@@ -1,0 +1,77 @@
+package vn.chuongpl.user_service.features.user;
+
+
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import vn.chuongpl.user_service.dtos.ApiResponse;
+import vn.chuongpl.user_service.dtos.PageResponse;
+import vn.chuongpl.user_service.dtos.request.UserUpdateRequest;
+import vn.chuongpl.user_service.dtos.response.UserResponse;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class UserController {
+    UserService userService;
+
+    @GetMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userID == authentication.principal.id")
+    public ApiResponse<UserResponse> getUser(@PathVariable String userId) {
+        return ApiResponse.<UserResponse>builder()
+                .message("Lay thong tin người dùng thành công")
+                .data(userService.getUserById(userId))
+                .build();
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<PageResponse<UserResponse>> getAllUsers(@RequestParam Integer page) {
+        return ApiResponse.<PageResponse<UserResponse>>builder()
+                .message("Lay danh sach người dùng thành công")
+                .data(userService.getAllUsers(page != null ? page : 0))
+                .build();
+    }
+
+    @GetMapping("/me")
+    @PostAuthorize("returnObject.data.id == authentication.principal.subject")
+    public ApiResponse<UserResponse> getMe(@AuthenticationPrincipal Jwt jwt) {
+        String userID = jwt.getSubject();
+        return ApiResponse.<UserResponse>builder()
+                .message("Lay thong người dùng hien tai thành công")
+                .data(userService.getUserById(userID))
+                .build();
+    }
+
+    @PutMapping("/{userID}")
+    public ApiResponse<UserResponse> updateUser(@PathVariable String userID, @RequestBody UserUpdateRequest request) {
+        return ApiResponse.<UserResponse>builder()
+                .message("Cap nhat người dùng thành công")
+                .data(userService.updateUser(userID, request))
+                .build();
+    }
+
+
+    @DeleteMapping("/{userID}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteUser(@PathVariable String userID) {
+        try {
+            userService.deleteUser(userID);
+            return ApiResponse.<Void>builder()
+                    .message("Xoa người dùng thành công")
+                    .build();
+        } catch (Exception e) {
+            return ApiResponse.<Void>builder()
+                    .message("error in delete user: " + e.getMessage())
+                    .build();
+        }
+    }
+
+
+}

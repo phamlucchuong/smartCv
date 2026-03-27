@@ -1,0 +1,15 @@
+# --- Global & OS ---
+.DS_Store           # Mac
+Thumbs.db           # Windows
+.idea/              # IntelliJ IDEA
+.vscode/            # VS Code
+*.log               # File log chung
+.postman
+
+# --- Security ---
+.env
+.env.local
+*.pem               # Key bảo mật
+
+# --- Docker ---
+docker-compose.override.yml
