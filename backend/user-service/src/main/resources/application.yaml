@@ -1,0 +1,54 @@
+
+server: 
+    port: ${USER_SERVICE_PORT:8081}
+    servlet:
+        context-path: /user
+
+spring:
+  application:
+    name: UserService
+  profiles:
+      include: local
+  data:
+    mongodb:
+      uri: mongodb://${DB_USERNAME}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?authSource=admin
+      auto-index-creation: true
+
+  cache:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  main:
+      banner-mode: "off"
+
+  output:
+      ansi:
+          enabled: ALWAYS
+
+logging:
+    level:
+        root: WARN
+        "vn.chuongpl.user-service": INFO
+    pattern:
+        console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
+
+mongock:
+  migration-scan-package:
+    - vn.chuongpl.user_service.configuration.changelog
+  transaction-enabled: false
+
+# Springdoc OpenAPI Configuration
+springdoc:
+    api-docs:
+        path: /v3/api-docs
+    swagger-ui:
+        path: /swagger-ui.html
+        enabled: true

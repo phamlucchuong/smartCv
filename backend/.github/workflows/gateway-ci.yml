@@ -1,0 +1,33 @@
+name: CI API Gateway
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'api-gateway/**'
+      - 'libs/common/**' # Nếu Gateway dùng chung lib auth/logger
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Setup environment
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: "maven"
+
+      # 2. run Unit Test & Integration Test
+      - name: Run Tests
+        run: |
+          cd services/api-gateway
+          ./mvnw test 
+
+      # 3. Build Docker Image (Standard cho Microservices)
+      - name: Build Docker Image
+        run: |
+          docker build -t my-reg/api-gateway:${{ github.sha }} ./services/api-gateway

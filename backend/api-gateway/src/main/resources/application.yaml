@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: ${USER_SERVICE_URI:https://localhost:8081}
+          predicates:
+            - Path=/user/**
+
+  main:
+    banner-mode: off
+  output:
+    ansi:
+      enabled: always
+
+logging:
+  level:
+    root: INFO
+    "vn.chuongpl.api-gateway": INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+#    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
