@@ -12,6 +12,10 @@ spring:
           uri: ${USER_SERVICE_URI:https://localhost:8081}
           predicates:
             - Path=/user/**
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URI:https://localhost:8084}
+          predicates:
+            - Path=/notification/**
 
   main:
     banner-mode: off
