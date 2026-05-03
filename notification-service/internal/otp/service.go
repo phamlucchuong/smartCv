@@ -16,15 +16,19 @@ type Service interface {
 }
 
 type otpService struct {
-	redis *redis.Client
+	redis         *redis.Client
+	codeGenerator func(length int) (string, error)
 }
 
 func NewService(redisClient *redis.Client) Service {
-	return &otpService{redis: redisClient}
+	return &otpService{
+		redis:         redisClient,
+		codeGenerator: generateRandomCode,
+	}
 }
 
 func (s *otpService) GenerateOTP(ctx context.Context, target string, targetType string, ttlMinutes int) (string, error) {
-	code, err := generateRandomCode(6)
+	code, err := s.codeGenerator(6)
 	if err != nil {
 		return "", err
 	}
