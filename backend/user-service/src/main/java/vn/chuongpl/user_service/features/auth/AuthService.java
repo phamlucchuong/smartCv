@@ -17,6 +17,7 @@ import org.springframework.util.CollectionUtils;
 import vn.chuongpl.user_service.dtos.request.AuthRequest;
 import vn.chuongpl.user_service.dtos.request.IntrospectRequest;
 import vn.chuongpl.user_service.dtos.request.RegisterRequest;
+import vn.chuongpl.user_service.dtos.request.VerifyRegistrationRequest;
 import vn.chuongpl.user_service.dtos.response.AuthResponse;
 import vn.chuongpl.user_service.dtos.response.IntrospectResponse;
 import vn.chuongpl.user_service.dtos.response.UserResponse;
@@ -27,6 +28,7 @@ import vn.chuongpl.user_service.features.role.RoleService;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserMapper;
 import vn.chuongpl.user_service.features.user.UserService;
+import vn.chuongpl.user_service.integration.notification.NotificationClient;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -34,6 +36,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.StringJoiner;
 import java.util.UUID;
 
@@ -47,9 +51,10 @@ public class AuthService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     JwtBlacklistService jwtBlacklistService;
+    NotificationClient notificationClient;
 
     @NonFinal
-    @Value("${JWT_SIGNER_KEY}")
+    @Value("${JWT_SECRET_KEY}")
     protected String SIGNER_KEY;
     @NonFinal
     @Value("${JWT_VALID_DURATION}")
@@ -61,8 +66,7 @@ public class AuthService {
     @Value("${JWT_LONG_REFRESHABLE_DURATION}")
     protected long LONG_REFRESHABLE_DURATION;
 
-
-    public AuthResponse authenticated(AuthRequest request) {
+    public Map<String, String> authenticated(AuthRequest request) {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
         var user = userService.findByEmailAndDeletedFalse(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -72,26 +76,64 @@ public class AuthService {
             throw new AppException(ErrorCode.AUTHENTICATION_FAILED);
         }
 
-        return AuthResponse.builder()
-                .token(generateToken(user, VALID_DURATION))
-                .refreshToken(generateToken(user, REFRESHABLE_DURATION))
-                .authenticated(authenticated)
-                .build();
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("token", generateToken(user, VALID_DURATION));
+        tokens.put("refreshToken", generateToken(user, REFRESHABLE_DURATION));
+
+        return tokens;
     }
 
-
     public UserResponse register(RegisterRequest request) {
-        if (!userService.verifyEmail(request.getEmail())) throw new AppException(ErrorCode.EMAIL_EXISTED);
+        if (!userService.verifyEmail(request.getEmail()))
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
 
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setVerified(false); // New user must be verified via OTP
 
         HashSet<Role> roles = new HashSet<>();
         roleService.findById("USER").ifPresent(roles::add);
         user.setRoles(roles);
         user.setCreatedAt(LocalDateTime.now());
 
-        return userMapper.toUserResponse(userService.saveUser(user));
+        User savedUser = userService.saveUser(user);
+
+        // Send OTP via notification-service
+        String target = "SMS".equalsIgnoreCase(request.getPreferredVerification()) ? request.getPhone()
+                : request.getEmail();
+        notificationClient.sendOTP(target, request.getPreferredVerification());
+
+        return userMapper.toUserResponse(savedUser);
+    }
+
+    public AuthResponse verifyRegistration(VerifyRegistrationRequest request) {
+        // 1. Verify OTP via notification-service
+        boolean isValid = notificationClient.verifyOTP(request.getContact(), request.getVerificationType(),
+                request.getCode());
+        if (!isValid) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+
+        // 2. Find and activate user
+        User user;
+        if ("SMS".equalsIgnoreCase(request.getVerificationType())) {
+            user = userService.findByPhone(request.getContact())
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        } else {
+            user = userService.findByEmailAndDeletedFalse(request.getContact())
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        }
+
+        user.setVerified(true);
+        user.setUpdatedAt(LocalDateTime.now());
+        userService.saveUser(user);
+
+        // 3. Login the user (generate tokens)
+        return AuthResponse.builder()
+                .token(generateToken(user, VALID_DURATION))
+                .refreshToken(generateToken(user, REFRESHABLE_DURATION))
+                .authenticated(true)
+                .build();
     }
 
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
@@ -125,11 +167,11 @@ public class AuthService {
 
         Date expirityTime = (isRefresh)
                 ? new Date(signedJWT
-                .getJWTClaimsSet()
-                .getIssueTime()
-                .toInstant()
-                .plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS)
-                .toEpochMilli())
+                        .getJWTClaimsSet()
+                        .getIssueTime()
+                        .toInstant()
+                        .plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS)
+                        .toEpochMilli())
                 : signedJWT.getJWTClaimsSet().getExpirationTime();
 
         boolean verify = signedJWT.verify(verifier);

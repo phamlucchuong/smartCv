@@ -9,6 +9,13 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+
+	"smartCv/notification-service/internal/email"
+	"smartCv/notification-service/internal/notification"
+	"smartCv/notification-service/internal/otp"
+	platformEmail "smartCv/notification-service/internal/platform/email"
+	platformSms "smartCv/notification-service/internal/platform/sms"
+	"smartCv/notification-service/internal/sms"
 )
 
 type Server struct {
@@ -17,6 +24,11 @@ type Server struct {
 	log  *slog.Logger
 	db   *gorm.DB
 	rdb  *redis.Client
+
+	notiSvc notification.ServiceInterface
+
+	notiHandler *notification.Handler
+	otpHandler  *otp.Handler
 }
 
 func New(cfg *config.Config, log *slog.Logger, gormDB *gorm.DB, rdb *redis.Client) *Server {
@@ -30,11 +42,32 @@ func New(cfg *config.Config, log *slog.Logger, gormDB *gorm.DB, rdb *redis.Clien
 		rdb:  rdb,
 	}
 
-	//uow := db.NewUnitOfWork(gormDB)
-	//emailSvc := email.NewService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPFrom)
+	// 1. Initialize Platforms/Adapters
+	emailProvider := platformEmail.NewService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPFrom, cfg.SMTPName)
+	smsProvider := platformSms.NewTwilioProvider(cfg.TwilioAccountSID, cfg.TwilioAuthToken, cfg.TwilioFromNumber)
+
+	// 2. Initialize Domain Services
+	emailSvc := email.NewService(emailProvider)
+	smsSvc := sms.NewService(smsProvider)
+	otpSvc := otp.NewService(rdb)
+
+	// 3. Initialize Orchestrator
+	repo := notification.NewRepository(gormDB)
+	s.notiSvc = notification.NewService(
+		repo,
+		log,
+		"", // FCM Project ID
+		"", // FCM Service Account JSON
+		otpSvc,
+		emailSvc,
+		smsSvc,
+	)
+
+	s.notiHandler = notification.NewHandler(s.notiSvc, log)
+	s.otpHandler = otp.NewHandler(s.notiSvc, log)
 
 	s.echo.Validator = NewValidator()
-	s.setupMiddleware()
+	// s.setupMiddleware()
 	s.setupRoutes()
 
 	return s

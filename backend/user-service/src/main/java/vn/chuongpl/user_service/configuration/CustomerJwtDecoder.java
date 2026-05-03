@@ -27,7 +27,7 @@ import com.nimbusds.jose.JOSEException;
 public class CustomerJwtDecoder implements JwtDecoder {
 
     @NonFinal
-    @Value("${JWT_SIGNER_KEY}")
+    @Value("${JWT_SECRET_KEY}")
     String SIGNER_KEY;
     AuthService authService;
 

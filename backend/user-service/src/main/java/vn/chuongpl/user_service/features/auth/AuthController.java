@@ -1,10 +1,16 @@
 package vn.chuongpl.user_service.features.auth;
 
 import java.text.ParseException;
+import java.util.Map;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.nimbusds.jose.JOSEException;
+
+import jakarta.servlet.http.HttpServletResponse;
 import vn.chuongpl.user_service.dtos.request.AuthRequest;
 import vn.chuongpl.user_service.dtos.request.IntrospectRequest;
 import vn.chuongpl.user_service.dtos.request.RefreshTokenRequest;
@@ -27,22 +35,61 @@ import vn.chuongpl.user_service.dtos.response.UserResponse;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthController {
+	@NonFinal
+    @Value("${JWT_VALID_DURATION}")
+    protected long VALID_DURATION;
+    @NonFinal
+    @Value("${JWT_REFRESHABLE_DURATION}")
+    protected long REFRESHABLE_DURATION;
+    @NonFinal
+    @Value("${JWT_LONG_REFRESHABLE_DURATION}")
+    protected long LONG_REFRESHABLE_DURATION;
+	
     AuthService authService;
 
     @PostMapping("/register")
     public ApiResponse<UserResponse> register(@RequestBody RegisterRequest request) {
         return ApiResponse.<UserResponse>builder()
-                .message("Tạo tài khoản thành công")
+                .message("Please verify your account with the OTP sent to your " + 
+                         ("SMS".equalsIgnoreCase(request.getPreferredVerification()) ? "phone" : "email"))
                 .data(authService.register(request))
+                .build();
+    }
+
+    @PostMapping("/verify-registration")
+    public ApiResponse<AuthResponse> verifyRegistration(@RequestBody @jakarta.validation.Valid vn.chuongpl.user_service.dtos.request.VerifyRegistrationRequest request) {
+        return ApiResponse.<AuthResponse>builder()
+                .message("Account verified successfully")
+                .data(authService.verifyRegistration(request))
                 .build();
     }
 
 
     @PostMapping("/login")
-    public ApiResponse<AuthResponse> authenticated(@RequestBody AuthRequest request) {
+    public ApiResponse<AuthResponse> authenticated(@RequestBody AuthRequest request, HttpServletResponse response) {
+        Map<String, String> tokens = authService.authenticated(request);
+
+        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", tokens.get("accessToken"))
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(VALID_DURATION)
+                .sameSite("Lax")
+                .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", tokens.get("refreshToken"))
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(REFRESHABLE_DURATION)
+                .sameSite("Lax")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
         return ApiResponse.<AuthResponse>builder()
                 .message("Đăng nhập thành công")
-                .data(authService.authenticated(request))
                 .build();
     }
 

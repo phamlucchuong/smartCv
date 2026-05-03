@@ -32,7 +32,7 @@ import vn.chuongpl.user_service.configuration.CustomerJwtDecoder;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${FE_DOMAIN}")
+    @Value("${FE_DOMAIN:http://localhost:4127}")
     String FE_DOMAIN = "http://localhost:4127";
 
     final String[] PUBLIC_POST_ENDPOINT = {

@@ -1,10 +1,12 @@
 
 
-run:
-	user:
-		cd user-service/ && ./mvnw spring-boot:run
-	gateway:
-		cd api-gateway/ && ./mvnw spring-boot:run
+# run services
+run-user:
+	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && ./mvnw spring-boot:run
+run-gateway:
+	set -a; [ -f .env ] && . ./.env; set +a; cd api-gateway/ && ./mvnw spring-boot:run
+run-noti:
+	cd notification-service/ && go run cmd/server/main.go
 
 # docker compose commands
 compose-up:

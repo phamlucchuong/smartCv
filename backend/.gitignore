@@ -3,13 +3,14 @@
 Thumbs.db           # Windows
 .idea/              # IntelliJ IDEA
 .vscode/            # VS Code
-*.log               # File log chung
-.postman
+*.log               # File log
+.postman/
+postman/
 
 # --- Security ---
 .env
 .env.local
-*.pem               # Key bảo mật
+*.pem
 
 # --- Docker ---
 docker-compose.override.yml

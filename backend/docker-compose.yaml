@@ -1,21 +1,49 @@
-
 services:
   mongodb:
     image: mongo:latest
     container_name: smartCv-mongodb
     restart: unless-stopped
     ports:
-      - "${DB_PORT:-27017}:27017"
+      - "${MONGO_DB_PORT:-27017}:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
     volumes:
       - mongodb_data_vol:/data/db
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - smartCv-net
+
+  postgresql:
+    image: postgres:16-alpine
+    container_name: smartCv-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+    volumes:
+      - postgres_data_vol:/var/lib/postgresql/data
+      # - ./infra/postgres/init-go-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "${POSTGRES_DB_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${POSTGRES_DB_USER}",
+          "-d",
+          "${POSTGRES_DB_NAME}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
       - smartCv-net
 
@@ -28,7 +56,7 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -38,6 +66,7 @@ services:
 
 volumes:
   mongodb_data_vol:
+  postgres_data_vol:
   redis_data:
 
 networks:
