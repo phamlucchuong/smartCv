@@ -29,6 +29,6 @@ jobs:
           chmod +x mvnw
           ./mvnw test 
 
-      - name: Build Docker Image
-        run: |
-          docker build -t my-reg/api-gateway:${{ github.sha }} ./api-gateway
+      # - name: Build Docker Image
+      #   run: |
+      #     docker build -t my-reg/api-gateway:${{ github.sha }} ./api-gateway
