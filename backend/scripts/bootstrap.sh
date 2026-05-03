@@ -41,14 +41,14 @@ mvn clean install -DskipTests -f pom.xml
 # 4. Start Infrastructure
 echo ""
 echo "[4/4] Starting Docker infrastructure..."
-docker compose -f docker-compose.dev.yaml up -d
+docker compose -f docker-compose.yaml up -d
 
 echo ""
 echo "=== Bootstrap Complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Check containers status: docker compose -f docker-compose.dev.yml ps"
-echo "  2. View logs: docker compose -f docker-compose.dev.yml logs -f"
+echo "  1. Check containers status: docker compose -f docker-compose.yaml ps"
+echo "  2. View logs: docker compose -f docker-compose.yaml logs -f"
 echo "  3. Run application: './mvnw spring-boot:run' or 'make run'"
 echo ""
 echo "Endpoints (default):"
