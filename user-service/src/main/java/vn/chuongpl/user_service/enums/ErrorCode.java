@@ -13,7 +13,9 @@ public enum ErrorCode {
     PERMISSION_EXITED(1009, "Permission exited"),
     ROLE_ALREADY_EXISTS(1009, "Role exited"),
     ROLE_NOT_FOUND(1009, "Role exited"),
-    EMAIL_EXISTED(3001, "Email existed");
+    EMAIL_EXISTED(3001, "Email existed"),
+    INVALID_OTP(3002, "Invalid or expired OTP"),
+    USER_NOT_VERIFIED(3003, "User not verified, please verify with OTP");
 
     private int code;
     private String message;
