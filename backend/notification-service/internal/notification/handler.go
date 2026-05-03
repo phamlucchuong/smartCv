@@ -147,7 +147,7 @@ func (h *Handler) SubscribeFCMToken(c *echo.Context) error {
 	}
 
 	if err := h.notifSvc.SubscribeFCMToken(c.Request().Context(), userID, req.Token); err != nil {
-		h.logger.Error("failed to save fcm token", "userID", userID, "audience", "err", err)
+		h.logger.Error("failed to save fcm token", "userID", userID, "err", err)
 		return pkg.JSONError(c, http.StatusInternalServerError, pkg.CodeInternalError, "failed to save token")
 	}
 

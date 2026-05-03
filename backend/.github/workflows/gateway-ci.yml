@@ -26,6 +26,7 @@ jobs:
       - name: Run Tests
         run: |
           cd api-gateway
+          chmod +x mvnw
           ./mvnw test 
 
       - name: Build Docker Image

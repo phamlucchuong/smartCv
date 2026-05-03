@@ -21,7 +21,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Auth Tests
+      - name: Run Tests
         run: |
           cd user-service
-          mvn clean test
+          chmod +x mvnw
+          ./mvnw test
