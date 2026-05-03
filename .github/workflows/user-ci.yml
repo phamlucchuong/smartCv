@@ -1,12 +1,11 @@
 name: user-ci.yml
 on:
   push:
-    branches: [ "main" ]
+    branches: ["dev" ]
     paths:
-      - 'user-service/**'    # Chỉ chạy khi code trong thư mục này thay đổi
-      - '.github/workflows/ci-auth-service.yml'
+      - 'user-service/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
     paths:
       - 'user-service/**'
 jobs:
@@ -22,8 +21,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Auth Tests
-        # Lưu ý: Phải di chuyển vào thư mục service trước khi chạy lệnh
+      - name: Run Tests
         run: |
           cd user-service
-          mvn clean test
+          chmod +x mvnw
+          ./mvnw test

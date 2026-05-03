@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực Smart CV</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 1px;
+        }
+        .content {
+            padding: 40px;
+            text-align: center;
+        }
+        .otp-code {
+            font-size: 48px;
+            font-weight: bold;
+            color: #1e3c72;
+            letter-spacing: 8px;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f0f4f8;
+            border-radius: 8px;
+            border: 2px dashed #2a5298;
+        }
+        .message {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .expiry {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+        }
+        .footer {
+            background-color: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eeeeee;
+        }
+        .footer a {
+            color: #2a5298;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SMART CV</h1>
+        </div>
+        <div class="content">
+            <p class="message">Xin chào,</p>
+            <p class="message">Để hoàn tất quá trình xác thực, vui lòng sử dụng mã OTP dưới đây:</p>
+            <div class="otp-code">{{.Code}}</div>
+            <p class="expiry">Mã này có hiệu lực trong <strong>{{.TTLMinutes}} phút</strong>.</p>
+            <p class="message">Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Smart CV. Tất cả quyền được bảo lưu.</p>
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+</html>

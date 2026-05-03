@@ -33,7 +33,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         String path = exchange.getRequest().getURI().getPath();
         log.info("Entering authentication filter for request: {}", path);
-        if (path.endsWith("user/api/auth/login")) {
+        if (path.endsWith("user/api/auth/login") || path.endsWith("user/api/auth/register") || path.endsWith("notification/api/otp/send") || path.endsWith("notification/api/otp/verify")) {
             return chain.filter(exchange);
         }
 

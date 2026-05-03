@@ -32,6 +32,8 @@ public class User {
     @Field(name = "deleted_at")
     LocalDateTime deletedAt;
     @Builder.Default
+    boolean verified = false;
+    @Builder.Default
     boolean deleted = false;
     @DocumentReference
     Set<Role> roles;
