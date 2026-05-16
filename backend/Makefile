@@ -5,6 +5,8 @@ run-user:
 	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && ./mvnw spring-boot:run
 run-gateway:
 	set -a; [ -f .env ] && . ./.env; set +a; cd api-gateway/ && ./mvnw spring-boot:run
+run-job:
+	set -a; [ -f .env ] && . ./.env; set +a; cd job_service/ && ./mvnw spring-boot:run
 run-noti:
 	cd notification-service/ && go run cmd/server/main.go
 
