@@ -1,20 +1,23 @@
-
 server: 
-    port: ${USER_SERVICE_PORT:8081}
+    port: ${JOB_SERVICE_PORT:8082}
     servlet:
-        context-path: /user
+        context-path: /job
 
 spring:
   config:
     import: optional:file:../.env[.properties]
     
   application:
-    name: UserService
-  profiles:
-      include: local
+    name: JobService
+
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+
   data:
     mongodb:
-      uri: mongodb://${MONGO_DB_USERNAME:admin}:${MONGO_DB_PASSWORD:admin}@${MONGO_DB_HOST:localhost}:${MONGO_DB_PORT:27017}/${MONGO_DB_NAME:user_db}?authSource=admin
+      uri: mongodb://${MONGO_DB_USERNAME:admin}:${MONGO_DB_PASSWORD:admin}@${MONGO_DB_HOST:localhost}:${MONGO_DB_PORT:27017}/${MONGO_DB_NAME:job_db}?authSource=admin
       auto-index-creation: true
 
   cache:
@@ -28,13 +31,6 @@ spring:
           max-idle: 8
           min-idle: 0
           max-wait: -1ms
-
-  rabbitmq:
-     host: ${RABBITMQ_HOST:localhost}
-     port: ${RABBITMQ_PORT:5672}
-     username: ${RABBITMQ_USER:admin}
-     password: ${RABBITMQ_PASSWORD:admin123}
-
 
   main:
       banner-mode: "off"
