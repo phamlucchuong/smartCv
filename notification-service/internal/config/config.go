@@ -24,6 +24,12 @@ type Config struct {
 	TwilioAccountSID string `mapstructure:"TWILIO_ACCOUNT_SID"`
 	TwilioAuthToken  string `mapstructure:"TWILIO_AUTH_TOKEN"`
 	TwilioFromNumber string `mapstructure:"TWILIO_FROM_NUMBER"`
+ 
+	// RabbitMQ configuration
+	RabbitMQHost     string `mapstructure:"RABBITMQ_HOST"`
+	RabbitMQPort     string `mapstructure:"RABBITMQ_PORT"`
+	RabbitMQUser     string `mapstructure:"RABBITMQ_USER"`
+	RabbitMQPassword string `mapstructure:"RABBITMQ_PASSWORD"`
 }
 
 func Load() (*Config, error) {
@@ -41,6 +47,10 @@ func Load() (*Config, error) {
 	viper.SetDefault("TWILIO_ACCOUNT_SID", "")
 	viper.SetDefault("TWILIO_AUTH_TOKEN", "")
 	viper.SetDefault("TWILIO_FROM_NUMBER", "")
+	viper.SetDefault("RABBITMQ_HOST", "localhost")
+	viper.SetDefault("RABBITMQ_PORT", "5672")
+	viper.SetDefault("RABBITMQ_USER", "admin")
+	viper.SetDefault("RABBITMQ_PASSWORD", "admin123")
 
 	_ = viper.ReadInConfig()
 

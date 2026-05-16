@@ -1,30 +1,24 @@
 package vn.chuongpl.user_service.configuration;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.config.Customizer;
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import vn.chuongpl.user_service.configuration.CustomerJwtDecoder;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -73,14 +67,14 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .addFilterBefore(jwtBlacklistFilter, BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(request -> request
-                    .requestMatchers(SWAGGER_ENDPOINT).permitAll()
-                    .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINT).permitAll()
-                    .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINT).permitAll()
-                    .requestMatchers(HttpMethod.PUT, PUBLIC_PUT_ENDPOINT).permitAll()
-                    .anyRequest().authenticated())
+                        .requestMatchers(SWAGGER_ENDPOINT).permitAll()
+                        .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINT).permitAll()
+                        .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINT).permitAll()
+                        .requestMatchers(HttpMethod.PUT, PUBLIC_PUT_ENDPOINT).permitAll()
+                        .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfiguer -> jwtConfiguer
-                    .decoder(customerJwtDecoder)
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                        .decoder(customerJwtDecoder)
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return httpSecurity.build();
     }
 
