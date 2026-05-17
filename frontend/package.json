@@ -1,0 +1,13 @@
+{
+  "name": "smart-cv-fe",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "generate:api": "pnpm -F @smart-cv/api generate"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2"
+  }
+}
