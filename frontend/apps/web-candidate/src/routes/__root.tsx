@@ -14,6 +14,13 @@ function RootComponent() {
     i18n.changeLanguage(lng)
   }
 
+  const isAuthenticated = typeof window !== 'undefined' ? localStorage.getItem('isAuthenticated') === 'true' : false
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated')
+    window.location.reload()
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-secondary/30 text-foreground transition-colors duration-300">
       {/* Persisted Top Navigation */}
@@ -72,6 +79,16 @@ function RootComponent() {
             >
               EN
             </Button>
+            {isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="h-8 px-3 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold border-destructive/20 ml-2"
+              >
+                Đăng xuất
+              </Button>
+            )}
           </div>
         </div>
       </header>

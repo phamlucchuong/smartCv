@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCandidateStore } from '../store/useCandidateStore'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Input, Badge } from '@smart-cv/ui'
 import { Search, MapPin, Sparkles, Briefcase } from 'lucide-react'
@@ -8,6 +8,14 @@ import viteLogo from '../assets/vite.svg'
 import heroImg from '../assets/hero.png'
 
 export const Route = createFileRoute('/')({
+  beforeLoad: () => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+    if (!isAuthenticated) {
+      throw redirect({
+        to: '/signin',
+      })
+    }
+  },
   component: IndexComponent,
 })
 
