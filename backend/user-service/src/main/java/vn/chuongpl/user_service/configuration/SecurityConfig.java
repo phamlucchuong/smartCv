@@ -2,6 +2,7 @@ package vn.chuongpl.user_service.configuration;
 
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +19,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import lombok.RequiredArgsConstructor;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -31,14 +30,14 @@ public class SecurityConfig {
 
     final String[] PUBLIC_POST_ENDPOINT = {
             "/api/auth/register",
+            "/api/auth/verify-registration",
+            "/api/auth/resend-otp",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password",
             "/api/auth/login",
             "/api/auth/introspect",
             "/api/auth/refresh",
             "/api/users",
-    };
-
-    final String[] PUBLIC_PUT_ENDPOINT = {
-            "/api/users/{email}"
     };
 
     final String[] PUBLIC_GET_ENDPOINT = {
@@ -70,7 +69,6 @@ public class SecurityConfig {
                         .requestMatchers(SWAGGER_ENDPOINT).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINT).permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINT).permitAll()
-                        .requestMatchers(HttpMethod.PUT, PUBLIC_PUT_ENDPOINT).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfiguer -> jwtConfiguer
                         .decoder(customerJwtDecoder)
