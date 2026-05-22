@@ -2,34 +2,74 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:file:../.env[.properties]
   application:
     name: api-gateway
-
   cloud:
     gateway:
       routes:
         - id: user-service
-          uri: ${USER_SERVICE_URI:https://localhost:8081}
+          uri: ${USER_SERVICE_URI:http://localhost:8081}
           predicates:
             - Path=/user/**
         - id: job-service
-          uri: ${JOB_SERVICE_URI:https://localhost:8082}
+          uri: ${JOB_SERVICE_URI:http://localhost:8082}
           predicates:
             - Path=/job/**
         - id: notification-service
-          uri: ${NOTIFICATION_SERVICE_URI:https://localhost:8084}
+          uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8084}
           predicates:
             - Path=/notification/**
-
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   main:
     banner-mode: off
   output:
     ansi:
       enabled: always
 
+app:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
+  public-routes:
+    - method: POST
+      path: /user/api/auth/register
+    - method: POST
+      path: /user/api/auth/verify-registration
+    - method: POST
+      path: /user/api/auth/resend-otp
+    - method: POST
+      path: /user/api/auth/forgot-password
+    - method: POST
+      path: /user/api/auth/reset-password
+    - method: POST
+      path: /user/api/auth/login
+    - method: POST
+      path: /user/api/auth/introspect
+    - method: POST
+      path: /user/api/auth/refresh
+    - method: GET
+      path: /user/api/users/verify-email/**
+    - method: GET
+      path: /job/api/jobs
+    - method: GET
+      path: /job/api/jobs/search
+    - method: GET
+      path: /job/api/jobs/*
+    - method: GET
+      path: /notification/api/otp/verify
+    - method: POST
+      path: /notification/api/otp/send
+
 logging:
   level:
     root: INFO
-    "vn.chuongpl.api-gateway": INFO
+    "vn.chuongpl.api_gateway": INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

@@ -140,8 +140,8 @@ Swagger UI available at `http://localhost:{port}/{context-path}/swagger-ui.html`
 
 - Plan name:
 - Always write plan content in English.
-- File naming pattern (required): `YYYYMMDD-<short-scope>.md`
-  - Example: `20260523-user-service-completion.md`
+- File naming pattern (required): `YYYYMMDD-HHmm-<short-scope>.md`
+  - Example: `20260523-2112-user-service-completion.md`
   - Use lowercase, hyphen-separated words, and keep the scope concise (3-7 words).
 - Place new plan files under `plans/`.
 - Include: scope, current assessment, phased steps, and a short execution order summary.
