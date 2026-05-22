@@ -3,8 +3,8 @@ package vn.chuongpl.user_service.features.candidate;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
@@ -45,9 +45,10 @@ public class CandidateController {
     @PreAuthorize("hasRole('CANDIDATE') or hasRole('ADMIN')")
     public ApiResponse<CandidateResponse> update(@PathVariable String id,
                                                  @RequestBody CandidateRequest request,
-                                                 @AuthenticationPrincipal Jwt jwt) {
-        boolean isAdmin = jwt.getClaimAsString("scope") != null && jwt.getClaimAsString("scope").contains("ROLE_ADMIN");
-        return ApiResponse.<CandidateResponse>builder().data(candidateService.update(id, request, jwt.getSubject(), isAdmin)).build();
+                                                 @AuthenticationPrincipal String userId,
+                                                 Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<CandidateResponse>builder().data(candidateService.update(id, request, userId, isAdmin)).build();
     }
 
     @DeleteMapping("/{id}")

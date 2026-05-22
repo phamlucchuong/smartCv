@@ -1,8 +1,5 @@
 package vn.chuongpl.user_service.features.auth;
 
-import java.text.ParseException;
-import java.util.Map;
-
 import com.nimbusds.jose.JOSEException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -13,14 +10,15 @@ import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.request.*;
 import vn.chuongpl.user_service.dtos.response.AuthResponse;
 import vn.chuongpl.user_service.dtos.response.IntrospectResponse;
 import vn.chuongpl.user_service.dtos.response.UserResponse;
+
+import java.text.ParseException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -104,8 +102,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@AuthenticationPrincipal Jwt jwt) throws ParseException, JOSEException {
-        String token = jwt.getTokenValue();
+    public ApiResponse<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader)
+            throws ParseException, JOSEException {
+        String token = authHeader.replace("Bearer ", "").strip();
         authService.logout(token);
         return ApiResponse.<Void>builder().message("Logout successfully").build();
     }

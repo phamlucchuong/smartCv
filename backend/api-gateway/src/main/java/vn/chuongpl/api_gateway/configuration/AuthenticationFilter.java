@@ -1,22 +1,24 @@
 package vn.chuongpl.api_gateway.configuration;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import lombok.experimental.NonFinal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import vn.chuongpl.api_gateway.service.IdentityService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
@@ -24,37 +26,48 @@ import java.util.List;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationFilter implements GlobalFilter, Ordered {
-    IdentityService identityService;
+    GatewayJwtUtils jwtUtils;
+    BlacklistCheckService blacklistCheck;
+    PublicRoutesMatcher publicRoutesMatcher;
+
+    @NonFinal
+    @Value("${app.gateway.internal-secret}")
+    String internalSecret;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String path = exchange.getRequest().getURI().getPath();
-        HttpMethod method = exchange.getRequest().getMethod();
-
-        if (path.endsWith("user/api/auth/login")
-                || path.endsWith("user/api/auth/register")
-                || path.endsWith("user/api/auth/verify-registration")
-                || path.endsWith("user/api/auth/resend-otp")
-                || path.endsWith("user/api/auth/forgot-password")
-                || path.endsWith("user/api/auth/reset-password")
-                || path.endsWith("notification/api/otp/send")
-                || path.endsWith("notification/api/otp/verify")
-                || (path.contains("job/api/jobs") && method == HttpMethod.GET && !path.contains("/my") && !path.contains("/admin"))) {
-            return chain.filter(exchange);
+        if (publicRoutesMatcher.isPublic(exchange)) {
+            return chain.filter(addInternalSecret(exchange));
         }
 
         List<String> authHeaders = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION);
         if (CollectionUtils.isEmpty(authHeaders)) {
-            return unauthenticated(exchange.getResponse());
+            return reject(exchange.getResponse(), HttpStatus.UNAUTHORIZED, "Missing Authorization header");
         }
 
-        String token = authHeaders.getFirst().replace("Bearer ", "");
-        return identityService.introspect(token).flatMap(response -> {
-            if (response == null || response.getData() == null || !response.getData().isAuthenticated()) {
-                return unauthenticated(exchange.getResponse());
-            }
-            return chain.filter(exchange);
-        });
+        String token = authHeaders.getFirst().replace("Bearer ", "").strip();
+
+        try {
+            JWTClaimsSet claims = jwtUtils.verify(token);
+            String userId = jwtUtils.extractUserId(claims);
+            String scope = jwtUtils.extractScope(claims);
+
+            return blacklistCheck.isBlacklisted(token).flatMap(blacklisted -> {
+                if (Boolean.TRUE.equals(blacklisted)) {
+                    return reject(exchange.getResponse(), HttpStatus.UNAUTHORIZED, "Token revoked");
+                }
+                ServerWebExchange mutated = exchange.mutate().request(r -> r
+                        .header("X-User-Id", userId == null ? "" : userId)
+                        .header("X-User-Scope", scope == null ? "" : scope)
+                        .header("X-Gateway-Secret", internalSecret)
+                ).build();
+                return chain.filter(mutated);
+            });
+
+        } catch (Exception e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
+            return reject(exchange.getResponse(), HttpStatus.UNAUTHORIZED, "Invalid token");
+        }
     }
 
     @Override
@@ -62,9 +75,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         return -1;
     }
 
-    Mono<Void> unauthenticated(ServerHttpResponse response) {
-        String body = "Unauthorized";
-        response.setStatusCode(HttpStatus.UNAUTHORIZED);
-        return response.writeWith(Mono.just(response.bufferFactory().wrap(body.getBytes())));
+    private ServerWebExchange addInternalSecret(ServerWebExchange exchange) {
+        return exchange.mutate().request(r -> r.header("X-Gateway-Secret", internalSecret)).build();
+    }
+
+    private Mono<Void> reject(ServerHttpResponse response, HttpStatus status, String message) {
+        response.setStatusCode(status);
+        byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
+        return response.writeWith(Mono.just(response.bufferFactory().wrap(bytes)));
     }
 }

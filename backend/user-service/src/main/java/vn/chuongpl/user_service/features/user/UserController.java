@@ -7,7 +7,6 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
@@ -24,7 +23,7 @@ public class UserController {
     UserService userService;
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.subject")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.name")
     public ApiResponse<UserResponse> getUser(@PathVariable String userId) {
         return ApiResponse.<UserResponse>builder().message("Lay thong tin người dùng thành công").data(userService.getUserById(userId)).build();
     }
@@ -36,9 +35,9 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    @PostAuthorize("returnObject.data.id == authentication.principal.subject")
-    public ApiResponse<UserResponse> getMe(@AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.<UserResponse>builder().message("Lay thong người dùng hien tai thành công").data(userService.getUserById(jwt.getSubject())).build();
+    @PostAuthorize("returnObject.data.id == authentication.name")
+    public ApiResponse<UserResponse> getMe(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<UserResponse>builder().message("Lay thong người dùng hien tai thành công").data(userService.getUserById(userId)).build();
     }
 
     @PutMapping("/{userId}")
@@ -47,9 +46,9 @@ public class UserController {
     }
 
     @PutMapping("/me/password")
-    public ApiResponse<Void> changePassword(@AuthenticationPrincipal Jwt jwt,
+    public ApiResponse<Void> changePassword(@AuthenticationPrincipal String userId,
                                             @Valid @RequestBody ChangePasswordRequest request) {
-        userService.changePassword(jwt.getSubject(), request);
+        userService.changePassword(userId, request);
         return ApiResponse.<Void>builder().message("Change password successfully").build();
     }
 

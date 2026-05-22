@@ -1,9 +1,6 @@
 package vn.chuongpl.user_service.configuration;
 
-import java.util.List;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,12 +9,13 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
-import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -25,27 +23,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${FE_DOMAIN:http://localhost:4127}")
-    String FE_DOMAIN = "http://localhost:4127";
-
-    final String[] PUBLIC_POST_ENDPOINT = {
-            "/api/auth/register",
-            "/api/auth/verify-registration",
-            "/api/auth/resend-otp",
-            "/api/auth/forgot-password",
-            "/api/auth/reset-password",
-            "/api/auth/login",
-            "/api/auth/introspect",
-            "/api/auth/refresh",
-            "/api/users",
-    };
-
-    final String[] PUBLIC_GET_ENDPOINT = {
-            "/api/users/verify-email/{email}",
-            "/api/otp/verify",
-    };
-
-    final String[] SWAGGER_ENDPOINT = {
+    private static final String[] SWAGGER_ENDPOINTS = {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
@@ -53,27 +31,29 @@ public class SecurityConfig {
             "/webjars/**"
     };
 
-    @Autowired
-    CustomerJwtDecoder customerJwtDecoder;
-    @Autowired
-    JwtBlacklistFilter jwtBlacklistFilter;
+    private final InternalAuthFilter internalAuthFilter;
+
+    @Value("${FE_DOMAIN:http://localhost:4127}")
+    String FE_DOMAIN;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-
-        httpSecurity
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .addFilterBefore(jwtBlacklistFilter, BearerTokenAuthenticationFilter.class)
-                .authorizeHttpRequests(request -> request
-                        .requestMatchers(SWAGGER_ENDPOINT).permitAll()
-                        .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINT).permitAll()
-                        .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINT).permitAll()
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfiguer -> jwtConfiguer
-                        .decoder(customerJwtDecoder)
-                        .jwtAuthenticationConverter(jwtAuthenticationConverter())));
-        return httpSecurity.build();
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(internalAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(SWAGGER_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/register", "/api/auth/verify-registration",
+                                "/api/auth/resend-otp", "/api/auth/forgot-password",
+                                "/api/auth/reset-password", "/api/auth/login",
+                                "/api/auth/introspect", "/api/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/verify-email/**").permitAll()
+                        .anyRequest().authenticated()
+                );
+        return http.build();
     }
 
     @Bean
@@ -87,15 +67,5 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
-    }
-
-    @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
-        jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
-        return jwtAuthenticationConverter;
     }
 }

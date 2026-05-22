@@ -1,0 +1,170 @@
+services:
+  api-gateway:
+    image: ${API_GATEWAY_IMAGE:-smartcv/api-gateway:latest}
+    container_name: smartCv-api-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      USER_SERVICE_URI: http://user-service:8081
+      JOB_SERVICE_URI: http://job-service:8082
+      NOTIFICATION_SERVICE_URI: http://notification-service:8084
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      - user-service
+      - job-service
+      - notification-service
+      - redis
+    networks:
+      - smartCv-net
+
+  user-service:
+    image: ${USER_SERVICE_IMAGE:-smartcv/user-service:latest}
+    container_name: smartCv-user-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      FE_DOMAIN: ${FE_DOMAIN:-http://localhost:4127}
+      MONGO_DB_HOST: mongodb
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - smartCv-net
+
+  job-service:
+    image: ${JOB_SERVICE_IMAGE:-smartcv/job-service:latest}
+    container_name: smartCv-job-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONGO_DB_HOST: mongodb
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+      - elasticsearch
+    networks:
+      - smartCv-net
+
+  notification-service:
+    image: ${NOTIFICATION_SERVICE_IMAGE:-smartcv/notification-service:latest}
+    container_name: smartCv-notification-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      REDIS_HOST: redis
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+    depends_on:
+      - rabbitmq
+      - redis
+    networks:
+      - smartCv-net
+
+  mongodb:
+    image: mongo:latest
+    container_name: smartCv-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+    volumes:
+      - mongodb_data_vol:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartCv-net
+
+  postgresql:
+    image: postgres:16-alpine
+    container_name: smartCv-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+    volumes:
+      - postgres_data_vol:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_DB_USER}", "-d", "${POSTGRES_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartCv-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: smartCv-redis
+    command: redis-server --appendonly yes --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - smartCv-net
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: smartCv-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - smartCv-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: smartCv-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - smartCv-net
+
+volumes:
+  mongodb_data_vol:
+  postgres_data_vol:
+  redis_data:
+  elasticsearch_data:
+  rabbitmq_data:
+
+networks:
+  smartCv-net:
+    driver: bridge
+    internal: true
