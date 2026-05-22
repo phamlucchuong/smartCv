@@ -59,8 +59,7 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-JWT_VALID_DURATION: ${JWT_VALID_DURATION:60}
-
 app:
   job-default-page-size: ${JOB_DEFAULT_PAGE_SIZE:10}
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}

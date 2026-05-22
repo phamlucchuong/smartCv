@@ -3,8 +3,8 @@ package vn.chuongpl.user_service.features.recruiter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
@@ -45,9 +45,10 @@ public class RecruiterController {
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
     public ApiResponse<RecruiterResponse> update(@PathVariable String id,
                                                  @RequestBody RecruiterRequest request,
-                                                 @AuthenticationPrincipal Jwt jwt) {
-        boolean isAdmin = jwt.getClaimAsString("scope") != null && jwt.getClaimAsString("scope").contains("ROLE_ADMIN");
-        return ApiResponse.<RecruiterResponse>builder().data(recruiterService.update(id, request, jwt.getSubject(), isAdmin)).build();
+                                                 @AuthenticationPrincipal String userId,
+                                                 Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<RecruiterResponse>builder().data(recruiterService.update(id, request, userId, isAdmin)).build();
     }
 
     @DeleteMapping("/{id}")

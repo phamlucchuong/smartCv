@@ -4,8 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.job_service.dtos.ApiResponse;
 import vn.chuongpl.job_service.dtos.PageResponse;
@@ -24,8 +24,8 @@ public class JobController {
     @PostMapping
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
     public ApiResponse<JobResponse> createJob(@Valid @RequestBody JobCreateRequest request,
-                                              @AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.<JobResponse>builder().data(jobService.createJob(request, jwt.getSubject())).build();
+                                              @AuthenticationPrincipal String userId) {
+        return ApiResponse.<JobResponse>builder().data(jobService.createJob(request, userId)).build();
     }
 
     @GetMapping
@@ -41,10 +41,10 @@ public class JobController {
 
     @GetMapping("/my")
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
-    public ApiResponse<PageResponse<JobResponse>> getMyJobs(@AuthenticationPrincipal Jwt jwt,
+    public ApiResponse<PageResponse<JobResponse>> getMyJobs(@AuthenticationPrincipal String userId,
                                                             @RequestParam(defaultValue = "1") int page,
                                                             @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.<PageResponse<JobResponse>>builder().data(jobService.getMyJobs(jwt.getSubject(), page, size)).build();
+        return ApiResponse.<PageResponse<JobResponse>>builder().data(jobService.getMyJobs(userId, page, size)).build();
     }
 
     @GetMapping("/admin/all")
@@ -63,23 +63,28 @@ public class JobController {
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
     public ApiResponse<JobResponse> updateJob(@PathVariable String id,
                                               @RequestBody JobUpdateRequest request,
-                                              @AuthenticationPrincipal Jwt jwt) {
-        boolean isAdmin = jwt.getClaimAsString("scope") != null && jwt.getClaimAsString("scope").contains("ROLE_ADMIN");
-        return ApiResponse.<JobResponse>builder().data(jobService.updateJob(id, request, jwt.getSubject(), isAdmin)).build();
+                                              @AuthenticationPrincipal String userId,
+                                              Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<JobResponse>builder().data(jobService.updateJob(id, request, userId, isAdmin)).build();
     }
 
     @PatchMapping("/{id}/publish")
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
-    public ApiResponse<JobResponse> publishJob(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
-        boolean isAdmin = jwt.getClaimAsString("scope") != null && jwt.getClaimAsString("scope").contains("ROLE_ADMIN");
-        return ApiResponse.<JobResponse>builder().data(jobService.publishJob(id, jwt.getSubject(), isAdmin)).build();
+    public ApiResponse<JobResponse> publishJob(@PathVariable String id,
+                                               @AuthenticationPrincipal String userId,
+                                               Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<JobResponse>builder().data(jobService.publishJob(id, userId, isAdmin)).build();
     }
 
     @PatchMapping("/{id}/close")
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
-    public ApiResponse<JobResponse> closeJob(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
-        boolean isAdmin = jwt.getClaimAsString("scope") != null && jwt.getClaimAsString("scope").contains("ROLE_ADMIN");
-        return ApiResponse.<JobResponse>builder().data(jobService.closeJob(id, jwt.getSubject(), isAdmin)).build();
+    public ApiResponse<JobResponse> closeJob(@PathVariable String id,
+                                             @AuthenticationPrincipal String userId,
+                                             Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<JobResponse>builder().data(jobService.closeJob(id, userId, isAdmin)).build();
     }
 
     @DeleteMapping("/{id}")
