@@ -1,12 +1,12 @@
-server: 
-    port: ${JOB_SERVICE_PORT:8082}
-    servlet:
-        context-path: /job
+server:
+  port: ${JOB_SERVICE_PORT:8082}
+  servlet:
+    context-path: /job
 
 spring:
   config:
     import: optional:file:../.env[.properties]
-    
+
   application:
     name: JobService
 
@@ -19,6 +19,12 @@ spring:
     mongodb:
       uri: mongodb://${MONGO_DB_USERNAME:admin}:${MONGO_DB_PASSWORD:admin}@${MONGO_DB_HOST:localhost}:${MONGO_DB_PORT:27017}/${MONGO_DB_NAME:job_db}?authSource=admin
       auto-index-creation: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
 
   cache:
     redis:
@@ -33,28 +39,28 @@ spring:
           max-wait: -1ms
 
   main:
-      banner-mode: "off"
+    banner-mode: "off"
 
   output:
-      ansi:
-          enabled: ALWAYS
+    ansi:
+      enabled: ALWAYS
 
 logging:
-    level:
-        root: WARN
-        "vn.chuongpl.user_service": INFO
-    pattern:
-        console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
+  level:
+    root: WARN
+    "vn.chuongpl.job_service": INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
 
-mongock:
-  migration-scan-package:
-    - vn.chuongpl.user_service.configuration.changelog
-  transaction-enabled: false
-
-# Springdoc OpenAPI Configuration
 springdoc:
-    api-docs:
-        path: /v3/api-docs
-    swagger-ui:
-        path: /swagger-ui.html
-        enabled: true
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+JWT_VALID_DURATION: ${JWT_VALID_DURATION:60}
+
+app:
+  job-default-page-size: ${JOB_DEFAULT_PAGE_SIZE:10}
