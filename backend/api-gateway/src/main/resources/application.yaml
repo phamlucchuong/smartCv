@@ -12,6 +12,10 @@ spring:
           uri: ${USER_SERVICE_URI:https://localhost:8081}
           predicates:
             - Path=/user/**
+        - id: job-service
+          uri: ${JOB_SERVICE_URI:https://localhost:8082}
+          predicates:
+            - Path=/job/**
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URI:https://localhost:8084}
           predicates:
@@ -29,4 +33,3 @@ logging:
     "vn.chuongpl.api-gateway": INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-#    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"

@@ -7,8 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
-import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -28,31 +28,33 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-//        log.info("Entering AuthenticationFilter for request: {}", exchange.getRequest().getURI());
-        // get token from authorization header
-
         String path = exchange.getRequest().getURI().getPath();
-        log.info("Entering authentication filter for request: {}", path);
-        if (path.endsWith("user/api/auth/login") || path.endsWith("user/api/auth/register") || path.endsWith("notification/api/otp/send") || path.endsWith("notification/api/otp/verify")) {
+        HttpMethod method = exchange.getRequest().getMethod();
+
+        if (path.endsWith("user/api/auth/login")
+                || path.endsWith("user/api/auth/register")
+                || path.endsWith("user/api/auth/verify-registration")
+                || path.endsWith("user/api/auth/resend-otp")
+                || path.endsWith("user/api/auth/forgot-password")
+                || path.endsWith("user/api/auth/reset-password")
+                || path.endsWith("notification/api/otp/send")
+                || path.endsWith("notification/api/otp/verify")
+                || (path.contains("job/api/jobs") && method == HttpMethod.GET && !path.contains("/my") && !path.contains("/admin"))) {
             return chain.filter(exchange);
         }
 
-
         List<String> authHeaders = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION);
         if (CollectionUtils.isEmpty(authHeaders)) {
-            log.warn("No Authorization header found");
             return unauthenticated(exchange.getResponse());
         }
 
         String token = authHeaders.getFirst().replace("Bearer ", "");
-        log.info("Token: {}", token);
-
-        identityService.introspect(token).subscribe(response -> {
-            log.info("Invalid: {}", response.getData().isAuthenticated());
+        return identityService.introspect(token).flatMap(response -> {
+            if (response == null || response.getData() == null || !response.getData().isAuthenticated()) {
+                return unauthenticated(exchange.getResponse());
+            }
+            return chain.filter(exchange);
         });
-        // verify token
-
-        return chain.filter(exchange);
     }
 
     @Override
