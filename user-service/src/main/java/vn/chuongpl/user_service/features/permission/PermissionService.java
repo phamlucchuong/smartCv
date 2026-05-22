@@ -22,7 +22,7 @@ public class PermissionService {
 
     public PermissionResponse createPermission(CreatePermissionRequest request){
         if(permissionRepository.existsById(request.getName())){
-            throw new AppException(ErrorCode.PERMISSION_EXITED);
+            throw new AppException(ErrorCode.PERMISSION_EXISTED);
         }
         var permission = permissionMapper.toPermission(request);
         return permissionMapper.toPermissionResponse(permissionRepository.save(permission));
