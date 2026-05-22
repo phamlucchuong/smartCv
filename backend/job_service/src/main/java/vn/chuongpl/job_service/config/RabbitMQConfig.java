@@ -1,0 +1,46 @@
+package vn.chuongpl.job_service.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+    public static final String EXCHANGE = "job.exchange";
+    public static final String JOB_CREATED_QUEUE = "job.created.queue";
+    public static final String JOB_UPDATED_QUEUE = "job.updated.queue";
+    public static final String JOB_CLOSED_QUEUE = "job.closed.queue";
+
+    public static final String JOB_CREATED_ROUTING_KEY = "job.created";
+    public static final String JOB_UPDATED_ROUTING_KEY = "job.updated";
+    public static final String JOB_CLOSED_ROUTING_KEY = "job.closed";
+
+    @Bean
+    DirectExchange jobExchange() {
+        return new DirectExchange(EXCHANGE);
+    }
+
+    @Bean
+    Queue jobCreatedQueue() { return new Queue(JOB_CREATED_QUEUE); }
+
+    @Bean
+    Queue jobUpdatedQueue() { return new Queue(JOB_UPDATED_QUEUE); }
+
+    @Bean
+    Queue jobClosedQueue() { return new Queue(JOB_CLOSED_QUEUE); }
+
+    @Bean
+    Binding bindCreatedQueue(Queue jobCreatedQueue, DirectExchange jobExchange) {
+        return BindingBuilder.bind(jobCreatedQueue).to(jobExchange).with(JOB_CREATED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding bindUpdatedQueue(Queue jobUpdatedQueue, DirectExchange jobExchange) {
+        return BindingBuilder.bind(jobUpdatedQueue).to(jobExchange).with(JOB_UPDATED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding bindClosedQueue(Queue jobClosedQueue, DirectExchange jobExchange) {
+        return BindingBuilder.bind(jobClosedQueue).to(jobExchange).with(JOB_CLOSED_ROUTING_KEY);
+    }
+}

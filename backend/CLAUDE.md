@@ -134,3 +134,14 @@ Docker image builds are currently commented out in CI workflows.
 ## API Documentation
 
 Swagger UI available at `http://localhost:{port}/{context-path}/swagger-ui.html` for Java services (e.g., `http://localhost:8081/user/swagger-ui.html`). Postman collections are in `/postman/`.
+
+
+## Plan
+
+- Plan name:
+- Always write plan content in English.
+- File naming pattern (required): `YYYYMMDD-<short-scope>.md`
+  - Example: `20260523-user-service-completion.md`
+  - Use lowercase, hyphen-separated words, and keep the scope concise (3-7 words).
+- Place new plan files under `plans/`.
+- Include: scope, current assessment, phased steps, and a short execution order summary.
