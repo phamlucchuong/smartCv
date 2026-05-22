@@ -1,22 +1,28 @@
 package vn.chuongpl.user_service.dtos.response;
-
+ 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
+ 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Set;
-
-@Getter
-@Setter
+import java.util.List;
+ 
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserResponse {
+public class CandidateResponse {
     String id;
+    String userId;
     String fullName;
     String email;
-    Set<String> roles;
+    String phone;
+    LocalDate dob;
+    String gender;
+    String address;
+    String bio;
+    List<String> skills;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

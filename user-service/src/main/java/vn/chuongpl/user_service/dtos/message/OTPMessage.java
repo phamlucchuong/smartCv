@@ -1,10 +1,10 @@
 package vn.chuongpl.user_service.dtos.message;
- 
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
- 
+
 import java.io.Serializable;
- 
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -12,5 +12,6 @@ import java.io.Serializable;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OTPMessage implements Serializable {
     String target;
-    String targetType; // EMAIL or SMS
+    String targetType;
+    String otpType;
 }
