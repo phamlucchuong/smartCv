@@ -5,6 +5,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.MongoId;
+import vn.chuongpl.user_service.enums.RecruiterStatus;
 
 import java.time.LocalDateTime;
 
@@ -33,6 +34,23 @@ public class Recruiter {
 
     @Field(name = "company_description")
     String companyDescription;
+
+    @Field(name = "tax_code")
+    String taxCode;
+
+    @Field(name = "logo_url")
+    String logoUrl;
+
+    @Builder.Default
+    RecruiterStatus status = RecruiterStatus.PENDING;
+
+    @Field(name = "quota_job_post")
+    @Builder.Default
+    int quotaJobPost = 0;
+
+    @Field(name = "quota_cv_views")
+    @Builder.Default
+    int quotaCvViews = 0;
 
     @Field(name = "created_at")
     LocalDateTime createdAt;

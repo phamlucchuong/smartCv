@@ -6,10 +6,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.CandidateRequest;
 import vn.chuongpl.user_service.dtos.response.CandidateResponse;
+import vn.chuongpl.user_service.dtos.response.CvUploadResponse;
 
 @RestController
 @RequestMapping("/api/candidates")
@@ -17,6 +19,7 @@ import vn.chuongpl.user_service.dtos.response.CandidateResponse;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class CandidateController {
     CandidateService candidateService;
+    S3Service s3Service;
 
     @PostMapping
     @PreAuthorize("hasRole('CANDIDATE')")
@@ -49,6 +52,17 @@ public class CandidateController {
                                                  Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         return ApiResponse.<CandidateResponse>builder().data(candidateService.update(id, request, userId, isAdmin)).build();
+    }
+
+    @PostMapping("/cv/upload")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<CvUploadResponse> uploadCv(@RequestParam("file") MultipartFile file,
+                                                   @AuthenticationPrincipal String userId) {
+        String url = s3Service.uploadCv(file, userId);
+        return ApiResponse.<CvUploadResponse>builder()
+                .message("CV uploaded successfully")
+                .data(new CvUploadResponse(url))
+                .build();
     }
 
     @DeleteMapping("/{id}")

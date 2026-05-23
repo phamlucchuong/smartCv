@@ -1,0 +1,77 @@
+package vn.chuongpl.user_service.features.candidate;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import vn.chuongpl.user_service.enums.ErrorCode;
+import vn.chuongpl.user_service.exception.AppException;
+
+import java.time.Duration;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class S3Service {
+
+    private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
+
+    @Value("${AWS_S3_BUCKET_NAME:smartcv-cvs}")
+    String bucket;
+
+    @Value("${AWS_S3_PRESIGNED_URL_TTL_MINUTES:60}")
+    int presignedUrlTtl;
+
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final String ALLOWED_CONTENT_TYPE = "application/pdf";
+
+    public String uploadCv(MultipartFile file, String candidateId) {
+        validateFile(file);
+
+        String key = "cvs/" + candidateId + "/" + UUID.randomUUID() + ".pdf";
+
+        try {
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .contentType(ALLOWED_CONTENT_TYPE)
+                            .build(),
+                    RequestBody.fromBytes(file.getBytes())
+            );
+        } catch (Exception e) {
+            log.error("S3 upload failed: {}", e.getMessage());
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+
+        return generatePresignedUrl(key);
+    }
+
+    public String generatePresignedUrl(String key) {
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(presignedUrlTtl))
+                .getObjectRequest(r -> r.bucket(bucket).key(key).build())
+                .build();
+        return s3Presigner.presignGetObject(presignRequest).url().toString();
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_REQUIRED);
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new AppException(ErrorCode.FILE_TOO_LARGE);
+        }
+        if (!ALLOWED_CONTENT_TYPE.equals(file.getContentType())) {
+            throw new AppException(ErrorCode.INVALID_FILE_TYPE);
+        }
+    }
+}
