@@ -25,6 +25,10 @@ spring:
           uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8084}
           predicates:
             - Path=/notification/**
+        - id: ai-service
+          uri: ${AI_SERVICE_URI:http://localhost:8085}
+          predicates:
+            - Path=/ai/**
   data:
     redis:
       host: ${REDIS_HOST:localhost}
