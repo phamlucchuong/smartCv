@@ -6,9 +6,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
+import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
 import vn.chuongpl.user_service.dtos.response.RecruiterResponse;
 
 @RestController
@@ -49,6 +51,13 @@ public class RecruiterController {
                                                  Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         return ApiResponse.<RecruiterResponse>builder().data(recruiterService.update(id, request, userId, isAdmin)).build();
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<RecruiterResponse> updateStatus(@PathVariable String id,
+                                                       @Valid @RequestBody RecruiterStatusRequest request) {
+        return ApiResponse.<RecruiterResponse>builder().data(recruiterService.updateStatus(id, request)).build();
     }
 
     @DeleteMapping("/{id}")

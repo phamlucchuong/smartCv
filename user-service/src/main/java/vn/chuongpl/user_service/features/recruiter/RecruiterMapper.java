@@ -1,16 +1,18 @@
 package vn.chuongpl.user_service.features.recruiter;
  
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
 import vn.chuongpl.user_service.dtos.response.RecruiterResponse;
 import vn.chuongpl.user_service.features.user.User;
- 
+
 @Mapper(componentModel = "spring")
 public interface RecruiterMapper {
     Recruiter toRecruiter(RecruiterRequest request);
- 
+
     @Mapping(target = "id", source = "recruiter.id")
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "fullName", source = "user.fullName")
@@ -19,6 +21,10 @@ public interface RecruiterMapper {
     @Mapping(target = "createdAt", source = "recruiter.createdAt")
     @Mapping(target = "updatedAt", source = "recruiter.updatedAt")
     RecruiterResponse toRecruiterResponse(Recruiter recruiter, User user);
- 
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "quotaJobPost", ignore = true)
+    @Mapping(target = "quotaCvViews", ignore = true)
     void updateRecruiter(@MappingTarget Recruiter recruiter, RecruiterRequest request);
 }

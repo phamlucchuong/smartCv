@@ -34,6 +34,11 @@ spring:
     username: ${RABBITMQ_USER:admin}
     password: ${RABBITMQ_PASSWORD:admin123}
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   main:
     banner-mode: "off"
 
