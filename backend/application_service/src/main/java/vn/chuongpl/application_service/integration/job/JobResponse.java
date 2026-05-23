@@ -1,0 +1,18 @@
+package vn.chuongpl.application_service.integration.job;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class JobResponse {
+    String id;
+    String recruiterId;
+    String status;
+    String title;
+    String company;
+}
