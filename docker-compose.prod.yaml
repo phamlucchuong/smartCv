@@ -11,6 +11,7 @@ services:
       JOB_SERVICE_URI: http://job-service:8082
       APP_SERVICE_URI: http://application-service:8083
       NOTIFICATION_SERVICE_URI: http://notification-service:8084
+      AI_SERVICE_URI: http://ai-engine-service:8085
       REDIS_HOST: redis
       REDIS_PORT: 6379
     ports:
@@ -20,6 +21,7 @@ services:
       - job-service
       - application-service
       - notification-service
+      - ai-engine-service
       - redis
     networks:
       - smartCv-net
@@ -75,6 +77,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
       JOB_SERVICE_URL: http://job-service:8082/job
+      USER_SERVICE_URL: http://user-service:8081/user
       APP_DEFAULT_PAGE_SIZE: ${APP_DEFAULT_PAGE_SIZE:-10}
     depends_on:
       - mongodb
@@ -96,6 +99,48 @@ services:
     depends_on:
       - rabbitmq
       - redis
+    networks:
+      - smartCv-net
+
+  ai-engine-service:
+    image: ${AI_SERVICE_IMAGE:-smartcv/ai-engine-service:latest}
+    container_name: smartCv-ai-engine-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      JOB_SERVICE_URL: http://job-service:8082/job
+      USER_SERVICE_URL: http://user-service:8081/user
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+    depends_on:
+      - ollama
+      - job-service
+    networks:
+      - smartCv-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: smartCv-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - smartCv-net
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: smartCv-ollama-init
+    restart: "no"
+    volumes:
+      - ollama_data:/root/.ollama
+    depends_on:
+      - ollama
+    entrypoint: ["sh", "-c", "sleep 5 && ollama pull llama3.2"]
     networks:
       - smartCv-net
 
@@ -185,6 +230,7 @@ volumes:
   redis_data:
   elasticsearch_data:
   rabbitmq_data:
+  ollama_data:
 
 networks:
   smartCv-net:

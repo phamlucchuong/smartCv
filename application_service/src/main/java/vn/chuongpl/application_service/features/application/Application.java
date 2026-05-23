@@ -29,6 +29,12 @@ public class Application {
     @Field("recruiter_id")
     String recruiterId;
 
+    @Field("candidate_email")
+    String candidateEmail;
+
+    @Field("job_title")
+    String jobTitle;
+
     @Builder.Default
     ApplicationStatus status = ApplicationStatus.PENDING;
 

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả ứng tuyển - Smart CV</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 1px;
+        }
+        .header .subtitle {
+            margin-top: 8px;
+            font-size: 13px;
+            opacity: 0.85;
+            letter-spacing: 0.5px;
+        }
+        .content {
+            padding: 40px 40px 30px 40px;
+        }
+        .greeting {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .job-card {
+            background-color: #f7f9fc;
+            border: 1px solid #e1e8f0;
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin-bottom: 28px;
+        }
+        .job-card .label {
+            font-size: 12px;
+            color: #7a8a99;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 6px;
+        }
+        .job-card .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e3c72;
+            margin: 0;
+        }
+        .status-banner {
+            border-radius: 8px;
+            padding: 28px 24px;
+            margin-bottom: 28px;
+            text-align: center;
+        }
+        .status-banner .icon {
+            font-size: 44px;
+            line-height: 1;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .status-banner .title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            letter-spacing: 0.3px;
+        }
+        .status-banner .desc {
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+        .status-accepted {
+            background-color: #e6f9ed;
+            border-left: 4px solid #28a745;
+        }
+        .status-accepted .title { color: #1b6b34; }
+        .status-accepted .desc  { color: #2d7a47; }
+
+        .status-rejected {
+            background-color: #fdecee;
+            border-left: 4px solid #dc3545;
+        }
+        .status-rejected .title { color: #8a1a23; }
+        .status-rejected .desc  { color: #a02832; }
+
+        .status-withdrawn {
+            background-color: #fff8e5;
+            border-left: 4px solid #f0ad4e;
+        }
+        .status-withdrawn .title { color: #8a5a00; }
+        .status-withdrawn .desc  { color: #a8741a; }
+
+        .reason-box {
+            background-color: #ffffff;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin-top: 16px;
+            text-align: left;
+        }
+        .reason-box .reason-label {
+            font-size: 12px;
+            color: #8a1a23;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .reason-box .reason-text {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .next-steps {
+            background-color: #f0f4f8;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+        .next-steps h3 {
+            margin: 0 0 10px 0;
+            font-size: 15px;
+            color: #1e3c72;
+            font-weight: 600;
+        }
+        .next-steps p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+        .closing {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #444;
+            margin-top: 24px;
+        }
+        .signature {
+            margin-top: 8px;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        .footer {
+            background-color: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eeeeee;
+        }
+        .footer a {
+            color: #2a5298;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SMART CV</h1>
+            <div class="subtitle">Cập nhật trạng thái đơn ứng tuyển</div>
+        </div>
+        <div class="content">
+            <p class="greeting">Xin chào,</p>
+
+            <div class="job-card">
+                <div class="label">Vị trí ứng tuyển</div>
+                <p class="title">{{.JobTitle}}</p>
+            </div>
+
+            {{if eq .Status "ACCEPTED"}}
+            <div class="status-banner status-accepted">
+                <span class="icon">&#10004;</span>
+                <h2 class="title">Chúc mừng! Bạn đã được chấp nhận</h2>
+                <p class="desc">Nhà tuyển dụng đánh giá cao hồ sơ của bạn và mong muốn tiến tới bước tiếp theo trong quá trình tuyển dụng.</p>
+            </div>
+            <div class="next-steps">
+                <h3>Bước tiếp theo</h3>
+                <p>Nhà tuyển dụng sẽ liên hệ với bạn trong thời gian sớm nhất qua email hoặc số điện thoại để sắp xếp buổi phỏng vấn. Vui lòng kiểm tra hộp thư thường xuyên và chuẩn bị sẵn sàng cho buổi gặp gỡ.</p>
+            </div>
+            {{else if eq .Status "REJECTED"}}
+            <div class="status-banner status-rejected">
+                <span class="icon">&#9888;</span>
+                <h2 class="title">Hồ sơ chưa phù hợp lần này</h2>
+                <p class="desc">Rất tiếc, nhà tuyển dụng đã quyết định không tiếp tục với hồ sơ của bạn cho vị trí này.</p>
+                {{if .RejectionReason}}
+                <div class="reason-box">
+                    <div class="reason-label">Lý do từ nhà tuyển dụng</div>
+                    <p class="reason-text">{{.RejectionReason}}</p>
+                </div>
+                {{end}}
+            </div>
+            <div class="next-steps">
+                <h3>Đừng nản lòng</h3>
+                <p>Mỗi lần ứng tuyển là một cơ hội học hỏi. Hãy xem lại CV, cải thiện kỹ năng và tiếp tục khám phá những vị trí phù hợp khác trên Smart CV. Chúng tôi tin rằng cơ hội phù hợp đang chờ bạn phía trước.</p>
+            </div>
+            {{else if eq .Status "WITHDRAWN"}}
+            <div class="status-banner status-withdrawn">
+                <span class="icon">&#8634;</span>
+                <h2 class="title">Đơn ứng tuyển đã được rút lại</h2>
+                <p class="desc">Bạn đã rút đơn ứng tuyển thành công. Nhà tuyển dụng sẽ không còn xem xét hồ sơ này.</p>
+            </div>
+            <div class="next-steps">
+                <h3>Tiếp tục hành trình</h3>
+                <p>Hãy quay lại Smart CV để khám phá hàng nghìn cơ hội việc làm khác đang chờ bạn. Cập nhật CV và ứng tuyển vào những vị trí phù hợp hơn với mục tiêu nghề nghiệp của bạn.</p>
+            </div>
+            {{end}}
+
+            <p class="closing">
+                Cảm ơn bạn đã tin tưởng và sử dụng Smart CV.<br>
+                <span class="signature">— Đội ngũ Smart CV</span>
+            </p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Smart CV. Tất cả quyền được bảo lưu.</p>
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+</html>
