@@ -20,6 +20,7 @@ import vn.chuongpl.application_service.exception.AppException;
 import vn.chuongpl.application_service.integration.job.JobClient;
 import vn.chuongpl.application_service.integration.job.JobResponse;
 import vn.chuongpl.application_service.integration.notification.NotificationPublisher;
+import vn.chuongpl.application_service.integration.user.UserClient;
 
 import java.time.LocalDateTime;
 import java.util.EnumSet;
@@ -34,6 +35,7 @@ public class ApplicationService {
     ApplicationRepository applicationRepository;
     ApplicationMapper applicationMapper;
     JobClient jobClient;
+    UserClient userClient;
     NotificationPublisher notificationPublisher;
 
     @NonFinal
@@ -52,7 +54,9 @@ public class ApplicationService {
 
         Application app = Application.builder()
                 .candidateId(candidateId)
+                .candidateEmail(userClient.getCandidateEmail(candidateId))
                 .jobId(request.getJobId())
+                .jobTitle(job.getTitle())
                 .recruiterId(job.getRecruiterId())
                 .coverLetter(request.getCoverLetter())
                 .cvUrl(request.getCvUrl())
@@ -89,7 +93,9 @@ public class ApplicationService {
             results.getContent().stream()
                     .filter(a -> !a.getRecruiterId().equals(recruiterId))
                     .findFirst()
-                    .ifPresent(a -> { throw new AppException(ErrorCode.UNAUTHORIZED); });
+                    .ifPresent(a -> {
+                        throw new AppException(ErrorCode.UNAUTHORIZED);
+                    });
         }
 
         return toPage(results, applicationMapper::toDetailResponse, page, size);
