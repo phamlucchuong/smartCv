@@ -14,8 +14,10 @@ import java.time.LocalDateTime;
 public class ApplicationEventMessage implements Serializable {
     String applicationId;
     String candidateId;
+    String candidateEmail;
     String recruiterId;
     String jobId;
+    String jobTitle;
     String newStatus;
     String rejectionReason;
     LocalDateTime occurredAt;
