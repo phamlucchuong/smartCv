@@ -1,0 +1,45 @@
+server:
+  port: ${APP_SERVICE_PORT:8083}
+  servlet:
+    context-path: /application
+
+spring:
+  config:
+    import: optional:file:../.env[.properties]
+  application:
+    name: ApplicationService
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_DB_USERNAME:admin}:${MONGO_DB_PASSWORD:admin}@${MONGO_DB_HOST:localhost}:${MONGO_DB_PORT:27017}/${APP_MONGO_DB_NAME:application_db}?authSource=admin
+      auto-index-creation: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+  main:
+    banner-mode: "off"
+  output:
+    ansi:
+      enabled: ALWAYS
+
+app:
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
+  job-service:
+    base-url: ${JOB_SERVICE_URL:http://localhost:8082/job}
+  default-page-size: ${APP_DEFAULT_PAGE_SIZE:10}
+
+logging:
+  level:
+    root: WARN
+    "vn.chuongpl.application_service": INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true

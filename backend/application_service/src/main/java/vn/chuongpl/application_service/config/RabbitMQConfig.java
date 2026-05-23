@@ -1,0 +1,44 @@
+package vn.chuongpl.application_service.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+    public static final String EXCHANGE = "application.exchange";
+    public static final String APPLICATION_ACCEPTED_KEY = "application.accepted";
+    public static final String APPLICATION_REJECTED_KEY = "application.rejected";
+    public static final String APPLICATION_WITHDRAWN_KEY = "application.withdrawn";
+
+    @Bean
+    DirectExchange applicationExchange() {
+        return new DirectExchange(EXCHANGE);
+    }
+
+    @Bean Queue acceptedQueue() { return new Queue("application.accepted.queue"); }
+    @Bean Queue rejectedQueue() { return new Queue("application.rejected.queue"); }
+    @Bean Queue withdrawnQueue() { return new Queue("application.withdrawn.queue"); }
+
+    @Bean
+    Binding acceptedBinding(DirectExchange e) {
+        return BindingBuilder.bind(acceptedQueue()).to(e).with(APPLICATION_ACCEPTED_KEY);
+    }
+
+    @Bean
+    Binding rejectedBinding(DirectExchange e) {
+        return BindingBuilder.bind(rejectedQueue()).to(e).with(APPLICATION_REJECTED_KEY);
+    }
+
+    @Bean
+    Binding withdrawnBinding(DirectExchange e) {
+        return BindingBuilder.bind(withdrawnQueue()).to(e).with(APPLICATION_WITHDRAWN_KEY);
+    }
+
+    @Bean
+    MessageConverter jackson2MessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+}

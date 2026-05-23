@@ -17,6 +17,10 @@ spring:
           uri: ${JOB_SERVICE_URI:http://localhost:8082}
           predicates:
             - Path=/job/**
+        - id: application-service
+          uri: ${APP_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/application/**
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8084}
           predicates:

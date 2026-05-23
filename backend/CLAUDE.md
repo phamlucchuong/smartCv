@@ -78,6 +78,7 @@ All inter-service async events flow through **RabbitMQ**.
 | `api-gateway` | Java/Spring Cloud Gateway | 8080 | Redis (rate limit) | JWT auth filter, routing |
 | `user-service` | Java/Spring Boot 3.4.4 | 8081 | MongoDB, Redis | Auth, OTP, user profiles |
 | `job_service` | Java/Spring Boot 3.5.14 | 8082 | MongoDB, Elasticsearch | Job CRUD, full-text search |
+| `application_service` | Java/Spring Boot 3.4.4 | 8083 | MongoDB | Job application lifecycle, CRUD, role-based access |
 | `notification-service` | Go 1.25.6/Echo v5 | 8084 | PostgreSQL, Redis | Email (SMTP), SMS (Twilio), push (Firebase) |
 
 **Planned (not yet implemented):** Application Service (8083), AI Service (8085).
