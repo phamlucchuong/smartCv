@@ -1,4 +1,3 @@
-
 # test commands
 test-user:
 	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && ./mvnw test
@@ -12,10 +11,13 @@ test-job:
 test-application:
 	set -a; [ -f .env ] && . ./.env; set +a; cd application_service/ && ./mvnw test
 
+test-ai:
+	set -a; [ -f .env ] && . ./.env; set +a; cd ai_engine_service/ && ./mvnw test
+
 test-noti:
 	cd notification-service/ && go test ./... -v
 
-test: test-user test-gateway test-job test-application test-noti
+test: test-user test-gateway test-job test-application test-ai test-noti
 
 
 # run services
@@ -27,11 +29,12 @@ run-job:
 	set -a; [ -f .env ] && . ./.env; set +a; cd job_service/ && ./mvnw spring-boot:run
 run-application:
 	set -a; [ -f .env ] && . ./.env; set +a; cd application_service/ && ./mvnw spring-boot:run
+run-ai:
+	set -a; [ -f .env ] && . ./.env; set +a; cd ai_engine_service/ && ./mvnw spring-boot:run
 run-noti:
 	cd notification-service/ && go run cmd/server/main.go
 
-run: run-user run-gateway run-job run-application run-noti
-
+run: run-user run-gateway run-job run-application run-ai run-noti
 
 
 # docker compose commands
