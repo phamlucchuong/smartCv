@@ -23,7 +23,11 @@ public enum ErrorCode {
     CANDIDATE_EXISTED(4001, "Candidate profile already exists"),
     CANDIDATE_NOT_FOUND(4002, "Candidate profile not found"),
     RECRUITER_EXISTED(5001, "Recruiter profile already exists"),
-    RECRUITER_NOT_FOUND(5002, "Recruiter profile not found");
+    RECRUITER_NOT_FOUND(5002, "Recruiter profile not found"),
+    FILE_REQUIRED(6001, "File is required"),
+    FILE_TOO_LARGE(6002, "File must not exceed 5MB"),
+    INVALID_FILE_TYPE(6003, "Only PDF files are accepted"),
+    FILE_UPLOAD_FAILED(6004, "Failed to upload file, please try again");
 
     private int code;
     private String message;
