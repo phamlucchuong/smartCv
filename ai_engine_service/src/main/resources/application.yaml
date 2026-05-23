@@ -1,0 +1,44 @@
+server:
+  port: ${AI_SERVICE_PORT:8085}
+  servlet:
+    context-path: /ai
+
+spring:
+  config:
+    import: optional:file:../.env[.properties]
+  application:
+    name: ai_engine_service
+  ai:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        model: ${OLLAMA_MODEL:llama3.2}
+        options:
+          temperature: 0.2
+          num-ctx: 8192
+          top-p: 0.9
+  main:
+    banner-mode: "off"
+
+app:
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
+  job-service:
+    base-url: ${JOB_SERVICE_URL:http://localhost:8082/job}
+  ai:
+    recommend-batch-size: ${AI_RECOMMEND_BATCH:20}
+
+logging:
+  level:
+    root: WARN
+    "vn.chuongpl.ai_engine_service": INFO
+    "org.springframework.ai": INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
