@@ -43,6 +43,7 @@ type ServiceInterface interface {
 	// OTP methods
 	SendOTP(ctx context.Context, target string, targetType string, ttlMinutes int) error
 	VerifyOTP(ctx context.Context, target string, targetType string, code string) (bool, error)
+	SendApplicationResultEmail(ctx context.Context, msg ApplicationEventMessage) error
 }
 
 // Service provides high-level notification methods.
@@ -231,6 +232,10 @@ func (s *Service) SubscribeFCMToken(ctx context.Context, userID string, token st
 
 func (s *Service) UnsubscribeFCMToken(ctx context.Context, token string) error {
 	return s.repo.DeleteFCMTokenByTokenAndAudience(ctx, token, "web-user")
+}
+
+func (s *Service) SendApplicationResultEmail(ctx context.Context, msg ApplicationEventMessage) error {
+	return s.emailService.SendApplicationResult(ctx, msg.CandidateEmail, msg.JobTitle, msg.NewStatus, msg.RejectionReason)
 }
 
 func (s *Service) NotifyNewOrder(ctx context.Context, userID string, vendorID string, orderNo string, totalAmount int) {
@@ -423,7 +428,7 @@ func (s *Service) updateFirestoreSignal(userID string, signalType string, data m
 	}
 	ctx := context.Background()
 	docRef := s.firestoreClient.Collection("signals").Doc(userID)
-	
+
 	payload := map[string]interface{}{
 		"type":      signalType,
 		"data":      data,
