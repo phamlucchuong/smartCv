@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
+import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
 import vn.chuongpl.user_service.dtos.response.RecruiterResponse;
 import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
@@ -83,7 +84,26 @@ public class RecruiterService {
         String fixedUserId = recruiter.getUserId();
         recruiterMapper.updateRecruiter(recruiter, request);
         recruiter.setUserId(fixedUserId);
+
+        if (isAdmin) {
+            if (request.getStatus() != null) recruiter.setStatus(request.getStatus());
+            if (request.getQuotaJobPost() != null) recruiter.setQuotaJobPost(request.getQuotaJobPost());
+            if (request.getQuotaCvViews() != null) recruiter.setQuotaCvViews(request.getQuotaCvViews());
+        }
+
         recruiter.setUpdatedAt(LocalDateTime.now());
+        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+    }
+
+    public RecruiterResponse updateStatus(String id, RecruiterStatusRequest request) {
+        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        recruiter.setStatus(request.getStatus());
+        if (request.getQuotaJobPost() != null) recruiter.setQuotaJobPost(request.getQuotaJobPost());
+        if (request.getQuotaCvViews() != null) recruiter.setQuotaCvViews(request.getQuotaCvViews());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+
         return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
     }
 

@@ -1,5 +1,6 @@
 package vn.chuongpl.user_service.dtos.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.chuongpl.user_service.enums.RecruiterStatus;
@@ -9,14 +10,8 @@ import vn.chuongpl.user_service.enums.RecruiterStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class RecruiterRequest {
-    String userId;
-    String companyName;
-    String companyWebsite;
-    String companyAddress;
-    String companyDescription;
-    String taxCode;
-    String logoUrl;
+public class RecruiterStatusRequest {
+    @NotNull
     RecruiterStatus status;
     Integer quotaJobPost;
     Integer quotaCvViews;
