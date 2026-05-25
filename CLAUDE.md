@@ -139,7 +139,6 @@ Swagger UI available at `http://localhost:{port}/{context-path}/swagger-ui.html`
 
 ## Plan
 
-- Plan name:
 - Always write plan content in English.
 - File naming pattern (required): `YYYYMMDD-HHmm-<short-scope>.md`
   - Example: `20260523-2112-user-service-completion.md`

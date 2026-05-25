@@ -5,9 +5,11 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.MongoId;
+import vn.chuongpl.application_service.enums.AiScoringStatus;
 import vn.chuongpl.application_service.enums.ApplicationStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Document(collection = "applications")
 @Getter
@@ -43,6 +45,19 @@ public class Application {
 
     @Field("cv_url")
     String cvUrl;
+
+    @Field("ai_score")
+    Integer aiScore;
+
+    @Field("matched_skills")
+    List<String> matchedSkills;
+
+    @Field("missing_skills")
+    List<String> missingSkills;
+
+    @Builder.Default
+    @Field("ai_status")
+    AiScoringStatus aiStatus = AiScoringStatus.PENDING;
 
     @Field("recruiter_notes")
     String recruiterNotes;
