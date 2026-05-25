@@ -19,6 +19,9 @@ import vn.chuongpl.application_service.enums.ErrorCode;
 import vn.chuongpl.application_service.exception.AppException;
 import vn.chuongpl.application_service.integration.job.JobClient;
 import vn.chuongpl.application_service.integration.job.JobResponse;
+import vn.chuongpl.application_service.dtos.request.AiScoreUpdateRequest;
+import vn.chuongpl.application_service.enums.AiScoringStatus;
+import vn.chuongpl.application_service.integration.ai.AiScoringPublisher;
 import vn.chuongpl.application_service.integration.notification.NotificationPublisher;
 import vn.chuongpl.application_service.integration.user.UserClient;
 
@@ -37,6 +40,7 @@ public class ApplicationService {
     JobClient jobClient;
     UserClient userClient;
     NotificationPublisher notificationPublisher;
+    AiScoringPublisher aiScoringPublisher;
 
     @NonFinal
     @Value("${app.default-page-size:10}")
@@ -64,7 +68,9 @@ public class ApplicationService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return applicationMapper.toResponse(applicationRepository.save(app));
+        Application saved = applicationRepository.save(app);
+        aiScoringPublisher.publishScoringRequest(saved);
+        return applicationMapper.toResponse(saved);
     }
 
     public PageResponse<ApplicationResponse> getMyApplications(String candidateId, int page, int size) {
@@ -136,6 +142,16 @@ public class ApplicationService {
 
         notificationPublisher.publishStatusChanged(saved);
         return applicationMapper.toResponse(saved);
+    }
+
+    public void updateAiScore(String id, AiScoreUpdateRequest request) {
+        Application app = findActiveById(id);
+        app.setAiScore(request.getAiScore());
+        app.setMatchedSkills(request.getMatchedSkills());
+        app.setMissingSkills(request.getMissingSkills());
+        app.setAiStatus(request.getAiStatus() != null ? request.getAiStatus() : AiScoringStatus.SCORED);
+        app.setUpdatedAt(LocalDateTime.now());
+        applicationRepository.save(app);
     }
 
     public void delete(String id) {

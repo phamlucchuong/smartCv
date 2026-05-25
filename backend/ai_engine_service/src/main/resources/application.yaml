@@ -19,12 +19,19 @@ spring:
           top-p: 0.9
   main:
     banner-mode: "off"
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
 
 app:
   gateway:
     internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
   job-service:
     base-url: ${JOB_SERVICE_URL:http://localhost:8082/job}
+  application-service:
+    base-url: ${APPLICATION_SERVICE_URL:http://localhost:8083/application}
   ai:
     recommend-batch-size: ${AI_RECOMMEND_BATCH:20}
 

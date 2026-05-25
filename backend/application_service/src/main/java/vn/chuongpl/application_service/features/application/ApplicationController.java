@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.application_service.dtos.ApiResponse;
 import vn.chuongpl.application_service.dtos.PageResponse;
+import vn.chuongpl.application_service.dtos.request.AiScoreUpdateRequest;
 import vn.chuongpl.application_service.dtos.request.ApplicationCreateRequest;
 import vn.chuongpl.application_service.dtos.request.ApplicationStatusUpdateRequest;
 import vn.chuongpl.application_service.dtos.response.ApplicationDetailResponse;
@@ -96,6 +97,14 @@ public class ApplicationController {
         return ApiResponse.<PageResponse<ApplicationDetailResponse>>builder()
                 .data(applicationService.getAll(page, size))
                 .build();
+    }
+
+    @PatchMapping("/{id}/ai-score")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> updateAiScore(@PathVariable String id,
+                                           @RequestBody AiScoreUpdateRequest request) {
+        applicationService.updateAiScore(id, request);
+        return ApiResponse.<Void>builder().build();
     }
 
     @DeleteMapping("/{id}")
