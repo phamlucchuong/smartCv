@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvImproveRequest;
+import vn.chuongpl.ai_engine_service.dtos.request.InterviewQuestionsRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.JobRecommendRequest;
 import vn.chuongpl.ai_engine_service.dtos.response.CvAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvImprovementResponse;
+import vn.chuongpl.ai_engine_service.dtos.response.InterviewQuestionsResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.JobRecommendationResponse;
 import vn.chuongpl.ai_engine_service.enums.ErrorCode;
 import vn.chuongpl.ai_engine_service.exception.AppException;
@@ -42,6 +44,23 @@ public class AnalysisService {
     public CvAnalysisResponse analyze(CvAnalyzeRequest request) {
         String cvText = cvTextExtractor.resolveCvText(request.cvText(), request.cvUrl());
         JobSummary job = jobClient.getJobById(request.jobId());
+
+        String prompt = promptBuilder.buildAnalyzePrompt(Map.of(
+                "CV_TEXT", cvText,
+                "JOB_TITLE", nvl(job.title()),
+                "JOB_DESCRIPTION", nvl(job.description()),
+                "JOB_SKILLS", String.join(", ", safeList(job.skills())),
+                "JOB_REQUIREMENTS", String.join("\n- ", safeList(job.requirements())),
+                "EXPERIENCE_LEVEL", nvl(job.experienceLevel())
+        ));
+
+        String aiContent = callAi(prompt);
+        return parse(aiContent, CvAnalysisResponse.class);
+    }
+
+    public CvAnalysisResponse autoScore(String cvUrl, String jobId) {
+        String cvText = cvTextExtractor.resolveCvText(null, cvUrl);
+        JobSummary job = jobClient.getJobById(jobId);
 
         String prompt = promptBuilder.buildAnalyzePrompt(Map.of(
                 "CV_TEXT", cvText,
@@ -95,6 +114,27 @@ public class AnalysisService {
 
         String aiContent = callAi(prompt);
         return parse(aiContent, JobRecommendationResponse.class);
+    }
+
+    public InterviewQuestionsResponse generateInterviewQuestions(InterviewQuestionsRequest request) {
+        if ((request.cvText() == null || request.cvText().isBlank())
+                && (request.cvUrl() == null || request.cvUrl().isBlank())) {
+            throw new AppException(ErrorCode.CV_TEXT_REQUIRED);
+        }
+
+        String cvText = cvTextExtractor.resolveCvText(request.cvText(), request.cvUrl());
+        JobSummary job = jobClient.getJobById(request.jobId());
+
+        String prompt = promptBuilder.buildInterviewQuestionsPrompt(Map.of(
+                "CV_TEXT", cvText,
+                "JOB_TITLE", nvl(job.title()),
+                "JOB_DESCRIPTION", nvl(job.description()),
+                "JOB_SKILLS", String.join(", ", safeList(job.skills())),
+                "JOB_REQUIREMENTS", String.join("\n- ", safeList(job.requirements()))
+        ));
+
+        String aiContent = callAi(prompt);
+        return parse(aiContent, InterviewQuestionsResponse.class);
     }
 
     private String callAi(String prompt) {

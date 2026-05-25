@@ -1,6 +1,6 @@
 # SmartCV Backend — Project Status & Remaining Work
 
-**Updated:** 2026-05-23
+**Updated:** 2026-05-25
 **Branch:** `feat/init-user-candidate-and-recruiter` (pending merge)
 
 ---
@@ -145,23 +145,81 @@
 
 ---
 
-## 3. Remaining Work
+## 3. Remaining Work (theo Roadmap)
 
-### P2 — Nice to have / Post-MVP
+> Deadline: **20/06/2026**. Hôm nay: 25/05/2026 (Tuần 10/13).
+
+### MVP Critical — Tuần 9–10 (23/05 – 31/05)
+
+#### R7: Auto AI Scoring khi Apply (core MVP differentiator)
+✅ Implemented on 2026-05-25.
+- Application stores `aiScore`, `matchedSkills`, `missingSkills`, `aiStatus`.
+- `application_service` publishes cv scoring message after submit.
+- `ai_engine_service` consumes `cv.scoring.queue`, analyzes CV, callbacks `PATCH /api/applications/{id}/ai-score`.
+- Response DTOs expose AI scoring fields to frontend.
+
+Follow-up: add integration test for async flow (apply -> queue -> callback).
+
+#### R8: AI Mock Interview Questions
+✅ Implemented on 2026-05-25.
+- Added `POST /api/ai/interview-questions` in ai_engine_service.
+- Added `interview_questions.md` prompt template.
+- Added request/response DTOs and service generation flow.
+
+Note: current input uses `cvText|cvUrl + jobId` (not `applicationId`).
+
+### Phase 4 — Tuần 10 (25/05 – 31/05)
+
+#### R9: Payment Service (Mock)
+Recruiter cần mua gói để có quota đăng job.
+
+**Cần làm:**
+- Service mới `payment_service` (port 8086) hoặc module trong `user-service`
+- 3 gói: Basic (5 posts), Pro (20 posts), Enterprise (unlimited)
+- Mock payment: sau 3s tự xác nhận thành công
+- MongoDB Multi-document Transaction: update Invoice + recruiter.quotaJobPost atomically
+- `POST /api/payments/orders` — tạo đơn
+- `POST /api/payments/confirm/{orderId}` — confirm (mock webhook)
+
+#### R10: Recruiter Quota Enforcement trong Job Service
+Job service chưa kiểm tra recruiter có được phép đăng job không.
+
+**Cần làm:**
+- `job_service` gọi user-service: verify `recruiter.status == APPROVED` trước khi tạo job
+- Kiểm tra `recruiter.quotaJobPost > 0`; decrement khi tạo job thành công
+- Tăng lại quota khi job bị xóa/đóng
+
+### Phase 5 — Tuần 12 (08/06 – 14/06)
+
+#### R11: CI/CD Docker Build + EC2 Deploy
+**Cần làm:**
+- GitHub Actions: build + push Docker images lên DockerHub/ECR khi merge vào `main`
+- EC2: setup `docker-compose.prod.yaml`, map domain, cài SSL Let's Encrypt
+- Seed data mẫu cho demo
+
+### Post-MVP / Nice-to-have
 
 | Item | Notes |
 |------|-------|
-| RabbitMQ dead-letter queues | Retry failed messages 3× then route to DLQ |
-| Recruiter status enforcement in job-service | `createJob()` should verify recruiter `status == APPROVED` via user-service |
-| Payment service / VNPAY mock | Needed for recruiter quota packages |
-| AI mock interview question generator | Add `POST /api/ai/interview-questions` to ai_engine_service |
+| RabbitMQ dead-letter queues | Retry 3× sau đó route sang DLQ |
+| WebSocket realtime notification | Thay polling 3s bằng WS từ notification-service |
 | End-to-end integration tests | Full flow: register → apply → AI score → notify |
-| Docker image builds in CI | Push images to registry on merge to main |
-| AWS EC2 deploy + deploy pipeline | Final production deployment |
 
 ---
 
-## 4. Service Map (current)
+## 4. Timeline còn lại
+
+| Tuần | Ngày | Mục tiêu backend |
+|------|------|-----------------|
+| 9 | 18–24/05 | ✅ P1 xong (Recruiter fields, S3, Rate limiter) |
+| 10 | 25–31/05 | R7 Auto AI scoring + R8 Interview questions + R9 Payment |
+| 11 | 01–07/06 | R10 Quota enforcement + Bug fixing + Refactor |
+| 12 | 08–14/06 | R11 CI/CD build + EC2 deploy |
+| 13 | 15–20/06 | Code freeze + Demo data + Thesis |
+
+---
+
+## 6. Service Map (current)
 
 ```
 Client → API Gateway :8080  [rate limit: 20 req/s global, 5 req/s auth]
@@ -169,14 +227,18 @@ Client → API Gateway :8080  [rate limit: 20 req/s global, 5 req/s auth]
               ├── /job/**          → Job Service :8082           (jobs + Elasticsearch)
               ├── /application/**  → Application Service :8083   (apply lifecycle)
               ├── /notification/** → Notification Service :8084  (OTP + email/SMS)
-              └── /ai/**           → AI Engine Service :8085     (Llama 3 analysis)
+              ├── /ai/**           → AI Engine Service :8085     (Llama 3 analysis)
+              └── /payment/**      → Payment Service :8086       ❌ chưa có
 
 Async events (RabbitMQ):
   user-service        → notification-service   (OTP send)
-  application_service → notification-service   (accepted/rejected/withdrawn) ✅ consumed
+  application_service → notification-service   (accepted/rejected/withdrawn) ✅
+  application_service → ai_engine_service      (cv.analysis.queue) ❌ chưa có
 
 Sync HTTP (internal):
   application_service → job_service            (validate job ACTIVE before apply)
   application_service → user_service           (fetch candidateEmail at submit time)
   ai_engine_service   → job_service            (fetch job details for analysis)
+  ai_engine_service   → application_service    (callback ai-score) ❌ chưa có
+  job_service         → user_service           (verify recruiter APPROVED + quota) ❌ chưa có
 ```
