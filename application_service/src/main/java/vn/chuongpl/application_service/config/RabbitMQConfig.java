@@ -37,6 +37,21 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(withdrawnQueue()).to(e).with(APPLICATION_WITHDRAWN_KEY);
     }
 
+    public static final String CV_SCORING_EXCHANGE = "cv.scoring.exchange";
+    public static final String CV_SCORING_KEY      = "cv.scoring";
+
+    @Bean DirectExchange cvScoringExchange() {
+        return new DirectExchange(CV_SCORING_EXCHANGE);
+    }
+
+    @Bean Queue cvScoringQueue() {
+        return new Queue("cv.scoring.queue", true);
+    }
+
+    @Bean Binding cvScoringBinding() {
+        return BindingBuilder.bind(cvScoringQueue()).to(cvScoringExchange()).with(CV_SCORING_KEY);
+    }
+
     @Bean
     MessageConverter jackson2MessageConverter() {
         return new Jackson2JsonMessageConverter();

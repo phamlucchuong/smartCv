@@ -2,7 +2,10 @@ package vn.chuongpl.application_service.dtos.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import vn.chuongpl.application_service.enums.AiScoringStatus;
 import vn.chuongpl.application_service.enums.ApplicationStatus;
+
+import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +24,10 @@ public class ApplicationResponse {
     String coverLetter;
     String cvUrl;
     String rejectionReason;
+    Integer aiScore;
+    List<String> matchedSkills;
+    List<String> missingSkills;
+    AiScoringStatus aiStatus;
     LocalDateTime appliedAt;
     LocalDateTime updatedAt;
 }
