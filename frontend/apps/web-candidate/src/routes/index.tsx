@@ -1,212 +1,408 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useCandidateStore } from '../store/useCandidateStore'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Input, Badge } from '@smart-cv/ui'
-import { Search, MapPin, Sparkles, Briefcase } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import * as React from 'react'
+import { Badge, Button, Card, CardContent, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import reactLogo from '../assets/react.svg'
-import viteLogo from '../assets/vite.svg'
-import heroImg from '../assets/hero.png'
+import {
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  ChartColumn,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  DollarSign,
+  Layers3,
+  MapPin,
+  Search,
+  Sparkles,
+  Star,
+  TrendingUp,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/')({
-  beforeLoad: () => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-    if (!isAuthenticated) {
-      throw redirect({
-        to: '/signin',
-      })
-    }
-  },
   component: IndexComponent,
 })
 
+const stats = [
+  { label: 'Open jobs', value: '1,284+' },
+  { label: 'Hiring companies', value: '420+' },
+  { label: 'Avg response time', value: '36h' },
+  { label: 'Remote roles', value: '310+' },
+]
+
+const categories = [
+  { name: 'Frontend Engineering', jobs: 188, icon: Layers3 },
+  { name: 'Backend Engineering', jobs: 234, icon: BriefcaseBusiness },
+  { name: 'Data & AI', jobs: 116, icon: ChartColumn },
+  { name: 'DevOps / Cloud', jobs: 97, icon: TrendingUp },
+]
+
+const jobs = [
+  {
+    id: 'senior-nodejs',
+    title: 'Senior Node.js Backend Developer',
+    company: 'NexusTech Solutions',
+    salary: '$2,500 - $3,500',
+    location: 'Ho Chi Minh City (Hybrid)',
+    skills: ['Node.js', 'TypeScript', 'AWS', 'PostgreSQL'],
+    posted: 'Posted 2 hours ago',
+  },
+  {
+    id: 'frontend-react-nextjs',
+    title: 'Frontend Engineer (React + Next.js)',
+    company: 'Nova Product Studio',
+    salary: '$2,000 - $2,800',
+    location: 'Ha Noi (Onsite)',
+    skills: ['React', 'Next.js', 'Tailwind', 'GraphQL'],
+    posted: 'Posted 6 hours ago',
+  },
+  {
+    id: 'fullstack-python-react',
+    title: 'Fullstack Developer (Python/React)',
+    company: 'Skyline Labs',
+    salary: '$2,200 - $3,000',
+    location: 'Da Nang (Remote)',
+    skills: ['Python', 'Django', 'React', 'Docker'],
+    posted: 'Posted 1 day ago',
+  },
+  {
+    id: 'senior-qa-automation',
+    title: 'Senior QA Automation Engineer',
+    company: 'Finverse Digital',
+    salary: '$1,800 - $2,500',
+    location: 'Ho Chi Minh City (Onsite)',
+    skills: ['Playwright', 'Cypress', 'CI/CD', 'API Testing'],
+    posted: 'Posted 1 day ago',
+  },
+  {
+    id: 'devops-aws-kubernetes',
+    title: 'DevOps Engineer (AWS/Kubernetes)',
+    company: 'CloudBridge Tech',
+    salary: '$2,700 - $3,600',
+    location: 'Remote (Vietnam)',
+    skills: ['Kubernetes', 'Terraform', 'AWS', 'Prometheus'],
+    posted: 'Posted 2 days ago',
+  },
+  {
+    id: 'data-engineer-python-spark',
+    title: 'Data Engineer (Python/Spark)',
+    company: 'DataNova Analytics',
+    salary: '$2,300 - $3,200',
+    location: 'Ha Noi (Hybrid)',
+    skills: ['Python', 'Spark', 'Airflow', 'BigQuery'],
+    posted: 'Posted 3 days ago',
+  },
+  {
+    id: 'mobile-react-native',
+    title: 'Mobile Engineer (React Native)',
+    company: 'BluePixel Ventures',
+    salary: '$1,900 - $2,700',
+    location: 'Ho Chi Minh City (Hybrid)',
+    skills: ['React Native', 'TypeScript', 'Redux', 'Firebase'],
+    posted: 'Posted 3 days ago',
+  },
+  {
+    id: 'engineering-manager',
+    title: 'Engineering Manager',
+    company: 'ScaleOne Labs',
+    salary: '$4,000 - $5,500',
+    location: 'Remote (APAC)',
+    skills: ['Leadership', 'System Design', 'Agile', 'Hiring'],
+    posted: 'Posted 4 days ago',
+  },
+  {
+    id: 'product-designer-ux-ui',
+    title: 'Product Designer (UX/UI)',
+    company: 'PixelCraft Studio',
+    salary: '$1,600 - $2,400',
+    location: 'Da Nang (Onsite)',
+    skills: ['Figma', 'Design System', 'Research', 'Prototyping'],
+    posted: 'Posted 5 days ago',
+  },
+]
+
+const companies = [
+  { name: 'InnovateHub Vietnam', reviews: 45, hiring: 12, pitch: 'AI-first product studio scaling cloud-native platforms globally.' },
+  { name: 'ByteForge', reviews: 30, hiring: 8, pitch: 'Engineering-focused environment for high-load fintech products.' },
+  { name: 'CloudBridge Tech', reviews: 52, hiring: 16, pitch: 'Remote-friendly team building data and DevOps tooling.' },
+  { name: 'ScaleOne Labs', reviews: 38, hiring: 10, pitch: 'Fast-growth SaaS team with strong product engineering culture.' },
+]
+
+const resources = [
+  'How to craft a developer CV that passes ATS in 2026',
+  'Technical interview prep roadmap for mid-level engineers',
+  'Remote compensation benchmark in Vietnam IT market',
+  'How to evaluate engineering culture before accepting an offer',
+  'Backend system design checklist for senior-level interviews',
+  'Salary negotiation guide for software engineers in SEA',
+]
+
+const testimonials = [
+  {
+    name: 'Nguyen Minh Anh',
+    role: 'Frontend Engineer',
+    quote: 'I found a better role in 2 weeks thanks to transparent salary ranges and quality job descriptions.',
+  },
+  {
+    name: 'Tran Hoang Vu',
+    role: 'DevOps Engineer',
+    quote: 'The filters are practical. I could quickly narrow to remote AWS roles with growth-focused teams.',
+  },
+  {
+    name: 'Le Thu Ha',
+    role: 'Product Designer',
+    quote: 'Company profile details helped me avoid poor-fit interviews and focus on culture I value.',
+  },
+]
+
+const faqs = [
+  {
+    q: 'How do I apply for a job?',
+    a: 'Open a job card, review requirements, and click Quick Apply. Your profile is attached automatically.',
+  },
+  {
+    q: 'Can I filter only remote jobs?',
+    a: 'Yes. Use location filter and select Remote to see distributed opportunities only.',
+  },
+  {
+    q: 'Do companies see my profile publicly?',
+    a: 'No. Your profile is shared only when you apply or explicitly allow visibility.',
+  },
+]
+
 function IndexComponent() {
-  const { count, searchQuery, setSearchQuery, increment } = useCandidateStore()
   const { t } = useTranslation()
-
-  // Mock list of tags/categories
-  const categories = [
-    { name: 'React / Next.js', count: 124, variant: 'default' as const },
-    { name: 'Node.js Backend', count: 85, variant: 'secondary' as const },
-    { name: 'DevOps / AWS', count: 42, variant: 'outline' as const },
-    { name: 'UI/UX Design', count: 67, variant: 'secondary' as const },
-  ]
-
-  // Mock job listings
-  const jobs = [
-    {
-      title: 'Senior Frontend Engineer (React)',
-      company: 'TechVibe Solutions',
-      location: 'Hồ Chí Minh, Việt Nam (Hybrid)',
-      salary: '2,500 - 3,500 USD',
-      tags: ['React 19', 'TypeScript', 'Tailwind'],
-      status: 'Hot',
-    },
-    {
-      title: 'Fullstack Developer (Node.js & Next.js)',
-      company: 'SmartCV Global',
-      location: 'Hà Nội, Việt Nam (Remote)',
-      salary: 'Negotiable',
-      tags: ['Next.js', 'PostgreSQL', 'Docker'],
-      status: 'New',
-    }
-  ]
+  const [page, setPage] = React.useState(1)
+  const jobsPerPage = 6
+  const totalPages = Math.ceil(jobs.length / jobsPerPage)
+  const paginatedJobs = jobs.slice((page - 1) * jobsPerPage, page * jobsPerPage)
 
   return (
-    <div className="space-y-12">
-      {/* Hero Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-card border border-border p-8 rounded-2xl shadow-sm">
-        <div className="lg:col-span-7 space-y-6 text-left">
-          <Badge variant="secondary" className="px-3 py-1 text-sm bg-primary/10 text-primary border-primary/20 flex items-center w-fit gap-1.5">
-            <Sparkles className="h-3 w-3" />
-            Next-Gen Recruitment Platform
-          </Badge>
-          
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight !margin-0">
-            {t('welcome') || 'Chào mừng đến với Smart CV'}
-          </h1>
-          
-          <p className="text-lg text-muted-foreground max-w-xl">
-            Xây dựng hồ sơ xin việc chuyên nghiệp, ứng tuyển nhanh chóng với kết quả tức thì nhờ công nghệ phân tích CV tiên tiến nhất.
-          </p>
+    <div className="mx-auto max-w-6xl space-y-12 px-4 pb-12 md:px-6">
+      <section className="glass-grid relative left-1/2 right-1/2 -mx-[50vw] w-screen overflow-hidden border-y border-white/10 bg-white/5 py-8 md:py-12" aria-label="Job Search Engine">
+        <div className="mx-auto max-w-6xl space-y-5 px-4 md:px-6">
+          <h1 className="hero-title text-4xl font-bold leading-tight md:text-5xl">{t('hero_title_before')} <span className="hero-gradient">{t('hero_title_highlight')}</span></h1>
+          <p className="text-base text-muted-foreground md:text-lg">{t('hero_subtitle')}</p>
 
-          {/* Interactive counter button using Zustand */}
-          <div className="flex flex-wrap gap-3 items-center pt-2">
-            <Button
-              variant="default"
-              size="lg"
-              onClick={increment}
-              className="font-semibold shadow-lg shadow-primary/25"
-            >
-              Nhấp vào tôi (Zustand State): {count}
-            </Button>
-            <Button variant="outline" size="lg" className="font-semibold">
-              Xem hướng dẫn
-            </Button>
-          </div>
-        </div>
+          <form className="grid gap-3 rounded-2xl border border-white/10 bg-[#1f2833]/80 p-3 md:grid-cols-[1fr_220px_150px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder={t('search_placeholder')} className="h-11 border-white/10 bg-[#111844]/70 pl-9" />
+            </div>
+            <Input placeholder={t('search_location')} className="h-11 border-white/10 bg-[#111844]/70" />
+            <Button type="submit" className="h-11">{t('search_jobs')}</Button>
+          </form>
 
-        <div className="lg:col-span-5 flex justify-center items-center relative py-6">
-          <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl -z-10 w-72 h-72 mx-auto"></div>
-          <div className="relative group">
-            <img
-              src={heroImg}
-              className="w-48 sm:w-60 h-auto object-contain drop-shadow-xl transform group-hover:scale-105 transition-all duration-300"
-              alt="Smart CV Hero"
-            />
-            <img
-              src={reactLogo}
-              className="absolute -top-4 -right-4 w-12 h-12 animate-[spin_8s_linear_infinite]"
-              alt="React logo"
-            />
-            <img
-              src={viteLogo}
-              className="absolute -bottom-4 -left-4 w-12 h-12 animate-bounce"
-              alt="Vite logo"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">{t('hot_tech')}</span>
+            {['React', 'Node.js', 'Python', 'Docker', 'Go', 'Kubernetes'].map((item) => (
+              <Badge key={item} variant="secondary" className="bg-secondary/90 text-secondary-foreground">{item}</Badge>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Job Search & Filters */}
-      <section className="space-y-6">
-        <div className="text-left space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Tìm Kiếm Công Việc Mơ Ước</h2>
-          <p className="text-sm text-muted-foreground">Khám phá hàng ngàn cơ hội nghề nghiệp được cập nhật mỗi ngày</p>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Platform Stats">
+        {stats.map((item) => (
+          <Card key={item.label} className="border-white/10 bg-[#1f2833]/90">
+            <CardContent className="p-5">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
+              <p className="mt-2 text-3xl font-bold">{item.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      <section className="space-y-4" aria-label="Popular Categories">
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-semibold">Popular Categories</h2>
+          <a href="#" className="inline-flex items-center gap-1 text-sm text-secondary hover:underline">View all categories <ChevronRight className="h-4 w-4" /></a>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {categories.map((category) => {
+            const Icon = category.icon
+            return (
+              <Card key={category.name} className="elevate-card border-white/10 bg-[#1f2833]/95">
+                <CardContent className="space-y-3 p-5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-secondary"><Icon className="h-5 w-5" /></div>
+                  <h3 className="text-base font-semibold">{category.name}</h3>
+                  <p className="text-sm text-muted-foreground">{category.jobs} open positions this week</p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      </section>
+
+      <section id="remote-jobs" className="space-y-4" aria-label="Featured and Hot Jobs">
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-semibold">{t('featured_jobs')}</h2>
+          <Link to="/about" className="text-sm text-secondary hover:underline">Explore career profile tips</Link>
         </div>
 
-        {/* Search Box using our custom Input & Button */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Nhập vị trí, kỹ năng hoặc công ty..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11"
-            />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {paginatedJobs.map((job) => (
+            <Link key={job.title} to="/jobs/$jobId" params={{ jobId: job.id }} className="block">
+              <article className="elevate-card rounded-2xl border border-white/10 bg-[#1f2833]/95 p-5 h-full">
+                <div className="mb-3 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-semibold">{job.title}</h3>
+                    <p className="text-sm text-muted-foreground">{job.company}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-white/10" onClick={(e) => e.preventDefault()}>☆</Button>
+                </div>
+
+                <div className="mb-3 flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1"><DollarSign className="h-3.5 w-3.5" />{job.salary}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                </div>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {job.skills.map((skill) => <Badge key={skill} variant="outline" className="border-white/20 text-xs">{skill}</Badge>)}
+                </div>
+
+                <div className="flex items-center justify-between border-t border-white/10 pt-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{job.posted}</span>
+                  <Button size="sm" onClick={(e) => e.preventDefault()}>Quick Apply</Button>
+                </div>
+              </article>
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm md:flex-row">
+          <p className="text-muted-foreground">Page {page} of {totalPages} • Showing {(page - 1) * jobsPerPage + 1}-{Math.min(page * jobsPerPage, jobs.length)} of {jobs.length} jobs</p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="border-white/20 bg-white/5">
+              <ChevronLeft className="h-4 w-4" /> Prev
+            </Button>
+            {Array.from({ length: totalPages }).map((_, idx) => (
+              <Button
+                key={idx + 1}
+                size="sm"
+                variant={page === idx + 1 ? 'default' : 'outline'}
+                onClick={() => setPage(idx + 1)}
+                className={page === idx + 1 ? '' : 'border-white/20 bg-white/5'}
+              >
+                {idx + 1}
+              </Button>
+            ))}
+            <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="border-white/20 bg-white/5">
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-          <Button size="lg" className="sm:w-36 gap-2">
-            <Search className="h-4 w-4" />
-            Tìm kiếm
-          </Button>
         </div>
+      </section>
 
-        {/* Tag suggestions */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-left">
-          <span className="text-xs font-semibold text-muted-foreground mr-1 uppercase tracking-wider">Xu hướng:</span>
-          {categories.map((cat, i) => (
-            <Badge
-              key={i}
-              variant={cat.variant}
-              className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-all duration-200"
-              onClick={() => setSearchQuery(cat.name.split(' ')[0])}
-            >
-              {cat.name} ({cat.count})
-            </Badge>
+      <section id="companies" className="space-y-4" aria-label="Top Companies Spotlight">
+        <h2 className="text-2xl font-semibold">Top Companies Spotlight</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {companies.map((company) => (
+            <Card key={company.name} className="elevate-card overflow-hidden border-white/10 bg-[#1f2833]">
+              <div className="h-24 bg-gradient-to-r from-primary/80 to-[#7281d4]" />
+              <CardContent className="space-y-3 p-5">
+                <div className="-mt-11 flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-[#111844]"><Building2 className="h-5 w-5" /></div>
+                <h3 className="text-base font-semibold">{company.name}</h3>
+                <p className="flex items-center gap-1 text-sm text-secondary"><Star className="h-4 w-4 fill-current" />4.5 ({company.reviews} reviews)</p>
+                <p className="text-sm text-muted-foreground">{company.pitch}</p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.hiring} Open Positions</span>
+                  <a href="#" className="text-secondary hover:underline">View Profile</a>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* Job Listings using our Card component */}
-      <section className="space-y-6">
-        <div className="text-left">
-          <h2 className="text-2xl font-bold tracking-tight">Việc Làm Nổi Bật</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {jobs
-            .filter((j) =>
-              searchQuery
-                ? j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  j.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  j.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
-                : true
-            )
-            .map((job, index) => (
-              <Card key={index} className="text-left flex flex-col justify-between">
-                <CardHeader className="pb-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant={job.status === 'Hot' ? 'default' : 'secondary'} className="px-2 py-0.5 text-[10px]">
-                      {job.status}
-                    </Badge>
-                    <span className="text-sm font-semibold text-primary">{job.salary}</span>
-                  </div>
-                  <CardTitle className="text-lg font-bold text-foreground line-clamp-1">{job.title}</CardTitle>
-                  <CardDescription className="font-medium text-muted-foreground">{job.company}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-4 space-y-3">
-                  <div className="flex items-center text-xs text-muted-foreground gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                    {job.location}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {job.tags.map((tag, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px] py-0 px-2">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-2 border-t border-border mt-auto">
-                  <Button variant="ghost" size="sm" className="w-full text-primary hover:text-primary hover:bg-primary/5 font-semibold">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Ứng tuyển ngay
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          {jobs.filter((j) =>
-            searchQuery
-              ? j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                j.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                j.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
-              : true
-          ).length === 0 && (
-            <div className="col-span-2 text-center py-10 text-muted-foreground">
-              Không tìm thấy công việc nào phù hợp với từ khóa "{searchQuery}"
+      <section id="salary-insights" className="grid gap-4 lg:grid-cols-[1.2fr_1fr]" aria-label="Salary and Career Insights">
+        <Card className="border-white/10 bg-[#1f2833]/95">
+          <CardContent className="space-y-4 p-6">
+            <p className="inline-flex items-center gap-2 text-sm text-secondary"><Sparkles className="h-4 w-4" /> Salary Insights</p>
+            <h3 className="text-xl font-semibold">2026 Vietnam Tech Salary Snapshot</h3>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"><span>Frontend Engineer (Mid)</span><strong className="text-white">$1,500 - $2,300</strong></p>
+              <p className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"><span>Backend Engineer (Senior)</span><strong className="text-white">$2,500 - $3,800</strong></p>
+              <p className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"><span>DevOps Engineer</span><strong className="text-white">$2,200 - $3,500</strong></p>
             </div>
-          )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-[#1f2833]/95">
+          <CardContent className="space-y-4 p-6">
+            <p className="inline-flex items-center gap-2 text-sm text-secondary"><TrendingUp className="h-4 w-4" /> Career Momentum</p>
+            <h3 className="text-xl font-semibold">Most Requested Skills by Employers</h3>
+            <div className="flex flex-wrap gap-2">
+              {['TypeScript', 'System Design', 'AWS', 'Kubernetes', 'GraphQL', 'Data Modeling', 'Prompt Engineering'].map((tag) => (
+                <Badge key={tag} variant="outline" className="border-white/20">{tag}</Badge>
+              ))}
+            </div>
+            <Button variant="outline" className="w-full border-white/20 bg-white/5">Download Salary Report</Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-4" aria-label="Candidate Success Stories">
+        <h2 className="text-2xl font-semibold">Candidate Success Stories</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          {testimonials.map((item) => (
+            <Card key={item.name} className="border-white/10 bg-[#1f2833]/90">
+              <CardContent className="space-y-3 p-5">
+                <p className="text-sm leading-6 text-muted-foreground">“{item.quote}”</p>
+                <div>
+                  <p className="font-semibold">{item.name}</p>
+                  <p className="text-sm text-muted-foreground">{item.role}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section id="internships" className="space-y-4" aria-label="How It Works">
+        <h2 className="text-2xl font-semibold">How SmartCV Works</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { step: '1', title: 'Create your profile', desc: 'Add your skills, projects, and preferred role in under 10 minutes.' },
+            { step: '2', title: 'Get curated matches', desc: 'Receive job recommendations based on stack, level, and salary expectations.' },
+            { step: '3', title: 'Apply and track', desc: 'Submit applications quickly and track interview status in one dashboard.' },
+          ].map((item) => (
+            <Card key={item.step} className="border-white/10 bg-[#1f2833]/90">
+              <CardContent className="space-y-3 p-5">
+                <Badge className="bg-primary/20 text-secondary">Step {item.step}</Badge>
+                <h3 className="text-lg font-semibold">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.desc}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section id="resources" className="space-y-4" aria-label="Career Resources">
+        <h2 className="text-2xl font-semibold">Career Resources & Blog Hub</h2>
+        <div id="cv-templates" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {resources.map((title) => (
+            <Card key={title} className="border-white/10 bg-[#1f2833]/90">
+              <CardContent className="p-5">
+                <p className="mb-3 inline-flex items-center gap-1 text-xs text-secondary"><BookOpen className="h-3.5 w-3.5" />Career Guide</p>
+                <h3 className="text-base font-semibold">{title}</h3>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section id="interview-guides" className="space-y-4" aria-label="FAQ">
+        <h2 className="text-2xl font-semibold">Frequently Asked Questions</h2>
+        <div className="space-y-3">
+          {faqs.map((item) => (
+            <Card key={item.q} className="border-white/10 bg-[#1f2833]/90">
+              <CardContent className="space-y-2 p-5">
+                <h3 className="font-semibold">{item.q}</h3>
+                <p className="text-sm text-muted-foreground">{item.a}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
     </div>
