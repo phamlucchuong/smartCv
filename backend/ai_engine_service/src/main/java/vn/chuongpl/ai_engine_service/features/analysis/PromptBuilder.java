@@ -30,6 +30,10 @@ public class PromptBuilder {
         return apply(load("prompts/interview_questions.md"), vars);
     }
 
+    public String buildExtractSkillsPrompt(Map<String, Object> vars) {
+        return apply(load("prompts/extract_skills.md"), vars);
+    }
+
     public String systemPrompt() {
         return load("prompts/skill.md");
     }
