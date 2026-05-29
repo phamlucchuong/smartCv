@@ -16,6 +16,12 @@ import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -85,6 +91,51 @@ public class CandidateService {
         candidate.setUserId(fixedUserId);
         candidate.setUpdatedAt(LocalDateTime.now());
         return candidateMapper.toCandidateResponse(candidateRepository.save(candidate), user);
+    }
+
+    public CandidateResponse getMe(String userId) {
+        return getByUserId(userId);
+    }
+
+    public CandidateResponse saveCvUrl(String userId, String cvUrl) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        candidate.setCvUrl(cvUrl);
+        candidate.setUpdatedAt(LocalDateTime.now());
+        return candidateMapper.toCandidateResponse(candidateRepository.save(candidate), user);
+    }
+
+    public void mergeSkills(String userId, List<String> newSkills) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+
+        List<String> existing = candidate.getSkills() != null
+                ? new ArrayList<>(candidate.getSkills())
+                : new ArrayList<>();
+
+        Set<String> existingLower = existing.stream()
+                .filter(s -> s != null && !s.isBlank())
+                .map(s -> s.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (newSkills != null) {
+            for (String skill : newSkills) {
+                if (skill == null || skill.isBlank()) {
+                    continue;
+                }
+                String normalized = skill.toLowerCase(Locale.ROOT);
+                if (!existingLower.contains(normalized)) {
+                    existing.add(skill);
+                    existingLower.add(normalized);
+                }
+            }
+        }
+
+        candidate.setSkills(existing);
+        candidate.setUpdatedAt(LocalDateTime.now());
+        candidateRepository.save(candidate);
     }
 
     public void delete(String id) {
