@@ -14,6 +14,9 @@ public class RabbitMQConfig {
     public static final String EXCHANGE = "notification.exchange";
     public static final String QUEUE = "otp.queue";
     public static final String ROUTING_KEY = "otp.routing.key";
+    public static final String SKILL_EXCHANGE = "candidate.skill.exchange";
+    public static final String SKILL_EXTRACT_QUEUE = "candidate.skill.extract.queue";
+    public static final String SKILL_ROUTING_KEY = "candidate.skill.extract";
  
     @Bean
     public Queue otpQueue() {
@@ -26,8 +29,23 @@ public class RabbitMQConfig {
     }
  
     @Bean
-    public Binding binding(Queue queue, DirectExchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
+    public Binding binding() {
+        return BindingBuilder.bind(otpQueue()).to(exchange()).with(ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue skillExtractQueue() {
+        return new Queue(SKILL_EXTRACT_QUEUE, true);
+    }
+
+    @Bean
+    public DirectExchange skillExchange() {
+        return new DirectExchange(SKILL_EXCHANGE);
+    }
+
+    @Bean
+    public Binding skillBinding() {
+        return BindingBuilder.bind(skillExtractQueue()).to(skillExchange()).with(SKILL_ROUTING_KEY);
     }
  
     @Bean

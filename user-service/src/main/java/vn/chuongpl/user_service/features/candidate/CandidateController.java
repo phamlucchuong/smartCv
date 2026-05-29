@@ -12,6 +12,7 @@ import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.CandidateRequest;
 import vn.chuongpl.user_service.dtos.response.CandidateResponse;
 import vn.chuongpl.user_service.dtos.response.CvUploadResponse;
+import vn.chuongpl.user_service.integration.ai.SkillExtractPublisher;
 
 @RestController
 @RequestMapping("/api/candidates")
@@ -20,6 +21,7 @@ import vn.chuongpl.user_service.dtos.response.CvUploadResponse;
 public class CandidateController {
     CandidateService candidateService;
     S3Service s3Service;
+    SkillExtractPublisher skillExtractPublisher;
 
     @PostMapping
     @PreAuthorize("hasRole('CANDIDATE')")
@@ -54,11 +56,19 @@ public class CandidateController {
         return ApiResponse.<CandidateResponse>builder().data(candidateService.update(id, request, userId, isAdmin)).build();
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<CandidateResponse> getMe(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<CandidateResponse>builder().data(candidateService.getMe(userId)).build();
+    }
+
     @PostMapping("/cv/upload")
     @PreAuthorize("hasRole('CANDIDATE')")
     public ApiResponse<CvUploadResponse> uploadCv(@RequestParam("file") MultipartFile file,
                                                    @AuthenticationPrincipal String userId) {
         String url = s3Service.uploadCv(file, userId);
+        candidateService.saveCvUrl(userId, url);
+        skillExtractPublisher.publish(userId, url);
         return ApiResponse.<CvUploadResponse>builder()
                 .message("CV uploaded successfully")
                 .data(new CvUploadResponse(url))
