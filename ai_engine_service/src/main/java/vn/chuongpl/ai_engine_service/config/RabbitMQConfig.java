@@ -14,6 +14,9 @@ public class RabbitMQConfig {
     public static final String CV_SCORING_EXCHANGE = "cv.scoring.exchange";
     public static final String CV_SCORING_KEY = "cv.scoring";
     public static final String CV_SCORING_QUEUE = "cv.scoring.queue";
+    public static final String SKILL_EXCHANGE = "candidate.skill.exchange";
+    public static final String SKILL_EXTRACT_QUEUE = "candidate.skill.extract.queue";
+    public static final String SKILL_ROUTING_KEY = "candidate.skill.extract";
 
     @Bean
     DirectExchange cvScoringExchange() {
@@ -28,6 +31,21 @@ public class RabbitMQConfig {
     @Bean
     Binding cvScoringBinding() {
         return BindingBuilder.bind(cvScoringQueue()).to(cvScoringExchange()).with(CV_SCORING_KEY);
+    }
+
+    @Bean
+    DirectExchange skillExchange() {
+        return new DirectExchange(SKILL_EXCHANGE);
+    }
+
+    @Bean
+    Queue skillExtractQueue() {
+        return new Queue(SKILL_EXTRACT_QUEUE, true);
+    }
+
+    @Bean
+    Binding skillBinding() {
+        return BindingBuilder.bind(skillExtractQueue()).to(skillExchange()).with(SKILL_ROUTING_KEY);
     }
 
     @Bean

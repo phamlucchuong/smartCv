@@ -15,6 +15,7 @@ import vn.chuongpl.ai_engine_service.dtos.response.CvAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvImprovementResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.InterviewQuestionsResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.JobRecommendationResponse;
+import vn.chuongpl.ai_engine_service.dtos.response.SkillExtractionResponse;
 import vn.chuongpl.ai_engine_service.enums.ErrorCode;
 import vn.chuongpl.ai_engine_service.exception.AppException;
 import vn.chuongpl.ai_engine_service.integration.cv.CvTextExtractor;
@@ -73,6 +74,13 @@ public class AnalysisService {
 
         String aiContent = callAi(prompt);
         return parse(aiContent, CvAnalysisResponse.class);
+    }
+
+    public SkillExtractionResponse extractSkills(String cvUrl) {
+        String cvText = cvTextExtractor.resolveCvText(null, cvUrl);
+        String prompt = promptBuilder.buildExtractSkillsPrompt(Map.of("CV_TEXT", cvText));
+        String aiContent = callAi(prompt);
+        return parse(aiContent, SkillExtractionResponse.class);
     }
 
     public CvImprovementResponse improve(CvImproveRequest request) {
