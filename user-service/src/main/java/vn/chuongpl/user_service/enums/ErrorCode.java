@@ -27,7 +27,9 @@ public enum ErrorCode {
     FILE_REQUIRED(6001, "File is required"),
     FILE_TOO_LARGE(6002, "File must not exceed 5MB"),
     INVALID_FILE_TYPE(6003, "Only PDF files are accepted"),
-    FILE_UPLOAD_FAILED(6004, "Failed to upload file, please try again");
+    FILE_UPLOAD_FAILED(6004, "Failed to upload file, please try again"),
+    INSUFFICIENT_QUOTA(6005, "Insufficient job post quota"),
+    USER_LOCKED(1011, "User account is locked");
 
     private int code;
     private String message;

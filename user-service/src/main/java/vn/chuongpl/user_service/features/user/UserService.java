@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.ChangePasswordRequest;
 import vn.chuongpl.user_service.dtos.request.UpdateRolesRequest;
+import vn.chuongpl.user_service.dtos.request.UserStatusRequest;
 import vn.chuongpl.user_service.dtos.request.UserUpdateRequest;
 import vn.chuongpl.user_service.dtos.response.UserResponse;
 import vn.chuongpl.user_service.enums.ErrorCode;
@@ -91,17 +92,17 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    public PageResponse<UserResponse> getAllUsers(Integer page) {
-        int limit = defaultPageSize;
-        int pageCurrent = (page != null && page > 0) ? page - 1 : 0;
-        Pageable pageable = PageRequest.of(pageCurrent, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public PageResponse<UserResponse> getAllUsers(int page, int size) {
+        int pageCurrent = page > 0 ? page - 1 : 0;
+        int safeSize = size > 0 ? size : defaultPageSize;
+        Pageable pageable = PageRequest.of(pageCurrent, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<User> users = userRepository.findAll(pageable);
 
         return PageResponse.<UserResponse>builder()
                 .items(users.getContent().stream().map(userMapper::toUserResponse).toList())
                 .total(users.getTotalElements())
                 .page(pageCurrent + 1)
-                .pageSize(limit)
+                .pageSize(safeSize)
                 .totalPages(users.getTotalPages())
                 .build();
     }
@@ -109,8 +110,21 @@ public class UserService {
     public void deleteUser(String id) {
         User user = userRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        user.setDeleted(!user.isDeleted());
+        user.setDeleted(true);
+        user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    public UserResponse updateUserStatus(String userId, UserStatusRequest request) {
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.setLocked(request.isLocked());
+        user.setUpdatedAt(LocalDateTime.now());
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    public boolean isEmailAvailable(String email) {
+        return !userRepository.existsByEmailAndDeletedFalse(email);
     }
 
     public UserResponse getUserById(String id) {
