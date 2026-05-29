@@ -36,6 +36,12 @@ public class RecruiterController {
         return ApiResponse.<RecruiterResponse>builder().data(recruiterService.getByUserId(userId)).build();
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<RecruiterResponse> getMe(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<RecruiterResponse>builder().data(recruiterService.getMe(userId)).build();
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<RecruiterResponse>> getAll(@RequestParam(defaultValue = "1") int page,
