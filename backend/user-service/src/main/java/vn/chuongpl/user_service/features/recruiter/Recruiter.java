@@ -23,6 +23,7 @@ public class Recruiter {
     @Field(name = "user_id")
     String userId;
 
+    // ── Company info ──────────────────────────────────────────────────────────
     @Field(name = "company_name")
     String companyName;
 
@@ -35,12 +36,52 @@ public class Recruiter {
     @Field(name = "company_description")
     String companyDescription;
 
-    @Field(name = "tax_code")
-    String taxCode;
+    @Field(name = "company_phone")
+    String companyPhone;
 
+    @Field(name = "company_size")
+    String companySize;
+
+    @Field(name = "company_type")
+    String companyType;
+
+    @Field(name = "founded_year")
+    Integer foundedYear;
+
+    String industry;
+
+    // ── Media ─────────────────────────────────────────────────────────────────
     @Field(name = "logo_url")
     String logoUrl;
 
+    @Field(name = "cover_image_url")
+    String coverImageUrl;
+
+    // ── Legal ─────────────────────────────────────────────────────────────────
+    @Field(name = "tax_code")
+    String taxCode;
+
+    @Field(name = "business_license_url")
+    String businessLicenseUrl;
+
+    // ── Social links ──────────────────────────────────────────────────────────
+    @Field(name = "linkedin_url")
+    String linkedinUrl;
+
+    @Field(name = "facebook_url")
+    String facebookUrl;
+
+    // ── HR contact ────────────────────────────────────────────────────────────
+    @Field(name = "contact_name")
+    String contactName;
+
+    @Field(name = "contact_email")
+    String contactEmail;
+
+    @Field(name = "contact_phone")
+    String contactPhone;
+
+    // ── Status & quota ────────────────────────────────────────────────────────
     @Builder.Default
     RecruiterStatus status = RecruiterStatus.PENDING;
 
@@ -52,6 +93,7 @@ public class Recruiter {
     @Builder.Default
     int quotaCvViews = 0;
 
+    // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;
 

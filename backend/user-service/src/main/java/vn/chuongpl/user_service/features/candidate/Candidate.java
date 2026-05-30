@@ -5,6 +5,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.MongoId;
+import vn.chuongpl.user_service.enums.JobType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,12 +25,57 @@ public class Candidate {
     @Field(name = "user_id")
     String userId;
 
+    // ── Basic info ────────────────────────────────────────────────────────────
     LocalDate dob;
     String gender;
     String address;
     String bio;
+
+    /** Professional headline, e.g. "Senior Java Developer" */
+    String title;
+
+    @Field(name = "avatar_url")
+    String avatarUrl;
+
+    // ── Skills & experience ──────────────────────────────────────────────────
     List<String> skills;
 
+    @Field(name = "years_of_experience")
+    Integer yearsOfExperience;
+
+    List<WorkExperience> experiences;
+    List<Education> educations;
+    List<Certification> certifications;
+    List<Language> languages;
+
+    // ── Preferences ──────────────────────────────────────────────────────────
+    @Field(name = "job_type")
+    JobType jobType;
+
+    @Field(name = "preferred_location")
+    String preferredLocation;
+
+    @Field(name = "expected_salary_min")
+    Integer expectedSalaryMin;
+
+    @Field(name = "expected_salary_max")
+    Integer expectedSalaryMax;
+
+    // ── Online presence ───────────────────────────────────────────────────────
+    @Field(name = "portfolio_url")
+    String portfolioUrl;
+
+    @Field(name = "github_url")
+    String githubUrl;
+
+    @Field(name = "linkedin_url")
+    String linkedinUrl;
+
+    // ── CV ────────────────────────────────────────────────────────────────────
+    @Field(name = "cv_url")
+    String cvUrl;
+
+    // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;
 

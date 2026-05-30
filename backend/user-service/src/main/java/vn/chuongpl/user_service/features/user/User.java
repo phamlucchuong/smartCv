@@ -35,6 +35,8 @@ public class User {
     boolean verified = false;
     @Builder.Default
     boolean deleted = false;
+    @Builder.Default
+    boolean locked = false;
     @DocumentReference
     Set<Role> roles;
 }

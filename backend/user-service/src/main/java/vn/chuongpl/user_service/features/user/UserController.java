@@ -12,6 +12,7 @@ import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.ChangePasswordRequest;
 import vn.chuongpl.user_service.dtos.request.UpdateRolesRequest;
+import vn.chuongpl.user_service.dtos.request.UserStatusRequest;
 import vn.chuongpl.user_service.dtos.request.UserUpdateRequest;
 import vn.chuongpl.user_service.dtos.response.UserResponse;
 
@@ -30,8 +31,21 @@ public class UserController {
 
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<PageResponse<UserResponse>> getAllUsers(@RequestParam Integer page) {
-        return ApiResponse.<PageResponse<UserResponse>>builder().message("Lay danh sach người dùng thành công").data(userService.getAllUsers(page != null ? page : 0)).build();
+    public ApiResponse<PageResponse<UserResponse>> getAllUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.<PageResponse<UserResponse>>builder()
+                .message("Lay danh sach người dùng thành công")
+                .data(userService.getAllUsers(page, size))
+                .build();
+    }
+
+    @GetMapping("/verify-email/{email}")
+    public ApiResponse<Boolean> verifyEmail(@PathVariable String email) {
+        return ApiResponse.<Boolean>builder()
+                .data(userService.isEmailAvailable(email))
+                .message("Email availability checked")
+                .build();
     }
 
     @GetMapping("/me")
@@ -41,6 +55,7 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.name")
     public ApiResponse<UserResponse> updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request) {
         return ApiResponse.<UserResponse>builder().message("Cap nhat người dùng thành công").data(userService.updateUserById(userId, request)).build();
     }
@@ -50,6 +65,16 @@ public class UserController {
                                             @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(userId, request);
         return ApiResponse.<Void>builder().message("Change password successfully").build();
+    }
+
+    @PatchMapping("/{userId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<UserResponse> updateUserStatus(@PathVariable String userId,
+                                                      @RequestBody UserStatusRequest request) {
+        return ApiResponse.<UserResponse>builder()
+                .data(userService.updateUserStatus(userId, request))
+                .message(request.isLocked() ? "User locked successfully" : "User unlocked successfully")
+                .build();
     }
 
     @PatchMapping("/{userId}/roles")

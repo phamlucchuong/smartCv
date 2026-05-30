@@ -8,8 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.user_service.dtos.PageResponse;
+import vn.chuongpl.user_service.dtos.request.QuotaDeltaRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
+import vn.chuongpl.user_service.dtos.response.RecruiterProfileResponse;
 import vn.chuongpl.user_service.dtos.response.RecruiterResponse;
 import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
@@ -105,6 +107,62 @@ public class RecruiterService {
         recruiter.setUpdatedAt(LocalDateTime.now());
 
         return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+    }
+
+    public RecruiterResponse getMe(String userId) {
+        return getByUserId(userId);
+    }
+
+    public RecruiterProfileResponse getProfile(String userId) {
+        Recruiter r = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        return RecruiterProfileResponse.builder()
+                .recruiterId(r.getId())
+                .userId(r.getUserId())
+                .status(r.getStatus())
+                .quotaJobPost(r.getQuotaJobPost())
+                .quotaCvViews(r.getQuotaCvViews())
+                .build();
+    }
+
+    public RecruiterProfileResponse addQuota(String userId, QuotaDeltaRequest request) {
+        Recruiter r = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        if (r.getQuotaJobPost() != -1) {
+            r.setQuotaJobPost(r.getQuotaJobPost() + request.getAddJobPosts());
+        }
+        if (r.getQuotaCvViews() != -1) {
+            r.setQuotaCvViews(r.getQuotaCvViews() + request.getAddCvViews());
+        }
+        r.setUpdatedAt(LocalDateTime.now());
+        Recruiter saved = recruiterRepository.save(r);
+        return RecruiterProfileResponse.builder()
+                .recruiterId(saved.getId()).userId(saved.getUserId())
+                .status(saved.getStatus()).quotaJobPost(saved.getQuotaJobPost()).quotaCvViews(saved.getQuotaCvViews())
+                .build();
+    }
+
+    public void consumeJobQuota(String userId) {
+        Recruiter r = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        if (r.getQuotaJobPost() == 0) {
+            throw new AppException(ErrorCode.INSUFFICIENT_QUOTA);
+        }
+        if (r.getQuotaJobPost() != -1) {
+            r.setQuotaJobPost(r.getQuotaJobPost() - 1);
+            r.setUpdatedAt(LocalDateTime.now());
+            recruiterRepository.save(r);
+        }
+    }
+
+    public void refundJobQuota(String userId) {
+        Recruiter r = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        if (r.getQuotaJobPost() != -1) {
+            r.setQuotaJobPost(r.getQuotaJobPost() + 1);
+            r.setUpdatedAt(LocalDateTime.now());
+            recruiterRepository.save(r);
+        }
     }
 
     public void delete(String id) {

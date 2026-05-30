@@ -51,6 +51,8 @@ public class SecurityConfig {
                                 "/api/auth/reset-password", "/api/auth/login",
                                 "/api/auth/introspect", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/verify-email/**").permitAll()
+                        // Internal service-to-service endpoints — protected by InternalAuthFilter (X-Gateway-Secret)
+                        .requestMatchers("/api/internal/**").permitAll()
                         .anyRequest().authenticated()
                 );
         return http.build();
