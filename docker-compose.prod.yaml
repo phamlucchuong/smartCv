@@ -109,38 +109,14 @@ services:
     env_file:
       - .env
     environment:
-      OLLAMA_BASE_URL: http://ollama:11434
+      AI_BASE_URL: ${AI_BASE_URL}
+      AI_API_KEY: ${AI_API_KEY}
+      AI_MODEL: ${AI_MODEL}
       JOB_SERVICE_URL: http://job-service:8082/job
       USER_SERVICE_URL: http://user-service:8081/user
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
     depends_on:
-      - ollama
       - job-service
-    networks:
-      - smartCv-net
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: smartCv-ollama
-    restart: unless-stopped
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-    networks:
-      - smartCv-net
-
-  ollama-init:
-    image: ollama/ollama:latest
-    container_name: smartCv-ollama-init
-    restart: "no"
-    volumes:
-      - ollama_data:/root/.ollama
-    depends_on:
-      - ollama
-    entrypoint: ["sh", "-c", "sleep 5 && ollama pull llama3.2"]
     networks:
       - smartCv-net
 
@@ -230,7 +206,6 @@ volumes:
   redis_data:
   elasticsearch_data:
   rabbitmq_data:
-  ollama_data:
 
 networks:
   smartCv-net:
