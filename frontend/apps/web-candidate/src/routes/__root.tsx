@@ -29,7 +29,7 @@ function RootComponent() {
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const hideFooter = pathname === '/signin' || pathname === '/signup'
-  const [theme, setTheme] = React.useState<'dark' | 'light'>('dark')
+  const [theme, setTheme] = React.useState<'dark' | 'light'>('light')
   const [language, setLanguage] = React.useState(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
   const [jobMenuOpen, setJobMenuOpen] = React.useState(false)
   const [resourceMenuOpen, setResourceMenuOpen] = React.useState(false)
@@ -122,7 +122,7 @@ function RootComponent() {
   }, [pathname, refreshAuthState])
 
   React.useEffect(() => {
-    document.body.classList.toggle('theme-light', theme === 'light')
+    document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
   React.useEffect(() => {
@@ -156,15 +156,15 @@ function RootComponent() {
   }, [])
 
   return (
-    <div className="min-h-screen theme-text-main">
-      <header className="theme-header-bg sticky top-0 z-40 border-b theme-border backdrop-blur-xl">
+    <div className="min-h-screen text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3 md:gap-4">
             <Link to="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground">
                 S
               </div>
-              <span className="text-xl font-bold theme-text-main">Smart<span className="theme-text-accent">CV</span></span>
+              <span className="text-xl font-bold text-foreground">Smart<span className="text-primary">CV</span></span>
             </Link>
             <div className="hidden items-center gap-2 md:flex">
               <div className="relative" ref={jobMenuRef}>
@@ -173,13 +173,13 @@ function RootComponent() {
                     setJobMenuOpen((v) => !v)
                     setResourceMenuOpen(false)
                   }}
-                  className="theme-border theme-surface-soft theme-text-sub flex h-10 min-w-44 cursor-pointer items-center justify-between rounded-lg border px-3 text-sm"
+                  className="border-border bg-muted/60 text-muted-foreground flex h-10 min-w-44 cursor-pointer items-center justify-between rounded-lg border px-3 text-sm"
                 >
                   {jobFilter}
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </button>
                 {jobMenuOpen && (
-                  <div className="theme-border theme-surface-1 absolute left-0 top-12 z-50 w-52 rounded-lg border p-1 shadow-xl">
+                  <div className="border-border bg-card absolute left-0 top-12 z-50 w-52 rounded-lg border p-1 shadow-xl">
                     {jobOptions.map((item, idx) => (
                       <button
                         key={item}
@@ -189,7 +189,7 @@ function RootComponent() {
                           navigateToJobOption(item)
                           setJobMenuOpen(false)
                         }}
-                        className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === jobHighlightIndex ? 'theme-option-active' : 'theme-option-hover'}`}
+                        className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === jobHighlightIndex ? 'bg-muted/80' : 'hover:bg-muted/80'}`}
                       >
                         {item}
                       </button>
@@ -204,13 +204,13 @@ function RootComponent() {
                     setResourceMenuOpen((v) => !v)
                     setJobMenuOpen(false)
                   }}
-                  className="theme-border theme-surface-soft theme-text-sub flex h-10 min-w-44 cursor-pointer items-center justify-between rounded-lg border px-3 text-sm"
+                  className="border-border bg-muted/60 text-muted-foreground flex h-10 min-w-44 cursor-pointer items-center justify-between rounded-lg border px-3 text-sm"
                 >
                   {resourceFilter}
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </button>
                 {resourceMenuOpen && (
-                  <div className="theme-border theme-surface-1 absolute left-0 top-12 z-50 w-52 rounded-lg border p-1 shadow-xl">
+                  <div className="border-border bg-card absolute left-0 top-12 z-50 w-52 rounded-lg border p-1 shadow-xl">
                     {resourceOptions.map((item, idx) => (
                       <button
                         key={item}
@@ -220,7 +220,7 @@ function RootComponent() {
                           navigateToResourceOption(item)
                           setResourceMenuOpen(false)
                         }}
-                        className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === resourceHighlightIndex ? 'theme-option-active' : 'theme-option-hover'}`}
+                        className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === resourceHighlightIndex ? 'bg-muted/80' : 'hover:bg-muted/80'}`}
                       >
                         {item}
                       </button>
@@ -232,24 +232,24 @@ function RootComponent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="theme-text-sub theme-option-hover">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-muted/80">
               <Bell className="h-5 w-5" />
             </Button>
             <button
               onClick={toggleLanguage}
-              className="theme-border theme-surface-soft relative flex h-10 w-[92px] cursor-pointer items-center rounded-lg border p-1 text-sm"
+              className="border-border bg-muted/60 relative flex h-10 w-[92px] cursor-pointer items-center rounded-lg border p-1 text-sm"
             >
               <span
                 className={`absolute top-1 h-8 w-[42px] rounded-md bg-primary transition-transform duration-200 ${language === 'EN' ? 'translate-x-0' : 'translate-x-[42px]'}`}
               />
-              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'EN' ? 'text-primary-foreground' : 'theme-text-sub'}`}>EN</span>
-              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'VI' ? 'text-primary-foreground' : 'theme-text-sub'}`}>VI</span>
+              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'EN' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>EN</span>
+              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'VI' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>VI</span>
             </button>
             <Button
               variant="outline"
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               size="icon"
-              className="theme-border theme-surface-soft theme-text-sub transition-transform duration-300 active:scale-95"
+              className="border-border bg-muted/60 text-muted-foreground transition-transform duration-300 active:scale-95"
             >
               {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
@@ -265,7 +265,7 @@ function RootComponent() {
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                     {user.initials}
                   </div>
-                  <span className="text-sm font-medium theme-text-main">{user.firstName}</span>
+                  <span className="text-sm font-medium text-foreground">{user.firstName}</span>
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
                 </div>
 
@@ -316,7 +316,7 @@ function RootComponent() {
               </div>
             ) : (
               <>
-                <Link to="/signin"><Button variant="outline" className="theme-border theme-surface-soft theme-text-sub">{t('login')}</Button></Link>
+                <Link to="/signin"><Button variant="outline" className="border-border bg-muted/60 text-muted-foreground">{t('login')}</Button></Link>
                 <Link to="/signup"><Button className="bg-primary hover:bg-primary/90">{t('register')}</Button></Link>
               </>
             )}
@@ -330,7 +330,7 @@ function RootComponent() {
         <Outlet />
       </main>
 
-      {!hideFooter && <footer className="theme-footer-bg border-t theme-border">
+      {!hideFooter && <footer className="bg-card border-t border-border">
         <div className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10">
           <div className="grid gap-10 md:grid-cols-4">
             <div className="space-y-3">
@@ -338,21 +338,21 @@ function RootComponent() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
                   S
                 </div>
-                <span className="theme-text-main text-lg font-semibold">Smart<span className="theme-text-accent">CV</span></span>
+                <span className="text-foreground text-lg font-semibold">Smart<span className="text-primary">CV</span></span>
               </div>
-              <p className="theme-text-sub text-sm leading-6">
+              <p className="text-muted-foreground text-sm leading-6">
                 A trusted hiring platform connecting developers with transparent, high-quality tech opportunities.
               </p>
-              <div className="theme-text-sub flex items-center gap-2">
-                <a href="#" className="theme-border rounded-md border p-2 hover:opacity-80"><Facebook className="h-4 w-4" /></a>
-                <a href="#" className="theme-border rounded-md border p-2 hover:opacity-80"><Linkedin className="h-4 w-4" /></a>
-                <a href="#" className="theme-border rounded-md border p-2 hover:opacity-80"><Globe className="h-4 w-4" /></a>
+              <div className="text-muted-foreground flex items-center gap-2">
+                <a href="#" className="border-border rounded-md border p-2 hover:opacity-80"><Facebook className="h-4 w-4" /></a>
+                <a href="#" className="border-border rounded-md border p-2 hover:opacity-80"><Linkedin className="h-4 w-4" /></a>
+                <a href="#" className="border-border rounded-md border p-2 hover:opacity-80"><Globe className="h-4 w-4" /></a>
               </div>
             </div>
 
             <div>
-              <h3 className="theme-text-main mb-3 text-sm font-semibold uppercase tracking-wide">For Candidates</h3>
-              <ul className="theme-text-sub space-y-2 text-sm">
+              <h3 className="text-foreground mb-3 text-sm font-semibold uppercase tracking-wide">For Candidates</h3>
+              <ul className="text-muted-foreground space-y-2 text-sm">
                 <li><a href="#" className="hover:opacity-80">Browse Jobs</a></li>
                 <li><a href="#" className="hover:opacity-80">Top Companies</a></li>
                 <li><a href="#" className="hover:opacity-80">Salary Insights</a></li>
@@ -361,8 +361,8 @@ function RootComponent() {
             </div>
 
             <div>
-              <h3 className="theme-text-main mb-3 text-sm font-semibold uppercase tracking-wide">Resources</h3>
-              <ul className="theme-text-sub space-y-2 text-sm">
+              <h3 className="text-foreground mb-3 text-sm font-semibold uppercase tracking-wide">Resources</h3>
+              <ul className="text-muted-foreground space-y-2 text-sm">
                 <li><a href="#" className="hover:opacity-80">CV Templates</a></li>
                 <li><a href="#" className="hover:opacity-80">Interview Prep</a></li>
                 <li><a href="#" className="hover:opacity-80">Community Stories</a></li>
@@ -371,8 +371,8 @@ function RootComponent() {
             </div>
 
             <div>
-              <h3 className="theme-text-main mb-3 text-sm font-semibold uppercase tracking-wide">Contact</h3>
-              <ul className="theme-text-sub space-y-2 text-sm">
+              <h3 className="text-foreground mb-3 text-sm font-semibold uppercase tracking-wide">Contact</h3>
+              <ul className="text-muted-foreground space-y-2 text-sm">
                 <li className="inline-flex items-center gap-2"><Mail className="h-4 w-4" />support@smartcv.vn</li>
                 <li>Mon - Fri, 09:00 - 18:00 (GMT+7)</li>
                 <li>Ho Chi Minh City, Vietnam</li>
@@ -381,7 +381,7 @@ function RootComponent() {
           </div>
         </div>
 
-        <div className="theme-border theme-text-sub flex flex-col gap-2 border-t px-4 py-4 text-xs md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="border-border text-muted-foreground flex flex-col gap-2 border-t px-4 py-4 text-xs md:flex-row md:items-center md:justify-between md:px-6">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-2 py-1 md:flex-row md:items-center md:justify-between md:px-4">
             <p>© 2026 SmartCV. All rights reserved.</p>
             <div className="flex items-center gap-4">

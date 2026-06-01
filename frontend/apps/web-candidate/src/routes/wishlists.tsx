@@ -42,12 +42,12 @@ function WishlistsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold theme-text-main">Danh sách yêu thích</h1>
+        <h1 className="text-2xl font-bold text-foreground">Danh sách yêu thích</h1>
         <p className="mt-1 text-sm text-muted-foreground">{jobs.length} việc làm đã lưu</p>
       </header>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-        <Input placeholder="Tìm trong danh sách..." className="h-10 max-w-sm border-white/10 bg-[#1f2833]/70" />
+        <Input placeholder="Tìm trong danh sách..." className="h-10 max-w-sm border-input bg-background" />
         <div className="flex flex-wrap gap-2">
           {chips.map((chip) => (
             <button
@@ -70,10 +70,10 @@ function WishlistsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => (
-            <article key={job.id} className="rounded-2xl border border-white/10 bg-[#1f2833]/95 p-5">
+            <article key={job.id} className="elevate-card rounded-2xl card-surface p-5">
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div className="flex gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#111844] text-xs font-bold text-muted-foreground">{job.initials}</div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs font-bold text-muted-foreground">{job.initials}</div>
                   <div>
                     <h3 className="text-base font-semibold">{job.title}</h3>
                     <p className="text-sm text-muted-foreground">{job.company}</p>
@@ -83,19 +83,19 @@ function WishlistsPage() {
 
               <div className="mb-3 flex flex-wrap gap-2 text-xs">
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1"><DollarSign className="h-3.5 w-3.5" />{job.salary}</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
               </div>
 
               <div className="mb-4 flex flex-wrap gap-2">
-                {job.skills.map((skill) => <Badge key={skill} variant="outline" className="border-white/20 text-xs">{skill}</Badge>)}
+                {job.skills.map((skill) => <Badge key={skill} variant="outline" className="border-border bg-secondary/70 text-xs text-secondary-foreground">{skill}</Badge>)}
               </div>
 
-              <div className="flex items-center justify-between border-t border-white/10 pt-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{job.savedAt}</span>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-full border border-white/10"
+                  className="h-8 w-8 rounded-full border border-border hover:bg-danger-soft"
                   onClick={() => setJobs((prev) => prev.filter((item) => item.id !== job.id))}
                 >
                   <Heart className="h-4 w-4 fill-current text-primary" />

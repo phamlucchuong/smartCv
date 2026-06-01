@@ -2,10 +2,28 @@
   "name": "smart-cv-fe",
   "private": true,
   "scripts": {
+    "install:all": "pnpm install",
     "dev": "pnpm -r --parallel dev",
+    "dev:candidate": "pnpm -F web-candidate dev",
+    "dev:recruiter": "pnpm -F web-recruiter dev",
+    "dev:admin": "pnpm -F web-admin dev",
     "build": "pnpm -r build",
+    "build:candidate": "pnpm -F web-candidate build",
+    "build:recruiter": "pnpm -F web-recruiter build",
+    "build:admin": "pnpm -F web-admin build",
     "lint": "pnpm -r lint",
-    "generate:api": "pnpm -F @smart-cv/api generate"
+    "lint:candidate": "pnpm -F web-candidate lint",
+    "lint:recruiter": "pnpm -F web-recruiter lint",
+    "lint:admin": "pnpm -F web-admin lint",
+    "preview:candidate": "pnpm -F web-candidate preview",
+    "preview:recruiter": "pnpm -F web-recruiter preview",
+    "preview:admin": "pnpm -F web-admin preview",
+    "generate:api": "pnpm -F @smart-cv/api generate",
+    "verify": "pnpm lint && pnpm build",
+    "start:candidate": "pnpm build:candidate && pnpm preview:candidate",
+    "start:recruiter": "pnpm build:recruiter && pnpm preview:recruiter",
+    "start:admin": "pnpm build:admin && pnpm preview:admin",
+    "ci": "pnpm install:all && pnpm generate:api && pnpm verify"
   },
   "devDependencies": {
     "typescript": "~6.0.2"

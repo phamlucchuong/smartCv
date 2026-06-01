@@ -41,8 +41,8 @@ function SignInComponent() {
 
   return (
     <section className="relative mx-auto grid min-h-[82vh] max-w-6xl items-center gap-6 px-4 md:min-h-[560px] md:grid-cols-2 md:px-6">
-      <div className={`hidden h-full rounded-3xl border border-white/10 bg-white/5 p-10 md:block ${fromSignup ? 'auth-swap-to-left' : ''}`}>
-        <Badge className="mb-4 bg-secondary text-secondary-foreground"><Sparkles className="mr-1 h-3.5 w-3.5" /> Smart matching</Badge>
+      <div className={`hidden h-full rounded-3xl border border-border bg-card p-10 md:block ${fromSignup ? 'auth-swap-to-left' : ''}`}>
+        <Badge className="mb-4 border border-ai/20 bg-ai-soft text-ai"><Sparkles className="mr-1 h-3.5 w-3.5" /> Smart matching</Badge>
         <h1 className="hero-title mb-5 text-5xl font-bold leading-tight lg:text-6xl">{t('signin_welcome').replace('SmartCV', '').trim()} <span className="hero-gradient">SmartCV</span></h1>
         <p className="mb-8 max-w-md text-lg leading-8 text-muted-foreground">Continue your hiring journey with personalized jobs, salary insights, and one-click applications.</p>
         <ul className="space-y-3 text-base text-muted-foreground">
@@ -53,7 +53,7 @@ function SignInComponent() {
       </div>
 
       <div className={`flex h-full items-center justify-center ${fromSignup ? 'auth-swap-to-right' : ''}`}>
-        <Card className="w-full max-w-md border-white/10 bg-[#1f2833]/90">
+        <Card className="w-full max-w-md card-surface">
           <CardHeader className="space-y-1 text-left">
             <CardTitle className="text-2xl">{t('signin_title')}</CardTitle>
             <CardDescription>Use your account to access candidate features.</CardDescription>
@@ -67,7 +67,7 @@ function SignInComponent() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 border-white/10 bg-[#111844]/70 pl-9"
+                  className="h-11 border-input bg-background pl-9"
                 />
               </div>
               <div className="relative">
@@ -77,9 +77,9 @@ function SignInComponent() {
                   placeholder={t('password')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 border-white/10 bg-[#111844]/70 pl-9 pr-10"
+                  className="h-11 border-input bg-background pl-9 pr-10"
                 />
-                <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white">
+                <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -87,8 +87,8 @@ function SignInComponent() {
               <Button type="submit" className="h-11 w-full gap-2">{t('login')} <ArrowRight className="h-4 w-4" /></Button>
             </form>
           </CardContent>
-          <CardFooter className="justify-center border-t border-white/10 text-sm text-muted-foreground">
-            {t('new_to_smartcv')} <Link to="/signup" className="ml-1 font-semibold text-secondary hover:underline">{t('create_account')}</Link>
+          <CardFooter className="justify-center border-t border-border text-sm text-muted-foreground">
+            {t('new_to_smartcv')} <Link to="/signup" className="ml-1 font-semibold text-primary hover:underline">{t('create_account')}</Link>
           </CardFooter>
         </Card>
       </div>
