@@ -67,6 +67,14 @@
   --border: oklch(0.25 0.03 265);
   --input: oklch(0.25 0.03 265);
   --ring: oklch(0.55 0.2 263);
+  --sidebar: oklch(0.14 0.03 265);
+  --sidebar-foreground: oklch(0.92 0.01 255);
+  --sidebar-primary: oklch(0.55 0.2 263);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.2 0.04 265);
+  --sidebar-accent-foreground: oklch(0.9 0.01 255);
+  --sidebar-border: oklch(0.25 0.03 265);
+  --sidebar-ring: oklch(0.55 0.2 263);
   --brand: oklch(0.55 0.2 263);
   --brand-blue: oklch(0.55 0.2 263);
   --ai: oklch(0.65 0.2 295);

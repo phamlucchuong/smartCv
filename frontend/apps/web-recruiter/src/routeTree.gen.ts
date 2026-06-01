@@ -14,6 +14,7 @@ import { Route as EmployerRouteImport } from './routes/employer'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as EmployerIndexRouteImport } from './routes/employer.index'
 import { Route as PublicIndexRouteImport } from './routes/_public.index'
+import { Route as SignupRecruiterRouteImport } from './routes/signup.recruiter'
 import { Route as EmployerVerificationRouteImport } from './routes/employer.verification'
 import { Route as EmployerSettingsRouteImport } from './routes/employer.settings'
 import { Route as EmployerNotificationsRouteImport } from './routes/employer.notifications'
@@ -54,6 +55,11 @@ const PublicIndexRoute = PublicIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PublicRoute,
+} as any)
+const SignupRecruiterRoute = SignupRecruiterRouteImport.update({
+  id: '/signup/recruiter',
+  path: '/signup/recruiter',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmployerVerificationRoute = EmployerVerificationRouteImport.update({
   id: '/verification',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/employer/notifications': typeof EmployerNotificationsRoute
   '/employer/settings': typeof EmployerSettingsRoute
   '/employer/verification': typeof EmployerVerificationRoute
+  '/signup/recruiter': typeof SignupRecruiterRoute
   '/employer/': typeof EmployerIndexRoute
   '/jobs/$id': typeof PublicJobsIdRoute
   '/employer/applicants/$id': typeof EmployerApplicantsIdRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/employer/notifications': typeof EmployerNotificationsRoute
   '/employer/settings': typeof EmployerSettingsRoute
   '/employer/verification': typeof EmployerVerificationRoute
+  '/signup/recruiter': typeof SignupRecruiterRoute
   '/': typeof PublicIndexRoute
   '/employer': typeof EmployerIndexRoute
   '/jobs/$id': typeof PublicJobsIdRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/employer/notifications': typeof EmployerNotificationsRoute
   '/employer/settings': typeof EmployerSettingsRoute
   '/employer/verification': typeof EmployerVerificationRoute
+  '/signup/recruiter': typeof SignupRecruiterRoute
   '/_public/': typeof PublicIndexRoute
   '/employer/': typeof EmployerIndexRoute
   '/_public/jobs/$id': typeof PublicJobsIdRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/employer/notifications'
     | '/employer/settings'
     | '/employer/verification'
+    | '/signup/recruiter'
     | '/employer/'
     | '/jobs/$id'
     | '/employer/applicants/$id'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/employer/notifications'
     | '/employer/settings'
     | '/employer/verification'
+    | '/signup/recruiter'
     | '/'
     | '/employer'
     | '/jobs/$id'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/employer/notifications'
     | '/employer/settings'
     | '/employer/verification'
+    | '/signup/recruiter'
     | '/_public/'
     | '/employer/'
     | '/_public/jobs/$id'
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   PublicRoute: typeof PublicRouteWithChildren
   EmployerRoute: typeof EmployerRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SignupRecruiterRoute: typeof SignupRecruiterRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof PublicIndexRouteImport
       parentRoute: typeof PublicRoute
+    }
+    '/signup/recruiter': {
+      id: '/signup/recruiter'
+      path: '/signup/recruiter'
+      fullPath: '/signup/recruiter'
+      preLoaderRoute: typeof SignupRecruiterRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/employer/verification': {
       id: '/employer/verification'
@@ -498,6 +518,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublicRoute: PublicRouteWithChildren,
   EmployerRoute: EmployerRouteWithChildren,
   LoginRoute: LoginRoute,
+  SignupRecruiterRoute: SignupRecruiterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

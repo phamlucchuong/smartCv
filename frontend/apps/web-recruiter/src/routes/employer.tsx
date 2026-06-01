@@ -3,20 +3,26 @@ import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLay
 import {
   LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Bell, Settings,
 } from "lucide-react";
-
-const NAV: NavItem[] = [
-  { to: "/employer", label: "Tổng quan", icon: LayoutDashboard },
-  { to: "/employer/verification", label: "Xác minh công ty", icon: ShieldCheck },
-  { to: "/employer/jobs", label: "Tin tuyển dụng", icon: Briefcase },
-  { to: "/employer/applicants", label: "Ứng viên", icon: Users },
-  { to: "/employer/ats", label: "Bảng ATS", icon: Trello },
-  { to: "/employer/cv-search", label: "Tìm kiếm CV", icon: Search },
-  { to: "/employer/assessments", label: "Bài kiểm tra", icon: ClipboardCheck },
-  { to: "/employer/billing", label: "Gói & Thanh toán", icon: CreditCard },
-  { to: "/employer/notifications", label: "Thông báo", icon: Bell },
-  { to: "/employer/settings", label: "Cài đặt", icon: Settings },
-];
+import { useTranslation } from "@smart-cv/i18n";
 
 export const Route = createFileRoute("/employer")({
-  component: () => <DashboardLayout role="employer" nav={NAV} userName="Trần Thị HR" userRole="FPT Software" />,
+  component: EmployerLayoutRoute,
 });
+
+function EmployerLayoutRoute() {
+  const { t } = useTranslation();
+  const nav: NavItem[] = [
+    { to: "/employer", label: t("recruiter_nav_overview"), icon: LayoutDashboard },
+    { to: "/employer/verification", label: t("recruiter_nav_verification"), icon: ShieldCheck },
+    { to: "/employer/jobs", label: t("recruiter_nav_jobs"), icon: Briefcase },
+    { to: "/employer/applicants", label: t("recruiter_nav_applicants"), icon: Users },
+    { to: "/employer/ats", label: t("recruiter_nav_ats"), icon: Trello },
+    { to: "/employer/cv-search", label: t("recruiter_nav_cv_search"), icon: Search },
+    { to: "/employer/assessments", label: t("recruiter_nav_assessments"), icon: ClipboardCheck },
+    { to: "/employer/billing", label: t("recruiter_nav_billing"), icon: CreditCard },
+    { to: "/employer/notifications", label: t("recruiter_nav_notifications"), icon: Bell },
+    { to: "/employer/settings", label: t("recruiter_nav_settings"), icon: Settings },
+  ];
+
+  return <DashboardLayout role="employer" nav={nav} userName="Trần Thị HR" userRole="FPT Software" />;
+}
