@@ -1,0 +1,69 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+# Development (all apps in parallel)
+pnpm dev
+
+# Single app (candidate=3000, recruiter=3001, admin=3003)
+pnpm -F web-candidate dev
+pnpm -F web-recruiter dev
+pnpm -F web-admin dev
+
+# Build
+pnpm build
+pnpm -F web-candidate build
+
+# Lint
+pnpm lint
+pnpm -F web-candidate lint
+
+# Generate API client from Swagger (requires swagger.json in packages/api)
+pnpm generate:api
+```
+
+No test runner is configured yet.
+
+## Architecture
+
+**pnpm monorepo** with three Vite + React 19 + TypeScript apps sharing three local packages.
+
+### Apps
+
+| App | Port | Purpose |
+|-----|------|---------|
+| `apps/web-candidate` | 3000 | Job seeker portal (CV builder, job search, applications) |
+| `apps/web-recruiter` | 3001 | Recruiter portal (job posting, candidate management) |
+| `apps/web-admin` | 3003 | Admin dashboard (user/platform management) |
+
+Each app uses the same stack: **TanStack Router** (file-based routing), **TanStack Query v5**, **Zustand** for client state, **Tailwind CSS v4**, **ESLint flat config**.
+
+### Shared Packages
+
+- **`@smart-cv/ui`** — Design system built on shadcn/ui + Tailwind. Components live in `packages/ui/src/components/ui/`. Use the `cn()` utility from `@smart-cv/ui` for conditional class merging.
+- **`@smart-cv/i18n`** — i18next + react-i18next. Locales in `packages/i18n/src/locales/{en,vi}/`. Namespaces: `common`, `web-admin`, `web-candidate`, `web-recruiter`. The root layout (`__root.tsx`) wires in the language switcher.
+- **`@smart-cv/api`** — Auto-generated React Query hooks via **Orval** from `swagger.json`. Regenerate with `pnpm generate:api`. The custom Axios instance lives at `packages/api/src/axios-instance.ts` and is the right place for auth headers/interceptors.
+
+### Routing
+
+TanStack Router with file-based routing. Routes live under `apps/<app>/src/routes/`. The `routeTree.gen.ts` file is **auto-generated** — never edit it manually. Add new routes by creating `.tsx` files in the routes directory; Vite's TanStack Router plugin regenerates the tree on save.
+
+### State Management
+
+- **Server state**: TanStack Query (hooks from `@smart-cv/api`)
+- **Client state**: Zustand stores in `apps/<app>/src/store/`
+
+### Environment Variables
+
+Copy `.env.example` to `.env` in each app (or at repo root). Key vars:
+
+```
+VITE_API_BASE_URL        # Backend API base URL
+VITE_I18N_DEFAULT_LOCALE # Default locale (en/vi)
+VITE_I18N_FALLBACK_LOCALE
+```
+
+All Vite env vars must be prefixed with `VITE_` to be accessible in the browser bundle.

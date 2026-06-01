@@ -139,3 +139,65 @@ To run a static typecheck on a specific workspace (e.g., candidate app) to guara
 ```bash
 pnpm -F web-candidate exec tsc --noEmit
 ```
+
+---
+
+## 🧪 5. Script Triggers (Manual & Automated)
+
+All commands below run from the monorepo root.
+
+### Manual triggers
+
+*   **Install all dependencies**
+    ```bash
+    pnpm install:all
+    ```
+*   **Run all apps in parallel**
+    ```bash
+    pnpm dev
+    ```
+*   **Run one app only**
+    ```bash
+    pnpm dev:candidate
+    pnpm dev:recruiter
+    pnpm dev:admin
+    ```
+*   **Lint one app**
+    ```bash
+    pnpm lint:candidate
+    pnpm lint:recruiter
+    pnpm lint:admin
+    ```
+*   **Build one app**
+    ```bash
+    pnpm build:candidate
+    pnpm build:recruiter
+    pnpm build:admin
+    ```
+*   **Run production preview for one app**
+    ```bash
+    pnpm preview:candidate
+    pnpm preview:recruiter
+    pnpm preview:admin
+    ```
+
+### Automated triggers
+
+*   **Verify full workspace (lint + build)**
+    ```bash
+    pnpm verify
+    ```
+*   **Generate API client**
+    ```bash
+    pnpm generate:api
+    ```
+*   **Run app-specific start pipeline (build + preview)**
+    ```bash
+    pnpm start:candidate
+    pnpm start:recruiter
+    pnpm start:admin
+    ```
+*   **Run full CI-like flow locally**
+    ```bash
+    pnpm ci
+    ```
