@@ -14,7 +14,10 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as JobSuggestionsRouteImport } from './routes/job-suggestions'
+import { Route as CvRouteImport } from './routes/cv'
+import { Route as AssessmentsRouteImport } from './routes/assessments'
 import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -45,9 +48,24 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobSuggestionsRoute = JobSuggestionsRouteImport.update({
   id: '/job-suggestions',
   path: '/job-suggestions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CvRoute = CvRouteImport.update({
+  id: '/cv',
+  path: '/cv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssessmentsRoute = AssessmentsRouteImport.update({
+  id: '/assessments',
+  path: '/assessments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApplicationsRoute = ApplicationsRouteImport.update({
@@ -75,7 +93,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/applications': typeof ApplicationsRoute
+  '/assessments': typeof AssessmentsRoute
+  '/cv': typeof CvRoute
   '/job-suggestions': typeof JobSuggestionsRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
@@ -87,7 +108,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/applications': typeof ApplicationsRoute
+  '/assessments': typeof AssessmentsRoute
+  '/cv': typeof CvRoute
   '/job-suggestions': typeof JobSuggestionsRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
@@ -100,7 +124,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/applications': typeof ApplicationsRoute
+  '/assessments': typeof AssessmentsRoute
+  '/cv': typeof CvRoute
   '/job-suggestions': typeof JobSuggestionsRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
@@ -114,7 +141,10 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/applications'
+    | '/assessments'
+    | '/cv'
     | '/job-suggestions'
+    | '/notifications'
     | '/profile'
     | '/settings'
     | '/signin'
@@ -126,7 +156,10 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/applications'
+    | '/assessments'
+    | '/cv'
     | '/job-suggestions'
+    | '/notifications'
     | '/profile'
     | '/settings'
     | '/signin'
@@ -138,7 +171,10 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/applications'
+    | '/assessments'
+    | '/cv'
     | '/job-suggestions'
+    | '/notifications'
     | '/profile'
     | '/settings'
     | '/signin'
@@ -151,7 +187,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ApplicationsRoute: typeof ApplicationsRoute
+  AssessmentsRoute: typeof AssessmentsRoute
+  CvRoute: typeof CvRoute
   JobSuggestionsRoute: typeof JobSuggestionsRoute
+  NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
@@ -197,11 +236,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/job-suggestions': {
       id: '/job-suggestions'
       path: '/job-suggestions'
       fullPath: '/job-suggestions'
       preLoaderRoute: typeof JobSuggestionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cv': {
+      id: '/cv'
+      path: '/cv'
+      fullPath: '/cv'
+      preLoaderRoute: typeof CvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assessments': {
+      id: '/assessments'
+      path: '/assessments'
+      fullPath: '/assessments'
+      preLoaderRoute: typeof AssessmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/applications': {
@@ -239,7 +299,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ApplicationsRoute: ApplicationsRoute,
+  AssessmentsRoute: AssessmentsRoute,
+  CvRoute: CvRoute,
   JobSuggestionsRoute: JobSuggestionsRoute,
+  NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,

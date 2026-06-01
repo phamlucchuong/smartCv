@@ -181,8 +181,8 @@ function IndexComponent() {
   const paginatedJobs = jobs.slice((page - 1) * jobsPerPage, page * jobsPerPage)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-4 pb-12 md:px-6">
-      <section className="relative overflow-hidden rounded-3xl border border-border" aria-label="Hero Banner">
+    <div className="space-y-12 pb-12">
+      <section className="relative overflow-hidden border-y border-border" aria-label="Hero Banner">
         <div className="absolute inset-0 ai-gradient opacity-60 pointer-events-none" />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 md:px-6 lg:grid-cols-2 lg:items-center lg:py-16">
           <div>
@@ -248,6 +248,7 @@ function IndexComponent() {
         </div>
       </section>
 
+      <div className="mx-auto max-w-6xl space-y-12 px-4 md:px-6">
       <section className="relative -mt-4" aria-label="Job Search Engine">
         <form className="grid gap-3 rounded-2xl card-surface p-3 md:grid-cols-[1fr_220px_150px]">
           <div className="relative">
@@ -468,6 +469,7 @@ function IndexComponent() {
           ))}
         </div>
       </section>
+      </div>
     </div>
   )
 }

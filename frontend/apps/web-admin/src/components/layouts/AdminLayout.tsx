@@ -1,0 +1,189 @@
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Bell, Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth'
+import { Button } from '@smart-cv/ui'
+import { useTranslation } from '@smart-cv/i18n'
+
+export function AdminLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light'
+    return (localStorage.getItem('smartcv_theme') as 'light' | 'dark' | null) ?? 'light'
+  })
+  const { i18n, t } = useTranslation()
+  const [language, setLanguage] = useState<'EN' | 'VI'>(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    overview: true,
+    access: true,
+    operations: true,
+    platform: true,
+  })
+  const user = useAuthStore((s) => s.user)
+  const clearAuth = useAuthStore((s) => s.clearAuth)
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
+  useEffect(() => {
+    setLanguage(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
+  }, [i18n.language])
+
+  const toggleLanguage = () => {
+    const nextLanguage = language === 'EN' ? 'VI' : 'EN'
+    setLanguage(nextLanguage)
+    localStorage.setItem('smartcv_lang', nextLanguage.toLowerCase())
+    i18n.changeLanguage(nextLanguage.toLowerCase())
+  }
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('smartcv_theme', next)
+      return next
+    })
+  }
+  const nav = [
+    { to: '/admin', label: t('admin_nav_overview'), icon: LayoutDashboard },
+    { to: '/admin/users', label: t('admin_nav_users'), icon: Users },
+    { to: '/admin/rbac', label: t('admin_nav_rbac'), icon: KeyRound },
+    { to: '/admin/employer-verification', label: t('admin_nav_employer_verification'), icon: ShieldCheck },
+    { to: '/admin/job-moderation', label: t('admin_nav_job_moderation'), icon: FileWarning },
+    { to: '/admin/packages', label: t('admin_nav_packages'), icon: Package },
+    { to: '/admin/payments', label: t('admin_nav_payments'), icon: CreditCard },
+    { to: '/admin/ai-config', label: t('admin_nav_ai_config'), icon: Brain },
+    { to: '/admin/settings', label: t('admin_nav_system_settings'), icon: Settings },
+    { to: '/admin/audit-logs', label: t('admin_nav_audit_logs'), icon: ScrollText },
+  ]
+  const navGroups = useMemo(() => ([
+    {
+      key: 'overview',
+      label: t('admin_sidebar_group_overview'),
+      items: nav.filter((item) => item.to === '/admin'),
+    },
+    {
+      key: 'access',
+      label: t('admin_sidebar_group_access'),
+      items: nav.filter((item) => ['/admin/users', '/admin/rbac', '/admin/employer-verification'].includes(item.to)),
+    },
+    {
+      key: 'operations',
+      label: t('admin_sidebar_group_operations'),
+      items: nav.filter((item) => ['/admin/job-moderation', '/admin/packages', '/admin/payments'].includes(item.to)),
+    },
+    {
+      key: 'platform',
+      label: t('admin_sidebar_group_platform'),
+      items: nav.filter((item) => ['/admin/ai-config', '/admin/settings', '/admin/audit-logs'].includes(item.to)),
+    },
+  ]), [nav, t])
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      <aside className={cn('sticky top-0 h-screen border-r border-sidebar-border bg-sidebar transition-all flex flex-col', collapsed ? 'w-16' : 'w-64')}>
+        <div className="h-16 border-b border-sidebar-border px-4 flex items-center">
+          <Link to="/admin" className="flex items-center gap-2 min-w-0">
+            <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center"><Sparkles className="size-4" /></div>
+            {!collapsed && <span className="font-bold">SmartCV Admin</span>}
+          </Link>
+        </div>
+        <nav className="p-2 space-y-2 flex-1 overflow-y-auto">
+          {navGroups.map((group) => {
+            const groupHasActive = group.items.some((item) => pathname === item.to || (item.to !== '/admin' && pathname.startsWith(item.to)))
+            if (group.items.length === 1) {
+              const item = group.items[0]
+              const active = pathname === item.to || (item.to !== '/admin' && pathname.startsWith(item.to))
+              return (
+                <Link key={group.key} to={item.to} className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm border border-transparent', active ? 'bg-primary/10 text-primary border-primary/20 font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent', collapsed && 'justify-center px-0')}>
+                  <item.icon className="size-4" />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              )
+            }
+            const expanded = collapsed ? false : (openGroups[group.key] ?? groupHasActive)
+            return (
+              <div key={group.key} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setOpenGroups((prev) => ({ ...prev, [group.key]: !expanded }))}
+                  className={cn(
+                    'flex w-full items-center rounded-lg px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-sidebar-accent',
+                    collapsed && 'justify-center px-0',
+                  )}
+                >
+                  {!collapsed && <span className="truncate">{group.label}</span>}
+                  {!collapsed && <ChevronDown className={cn('ml-auto size-3.5 transition-transform', expanded && 'rotate-180')} />}
+                  {collapsed && <div className={cn('size-1.5 rounded-full', groupHasActive ? 'bg-primary' : 'bg-muted-foreground/40')} />}
+                </button>
+                {expanded && group.items.map((item) => {
+                  const active = pathname === item.to || (item.to !== '/admin' && pathname.startsWith(item.to))
+                  return (
+                    <Link key={item.to} to={item.to} className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm border border-transparent', active ? 'bg-primary/10 text-primary border-primary/20 font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent')}>
+                      <item.icon className="size-4" />
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </nav>
+        <button onClick={() => setCollapsed((v) => !v)} className="m-2 w-[calc(100%-1rem)] rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent">
+          {collapsed ? <Menu className="size-4 mx-auto" /> : t('admin_sidebar_collapse')}
+        </button>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        <header className="sticky top-0 z-20 h-16 border-b border-border bg-card px-5 flex items-center gap-3">
+          <div className="relative max-w-md flex-1">
+            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input placeholder={t('admin_search_placeholder')} className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm" />
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggleLanguage}
+              className="border-border bg-muted/60 relative flex h-9 w-[84px] cursor-pointer items-center rounded-lg border p-1 text-xs"
+              title="Toggle language"
+            >
+              <span
+                className={`absolute top-1 h-7 w-9 rounded-md bg-primary transition-transform duration-200 ${language === 'EN' ? 'translate-x-0' : 'translate-x-[38px]'}`}
+              />
+              <span className={`relative z-10 w-9 text-center transition-colors duration-200 ${language === 'EN' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>EN</span>
+              <span className={`relative z-10 w-9 text-center transition-colors duration-200 ${language === 'VI' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>VI</span>
+            </button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleTheme}
+              className="border-border bg-muted/60 text-muted-foreground h-9 w-9 transition-transform duration-300 active:scale-95"
+              title="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
+            </Button>
+            <button className="p-2 rounded-lg hover:bg-accent"><Bell className="size-5" /></button>
+            <button
+              onClick={() => {
+                clearAuth()
+                navigate({ to: '/signin' })
+              }}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent"
+            >
+              <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
+                {(user?.name ?? 'A').slice(0, 1)}
+              </div>
+              <div className="hidden md:block text-left">
+                <div className="text-sm font-medium">{user?.name ?? 'Admin SmartCV'}</div>
+                <div className="text-xs text-muted-foreground">{t('admin_account_actions')}</div>
+              </div>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  )
+}

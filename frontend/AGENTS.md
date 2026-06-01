@@ -40,3 +40,10 @@ Git history uses Conventional Commits (for example, `feat: add sign-in page ...`
 - Keep commits focused and buildable.
 - PRs should include: clear description, linked issue/task, affected app/package list, and UI screenshots for visual changes.
 - Before opening PR: run `pnpm lint`, `pnpm build`, and regenerate API artifacts if contracts changed.
+
+
+## Issue
+When finishing a task documented in `docs/issues/*.md`:
+- Add `✅` to the start of the file name.
+- Move the file into `docs/issues/✅/`.
+- Keep the markdown content intact unless the task itself requires edits.

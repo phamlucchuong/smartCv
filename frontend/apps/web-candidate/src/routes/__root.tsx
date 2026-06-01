@@ -3,8 +3,10 @@ import * as React from 'react'
 import {
   Bell,
   ChevronDown,
+  ClipboardCheck,
   Facebook,
   FileText,
+  FileUp,
   Globe,
   Heart,
   Linkedin,
@@ -15,6 +17,7 @@ import {
   Sparkles,
   Sun,
   UserRound,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
@@ -22,6 +25,7 @@ import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createRootRoute({
   component: RootComponent,
+  notFoundComponent: NotFoundPage,
 })
 
 function RootComponent() {
@@ -29,7 +33,10 @@ function RootComponent() {
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const hideFooter = pathname === '/signin' || pathname === '/signup'
-  const [theme, setTheme] = React.useState<'dark' | 'light'>('light')
+  const [theme, setTheme] = React.useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'light'
+    return (localStorage.getItem('smartcv_theme') as 'dark' | 'light' | null) ?? 'light'
+  })
   const [language, setLanguage] = React.useState(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
   const [jobMenuOpen, setJobMenuOpen] = React.useState(false)
   const [resourceMenuOpen, setResourceMenuOpen] = React.useState(false)
@@ -114,7 +121,15 @@ function RootComponent() {
   const toggleLanguage = () => {
     const nextLanguage = language === 'EN' ? 'VI' : 'EN'
     setLanguage(nextLanguage)
+    localStorage.setItem('smartcv_lang', nextLanguage.toLowerCase())
     i18n.changeLanguage(nextLanguage.toLowerCase())
+  }
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('smartcv_theme', next)
+      return next
+    })
   }
 
   React.useEffect(() => {
@@ -247,7 +262,7 @@ function RootComponent() {
             </button>
             <Button
               variant="outline"
-              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              onClick={toggleTheme}
               size="icon"
               className="border-border bg-muted/60 text-muted-foreground transition-transform duration-300 active:scale-95"
             >
@@ -285,6 +300,21 @@ function RootComponent() {
                       <UserRound className="h-4 w-4 text-muted-foreground" />
                       {t('account_my_profile')}
                     </Link>
+                    <Link to="/cv" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors">
+                      <FileUp className="h-4 w-4 text-muted-foreground" />
+                      {t('account_my_cv')}
+                    </Link>
+                    <Link to="/assessments" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors">
+                      <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                      {t('account_assessments')}
+                    </Link>
+                    <Link to="/notifications" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors">
+                      <Bell className="h-4 w-4 text-muted-foreground" />
+                      {t('account_notifications')}
+                    </Link>
+                  </div>
+                  <hr className="border-border my-1" />
+                  <div className="p-1">
                     <Link to="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors">
                       <Settings className="h-4 w-4 text-muted-foreground" />
                       {t('account_settings')}
@@ -392,6 +422,39 @@ function RootComponent() {
           </div>
         </div>
       </footer>}
+    </div>
+  )
+}
+
+function NotFoundPage() {
+  const { t, i18n } = useTranslation()
+
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem('smartcv_theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isDark = savedTheme ? savedTheme === 'dark' : prefersDark
+    document.documentElement.classList.toggle('dark', isDark)
+
+    const savedLang = localStorage.getItem('smartcv_lang')
+    if (savedLang === 'en' || savedLang === 'vi') {
+      i18n.changeLanguage(savedLang)
+    }
+  }, [i18n])
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background px-4 py-10 md:px-6">
+      <div className="w-full max-w-2xl text-center">
+        <p className="text-8xl font-black leading-none tracking-tight text-foreground md:text-9xl">{t('not_found_title')}</p>
+        <h1 className="mt-4 text-xl font-bold text-foreground">{t('not_found_heading')}</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">{t('not_found_desc')}</p>
+        <Link
+          to="/"
+          className="mt-8 inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary px-5 py-2.5 text-sm font-semibold uppercase tracking-wide !text-white shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&>svg]:!text-white"
+        >
+          <ArrowLeft className="size-4" />
+          {t('not_found_back_home')}
+        </Link>
+      </div>
     </div>
   )
 }

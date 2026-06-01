@@ -8,8 +8,15 @@ interface RecruiterStore {
 }
 
 export const useRecruiterStore = create<RecruiterStore>((set) => ({
-  theme: 'light',
-  setTheme: (theme) => set({ theme }),
+  theme: typeof window !== 'undefined'
+    ? ((localStorage.getItem('smartcv_theme') as 'light' | 'dark' | null) ?? 'light')
+    : 'light',
+  setTheme: (theme) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('smartcv_theme', theme)
+    }
+    set({ theme })
+  },
   sidebarCollapsed: false,
   setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
 }))
