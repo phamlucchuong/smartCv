@@ -1,8 +1,8 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  Bell, Search, Sparkles, LogOut, Sun, Moon,
+  Bell, Search, Sparkles, LogOut, Sun, Moon, ChevronDown,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@smart-cv/ui";
 import {
@@ -39,6 +39,12 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
   const theme = useRecruiterStore((s) => s.theme);
   const setTheme = useRecruiterStore((s) => s.setTheme);
   const [language, setLanguage] = useState<"EN" | "VI">(i18n.language?.toUpperCase() === "VI" ? "VI" : "EN");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    overview: true,
+    hiring: true,
+    intelligence: true,
+    account: true,
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -50,8 +56,32 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
   const toggleLanguage = () => {
     const nextLanguage = language === "EN" ? "VI" : "EN";
     setLanguage(nextLanguage);
+    localStorage.setItem("smartcv_lang", nextLanguage.toLowerCase());
     i18n.changeLanguage(nextLanguage.toLowerCase());
   };
+
+  const navGroups = useMemo(() => ([
+    {
+      key: "overview",
+      label: t("recruiter_sidebar_group_overview"),
+      items: nav.filter((item) => item.to === ROLE_HOME[role]),
+    },
+    {
+      key: "hiring",
+      label: t("recruiter_sidebar_group_hiring"),
+      items: nav.filter((item) => ["/employer/company-verification", "/employer/jobs", "/employer/applicants", "/employer/ats-board"].includes(item.to)),
+    },
+    {
+      key: "intelligence",
+      label: t("recruiter_sidebar_group_intelligence"),
+      items: nav.filter((item) => ["/employer/cv-search", "/employer/assessments"].includes(item.to)),
+    },
+    {
+      key: "account",
+      label: t("recruiter_sidebar_group_account"),
+      items: nav.filter((item) => ["/employer/billing", "/employer/notifications", "/employer/settings"].includes(item.to)),
+    },
+  ].filter((group) => group.items.length > 0)), [nav, role, t]);
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -70,25 +100,66 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
             {!collapsed && <span className="font-bold tracking-tight">SmartCV</span>}
           </Link>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-          {nav.map((item) => {
-            const active = pathname === item.to || (item.to !== ROLE_HOME[role] && pathname.startsWith(item.to));
-            const Icon = item.icon;
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-2">
+          {navGroups.map((group) => {
+            const groupHasActive = group.items.some((item) => pathname === item.to || (item.to !== ROLE_HOME[role] && pathname.startsWith(item.to)));
+            if (group.items.length === 1) {
+              const item = group.items[0];
+              const active = pathname === item.to || (item.to !== ROLE_HOME[role] && pathname.startsWith(item.to));
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={group.key}
+                  to={item.to}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary font-semibold border-primary/20"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-foreground",
+                    collapsed && "justify-center px-0",
+                  )}
+                >
+                  <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            }
+            const expanded = collapsed ? false : (openGroups[group.key] ?? groupHasActive);
             return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary font-semibold border-primary/20"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-foreground",
-                  collapsed && "justify-center px-0",
-                )}
-              >
-                <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </Link>
+              <div key={group.key} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setOpenGroups((prev) => ({ ...prev, [group.key]: !expanded }))}
+                  className={cn(
+                    "flex w-full items-center rounded-lg px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-sidebar-accent",
+                    collapsed && "justify-center px-0",
+                  )}
+                >
+                  {!collapsed && <span className="truncate">{group.label}</span>}
+                  {!collapsed && <ChevronDown className={cn("ml-auto size-3.5 transition-transform", expanded && "rotate-180")} />}
+                  {collapsed && <div className={cn("size-1.5 rounded-full", groupHasActive ? "bg-primary" : "bg-muted-foreground/40")} />}
+                </button>
+                {expanded && group.items.map((item) => {
+                  const active = pathname === item.to || (item.to !== ROLE_HOME[role] && pathname.startsWith(item.to));
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors",
+                        active
+                          ? "bg-primary/10 text-primary font-semibold border-primary/20"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-foreground",
+                        collapsed && "justify-center px-0",
+                      )}
+                    >
+                      <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>

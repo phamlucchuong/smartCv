@@ -2,15 +2,17 @@ import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import { useEffect } from 'react'
+import { Toaster } from 'sonner'
 
 export const Route = createRootRoute({
-  component: RootComponent,
+  component: () => (
+    <>
+      <Outlet />
+      <Toaster richColors />
+    </>
+  ),
   notFoundComponent: NotFoundPage,
 })
-
-function RootComponent() {
-  return <Outlet />
-}
 
 function NotFoundPage() {
   const { t, i18n } = useTranslation()
@@ -34,7 +36,7 @@ function NotFoundPage() {
         <h1 className="mt-4 text-xl font-bold text-foreground">{t('not_found_heading')}</h1>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">{t('not_found_desc')}</p>
         <Link
-          to="/employer"
+          to="/admin"
           className="mt-8 inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary px-5 py-2.5 text-sm font-semibold uppercase tracking-wide !text-white shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&>svg]:!text-white"
         >
           <ArrowLeft className="size-4" />
