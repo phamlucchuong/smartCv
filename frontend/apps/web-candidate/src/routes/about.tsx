@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from '@smart-cv/ui'
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@smart-cv/ui'
 import { Award, ShieldCheck, Zap, Sparkles } from 'lucide-react'
 import { useCandidateStore } from '../store/useCandidateStore'
 

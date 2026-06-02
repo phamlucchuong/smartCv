@@ -34,15 +34,30 @@ Ask for confirmation before implementation when scope/intent is ambiguous or pot
 
 ### Phase 3: Branching
 
-Use feature/fix branch from `dev`.
+Check current branch first.
 
-If this issue reworks the same problem and an existing working branch already exists, reuse that branch instead of creating a new one.
-
-If there is no existing branch, create a new branch:
+- If current branch is `dev`:
+  - If this issue reworks the same problem and an existing working branch already exists, reuse that branch instead of creating a new one.
+  - If there is no existing branch, create a new branch from `dev`:
 
 ```bash
 git checkout dev && git pull && git checkout -b fix/[issue-name]
 ```
+
+- If current branch is **not** `dev`:
+  - Ask user this confirmation question:
+    - "Current branch is `<current-branch>`, not `dev`. Do you want to continue on this current branch?"
+  - If user answers **Yes**:
+    - Keep using current branch.
+    - Fetch/pull latest source into the current branch, then implement the issue on this branch.
+    - Example:
+
+```bash
+git fetch origin && git pull --rebase origin <current-branch>
+```
+
+  - If user answers **No**:
+    - Checkout `dev`, pull latest, then follow the same flow as normal (reuse existing branch for same problem if available; otherwise create `fix/[issue-name]` from `dev`).
 
 ### Phase 4: Implementation and Verification
 

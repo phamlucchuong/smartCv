@@ -15,7 +15,7 @@ export function AdminLayout() {
     return (localStorage.getItem('smartcv_theme') as 'light' | 'dark' | null) ?? 'light'
   })
   const { i18n, t } = useTranslation()
-  const [language, setLanguage] = useState<'EN' | 'VI'>(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
+  const language: 'EN' | 'VI' = i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN'
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     overview: true,
     access: true,
@@ -27,13 +27,8 @@ export function AdminLayout() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
-  useEffect(() => {
-    setLanguage(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
-  }, [i18n.language])
-
   const toggleLanguage = () => {
     const nextLanguage = language === 'EN' ? 'VI' : 'EN'
-    setLanguage(nextLanguage)
     localStorage.setItem('smartcv_lang', nextLanguage.toLowerCase())
     i18n.changeLanguage(nextLanguage.toLowerCase())
   }
@@ -44,40 +39,40 @@ export function AdminLayout() {
       return next
     })
   }
-  const nav = [
-    { to: '/admin', label: t('admin_nav_overview'), icon: LayoutDashboard },
-    { to: '/admin/users', label: t('admin_nav_users'), icon: Users },
-    { to: '/admin/rbac', label: t('admin_nav_rbac'), icon: KeyRound },
-    { to: '/admin/employer-verification', label: t('admin_nav_employer_verification'), icon: ShieldCheck },
-    { to: '/admin/job-moderation', label: t('admin_nav_job_moderation'), icon: FileWarning },
-    { to: '/admin/packages', label: t('admin_nav_packages'), icon: Package },
-    { to: '/admin/payments', label: t('admin_nav_payments'), icon: CreditCard },
-    { to: '/admin/ai-config', label: t('admin_nav_ai_config'), icon: Brain },
-    { to: '/admin/settings', label: t('admin_nav_system_settings'), icon: Settings },
-    { to: '/admin/audit-logs', label: t('admin_nav_audit_logs'), icon: ScrollText },
-  ]
   const navGroups = useMemo(() => ([
     {
       key: 'overview',
       label: t('admin_sidebar_group_overview'),
-      items: nav.filter((item) => item.to === '/admin'),
+      items: [{ to: '/admin', label: t('admin_nav_overview'), icon: LayoutDashboard }],
     },
     {
       key: 'access',
       label: t('admin_sidebar_group_access'),
-      items: nav.filter((item) => ['/admin/users', '/admin/rbac', '/admin/employer-verification'].includes(item.to)),
+      items: [
+        { to: '/admin/users', label: t('admin_nav_users'), icon: Users },
+        { to: '/admin/rbac', label: t('admin_nav_rbac'), icon: KeyRound },
+        { to: '/admin/employer-verification', label: t('admin_nav_employer_verification'), icon: ShieldCheck },
+      ],
     },
     {
       key: 'operations',
       label: t('admin_sidebar_group_operations'),
-      items: nav.filter((item) => ['/admin/job-moderation', '/admin/packages', '/admin/payments'].includes(item.to)),
+      items: [
+        { to: '/admin/job-moderation', label: t('admin_nav_job_moderation'), icon: FileWarning },
+        { to: '/admin/packages', label: t('admin_nav_packages'), icon: Package },
+        { to: '/admin/payments', label: t('admin_nav_payments'), icon: CreditCard },
+      ],
     },
     {
       key: 'platform',
       label: t('admin_sidebar_group_platform'),
-      items: nav.filter((item) => ['/admin/ai-config', '/admin/settings', '/admin/audit-logs'].includes(item.to)),
+      items: [
+        { to: '/admin/ai-config', label: t('admin_nav_ai_config'), icon: Brain },
+        { to: '/admin/settings', label: t('admin_nav_system_settings'), icon: Settings },
+        { to: '/admin/audit-logs', label: t('admin_nav_audit_logs'), icon: ScrollText },
+      ],
     },
-  ]), [nav, t])
+  ]), [t])
 
   return (
     <div className="min-h-screen flex bg-background">

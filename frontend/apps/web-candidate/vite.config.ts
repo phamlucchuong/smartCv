@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss()
   ],
   server: {
-    port: 3002,
+    port: Number(process.env.VITE_WEB_CANDIDATE_PORT) || 3000,
     // proxy: {
     //   '^.*$': {
     //     target: 'http://localhost:8080',

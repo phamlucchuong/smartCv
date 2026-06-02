@@ -126,6 +126,9 @@ importers:
       react-dom:
         specifier: ^19.2.5
         version: 19.2.6(react@19.2.6)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       zustand:
         specifier: ^5.0.3
         version: 5.0.13(@types/react@19.2.14)(immer@9.0.21)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
