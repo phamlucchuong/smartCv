@@ -38,7 +38,7 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
   const { i18n, t } = useTranslation();
   const theme = useRecruiterStore((s) => s.theme);
   const setTheme = useRecruiterStore((s) => s.setTheme);
-  const [language, setLanguage] = useState<"EN" | "VI">(i18n.language?.toUpperCase() === "VI" ? "VI" : "EN");
+  const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     overview: true,
     hiring: true,
@@ -49,13 +49,8 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
-  useEffect(() => {
-    setLanguage(i18n.language?.toUpperCase() === "VI" ? "VI" : "EN");
-  }, [i18n.language]);
-
   const toggleLanguage = () => {
     const nextLanguage = language === "EN" ? "VI" : "EN";
-    setLanguage(nextLanguage);
     localStorage.setItem("smartcv_lang", nextLanguage.toLowerCase());
     i18n.changeLanguage(nextLanguage.toLowerCase());
   };

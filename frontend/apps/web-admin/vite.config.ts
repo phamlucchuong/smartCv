@@ -12,6 +12,6 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3003,
+    port: Number(process.env.VITE_WEB_ADMIN_PORT) || 3002,
   },
 })

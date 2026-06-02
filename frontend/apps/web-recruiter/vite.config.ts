@@ -12,6 +12,6 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
+    port: Number(process.env.VITE_WEB_RECRUITER_PORT) || 3001,
   },
 })

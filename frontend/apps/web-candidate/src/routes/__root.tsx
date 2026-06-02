@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
+import { Toaster } from 'sonner'
 import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createRootRoute({
@@ -32,12 +33,10 @@ function RootComponent() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const hideFooter = pathname === '/signin' || pathname === '/signup'
-  const [theme, setTheme] = React.useState<'dark' | 'light'>(() => {
-    if (typeof window === 'undefined') return 'light'
-    return (localStorage.getItem('smartcv_theme') as 'dark' | 'light' | null) ?? 'light'
-  })
-  const [language, setLanguage] = React.useState(i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN')
+  const accountPaths = ['/profile', '/cv', '/assessments', '/notifications', '/settings', '/applications', '/wishlists', '/job-suggestions']
+  const isAccountArea = accountPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  const hidePublicChrome = isAccountArea
+  const hideFooter = pathname === '/signin' || pathname === '/signup' || hidePublicChrome
   const [jobMenuOpen, setJobMenuOpen] = React.useState(false)
   const [resourceMenuOpen, setResourceMenuOpen] = React.useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = React.useState(false)
@@ -48,6 +47,11 @@ function RootComponent() {
 
   const isAuthenticated = useCandidateStore((state) => state.isAuthenticated)
   const user = useCandidateStore((state) => state.user)
+  const theme = useCandidateStore((state) => state.theme)
+  const language = useCandidateStore((state) => state.language)
+  const toggleTheme = useCandidateStore((state) => state.toggleTheme)
+  const toggleLanguage = useCandidateStore((state) => state.toggleLanguage)
+  const syncLanguageFromI18n = useCandidateStore((state) => state.syncLanguageFromI18n)
   const signOut = useCandidateStore((state) => state.signOut)
   const refreshAuthState = useCandidateStore((state) => state.refreshAuthState)
 
@@ -118,18 +122,9 @@ function RootComponent() {
     navigate({ to: '/signin' })
   }
 
-  const toggleLanguage = () => {
-    const nextLanguage = language === 'EN' ? 'VI' : 'EN'
-    setLanguage(nextLanguage)
-    localStorage.setItem('smartcv_lang', nextLanguage.toLowerCase())
-    i18n.changeLanguage(nextLanguage.toLowerCase())
-  }
-  const toggleTheme = () => {
-    setTheme((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark'
-      localStorage.setItem('smartcv_theme', next)
-      return next
-    })
+  const handleToggleLanguage = () => {
+    toggleLanguage()
+    i18n.changeLanguage(language === 'EN' ? 'vi' : 'en')
   }
 
   React.useEffect(() => {
@@ -142,12 +137,8 @@ function RootComponent() {
 
   React.useEffect(() => {
     const currentLanguage = i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN'
-    setLanguage(currentLanguage)
-    setJobFilter(t('nav_all_jobs'))
-    setResourceFilter(t('nav_career_resources'))
-    setJobHighlightIndex(0)
-    setResourceHighlightIndex(0)
-  }, [t])
+    syncLanguageFromI18n(currentLanguage)
+  }, [syncLanguageFromI18n, t])
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -172,7 +163,7 @@ function RootComponent() {
 
   return (
     <div className="min-h-screen text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
+      {!hidePublicChrome && <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3 md:gap-4">
             <Link to="/" className="flex items-center gap-3">
@@ -251,7 +242,7 @@ function RootComponent() {
               <Bell className="h-5 w-5" />
             </Button>
             <button
-              onClick={toggleLanguage}
+              onClick={handleToggleLanguage}
               className="border-border bg-muted/60 relative flex h-10 w-[92px] cursor-pointer items-center rounded-lg border p-1 text-sm"
             >
               <span
@@ -354,11 +345,12 @@ function RootComponent() {
             <Button variant="ghost" size="icon" className="md:hidden"><UserRound className="h-5 w-5" /></Button>
           </div>
         </div>
-      </header>
+      </header>}
 
-      <main className="w-full py-8">
+      <main className={hidePublicChrome ? 'w-full' : 'w-full py-8'}>
         <Outlet />
       </main>
+      <Toaster richColors />
 
       {!hideFooter && <footer className="bg-card border-t border-border">
         <div className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10">

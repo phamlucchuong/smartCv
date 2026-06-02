@@ -1,14 +1,9 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
-import { Button } from '@smart-cv/ui'
-import { Clock, ClipboardCheck, ChevronLeft } from 'lucide-react'
+import { Button, Input } from '@smart-cv/ui'
+import { Clock, ClipboardCheck, ChevronDown, ChevronLeft } from 'lucide-react'
 
-export const Route = createFileRoute('/assessments')({
-  beforeLoad: () => {
-    if (localStorage.getItem('isAuthenticated') !== 'true') {
-      throw redirect({ to: '/signin' })
-    }
-  },
+export const Route = createFileRoute('/_account/assessments')({
   component: AssessmentsPage,
 })
 
@@ -46,22 +41,86 @@ const statusLabel: Record<AssessmentStatus, string> = {
   'Expired': 'Hết hạn',
 }
 
+const filterOptions: Array<{ key: 'all' | AssessmentStatus; label: string }> = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'Not started', label: 'Chưa làm' },
+  { key: 'In progress', label: 'Đang làm' },
+  { key: 'Submitted', label: 'Đã nộp' },
+  { key: 'Expired', label: 'Hết hạn' },
+]
+
 function AssessmentsPage() {
   const [taking, setTaking] = React.useState<string | null>(null)
+  const [query, setQuery] = React.useState('')
+  const [status, setStatus] = React.useState<'all' | AssessmentStatus>('all')
+  const [statusMenuOpen, setStatusMenuOpen] = React.useState(false)
+  const statusMenuRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (statusMenuRef.current && !statusMenuRef.current.contains(target)) {
+        setStatusMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   if (taking) {
     return <TakeAssessment onClose={() => setTaking(null)} />
   }
 
+  const filtered = ASSESSMENTS.filter((item) => {
+    const byStatus = status === 'all' ? true : item.status === status
+    const q = query.trim().toLowerCase()
+    const byQuery = q === '' ? true : item.title.toLowerCase().includes(q)
+    return byStatus && byQuery
+  })
+
+  const selectedStatusLabel = filterOptions.find((option) => option.key === status)?.label ?? 'Tất cả'
+
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+    <div className="space-y-6">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Bài kiểm tra</h1>
         <p className="mt-1 text-sm text-muted-foreground">Hoàn thành các bài đánh giá để tăng cơ hội trúng tuyển</p>
       </header>
 
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm bài kiểm tra..." className="h-10 max-w-sm" />
+        <div className="relative" ref={statusMenuRef}>
+          <button
+            type="button"
+            onClick={() => setStatusMenuOpen((v) => !v)}
+            className="border-border bg-card/80 text-foreground flex h-10 min-w-44 items-center justify-between rounded-lg border px-3 text-sm shadow-sm"
+          >
+            {selectedStatusLabel}
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${statusMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {statusMenuOpen && (
+            <div className="border-border bg-card absolute left-0 top-11 z-20 w-full rounded-lg border p-1 shadow-lg">
+              {filterOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    setStatus(option.key)
+                    setStatusMenuOpen(false)
+                  }}
+                  className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${status === option.key ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-muted'}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {ASSESSMENTS.map((a) => (
+        {filtered.map((a) => (
           <div key={a.id} className="card-surface p-5 flex flex-col gap-4">
             <div className="flex items-start justify-between">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--ai-soft)] text-[var(--ai)]">
