@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,7 +30,7 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class JobService {
     JobRepository jobRepository;
-    JobIndexService jobIndexService;
+    ObjectProvider<JobIndexService> jobIndexServiceProvider;
     JobMapper jobMapper;
     RabbitTemplate rabbitTemplate;
 
@@ -81,7 +82,7 @@ public class JobService {
         jobMapper.updateJob(job, request);
         Job saved = jobRepository.save(job);
         if (saved.getStatus() == JobStatus.ACTIVE) {
-            jobIndexService.indexJob(saved);
+            indexJobIfEnabled(saved);
         }
         publishEvent(saved, "UPDATED", RabbitMQConfig.JOB_UPDATED_ROUTING_KEY);
         return jobMapper.toJobResponse(saved);
@@ -98,7 +99,7 @@ public class JobService {
 
         job.setStatus(JobStatus.ACTIVE);
         Job saved = jobRepository.save(job);
-        jobIndexService.indexJob(saved);
+        indexJobIfEnabled(saved);
         publishEvent(saved, "CREATED", RabbitMQConfig.JOB_CREATED_ROUTING_KEY);
         return jobMapper.toJobResponse(saved);
     }
@@ -113,7 +114,7 @@ public class JobService {
 
         job.setStatus(JobStatus.CLOSED);
         Job saved = jobRepository.save(job);
-        jobIndexService.removeFromIndex(saved.getId());
+        removeFromIndexIfEnabled(saved.getId());
         publishEvent(saved, "CLOSED", RabbitMQConfig.JOB_CLOSED_ROUTING_KEY);
         return jobMapper.toJobResponse(saved);
     }
@@ -125,11 +126,35 @@ public class JobService {
         job.setDeleted(true);
         job.setDeletedAt(LocalDateTime.now());
         jobRepository.save(job);
-        jobIndexService.removeFromIndex(id);
+        removeFromIndexIfEnabled(id);
     }
 
     public PageResponse<JobResponse> searchJobs(JobSearchRequest request) {
+        JobIndexService jobIndexService = jobIndexServiceProvider.getIfAvailable();
+        if (jobIndexService == null) {
+            return PageResponse.<JobResponse>builder()
+                    .items(java.util.List.of())
+                    .total(0)
+                    .page(request.getPage() > 0 ? request.getPage() : 1)
+                    .pageSize(request.getSize() > 0 ? request.getSize() : defaultPageSize)
+                    .totalPages(0)
+                    .build();
+        }
         return jobIndexService.search(request);
+    }
+
+    private void indexJobIfEnabled(Job job) {
+        JobIndexService jobIndexService = jobIndexServiceProvider.getIfAvailable();
+        if (jobIndexService != null) {
+            jobIndexService.indexJob(job);
+        }
+    }
+
+    private void removeFromIndexIfEnabled(String jobId) {
+        JobIndexService jobIndexService = jobIndexServiceProvider.getIfAvailable();
+        if (jobIndexService != null) {
+            jobIndexService.removeFromIndex(jobId);
+        }
     }
 
     private void assertOwner(Job job, String userId, boolean isAdmin) {
