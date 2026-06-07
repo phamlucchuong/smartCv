@@ -143,12 +143,6 @@ function RootComponent() {
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node
-      if (jobMenuRef.current && !jobMenuRef.current.contains(target)) {
-        setJobMenuOpen(false)
-      }
-      if (resourceMenuRef.current && !resourceMenuRef.current.contains(target)) {
-        setResourceMenuOpen(false)
-      }
       if (accountMenuRef.current && !accountMenuRef.current.contains(target)) {
         setAccountMenuOpen(false)
       }
@@ -173,66 +167,50 @@ function RootComponent() {
               <span className="text-xl font-bold text-foreground">Smart<span className="text-primary">CV</span></span>
             </Link>
             <div className="hidden items-center gap-2 md:flex">
-              <div className="relative" ref={jobMenuRef}>
-                <button
-                  onClick={() => {
-                    setJobMenuOpen((v) => !v)
-                    setResourceMenuOpen(false)
-                  }}
-                  className="border-border bg-muted/60 text-muted-foreground flex h-10 min-w-44 cursor-pointer items-center justify-between rounded-lg border px-3 text-sm"
-                >
+              <div
+                className="relative"
+                ref={jobMenuRef}
+                onMouseEnter={() => { clearCloseTimer(); setJobMenuOpen(true); setResourceMenuOpen(false) }}
+                onMouseLeave={() => { clearCloseTimer(); closeMenuTimerRef.current = window.setTimeout(() => setJobMenuOpen(false), 150) }}
+              >
+                <button className="border-border bg-muted/60 text-muted-foreground flex h-10 min-w-44 cursor-default items-center justify-between rounded-lg border px-3 text-sm">
                   {jobFilter}
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                  <ChevronDown className={`ml-2 h-4 w-4 transition-transform duration-200 ${jobMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
-                {jobMenuOpen && (
-                  <div className="border-border bg-card absolute left-0 top-12 z-50 w-52 rounded-lg border p-1 shadow-xl">
-                    {jobOptions.map((item, idx) => (
-                      <button
-                        key={item}
-                        onClick={() => {
-                          setJobFilter(item)
-                          setJobHighlightIndex(idx)
-                          navigateToJobOption(item)
-                          setJobMenuOpen(false)
-                        }}
-                        className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === jobHighlightIndex ? 'bg-muted/80' : 'hover:bg-muted/80'}`}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className={`border-border bg-card absolute left-0 top-full z-50 mt-1.5 w-52 rounded-lg border p-1 shadow-xl transition-all duration-150 ${jobMenuOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1 opacity-0'}`}>
+                  {jobOptions.map((item, idx) => (
+                    <button
+                      key={item}
+                      onClick={() => { setJobFilter(item); setJobHighlightIndex(idx); navigateToJobOption(item); setJobMenuOpen(false) }}
+                      className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === jobHighlightIndex ? 'bg-muted/80' : 'hover:bg-muted/80'}`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="relative" ref={resourceMenuRef}>
-                <button
-                  onClick={() => {
-                    setResourceMenuOpen((v) => !v)
-                    setJobMenuOpen(false)
-                  }}
-                  className="border-border bg-muted/60 text-muted-foreground flex h-10 min-w-44 cursor-pointer items-center justify-between rounded-lg border px-3 text-sm"
-                >
+              <div
+                className="relative"
+                ref={resourceMenuRef}
+                onMouseEnter={() => { clearCloseTimer(); setResourceMenuOpen(true); setJobMenuOpen(false) }}
+                onMouseLeave={() => { clearCloseTimer(); closeMenuTimerRef.current = window.setTimeout(() => setResourceMenuOpen(false), 150) }}
+              >
+                <button className="border-border bg-muted/60 text-muted-foreground flex h-10 min-w-44 cursor-default items-center justify-between rounded-lg border px-3 text-sm">
                   {resourceFilter}
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                  <ChevronDown className={`ml-2 h-4 w-4 transition-transform duration-200 ${resourceMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
-                {resourceMenuOpen && (
-                  <div className="border-border bg-card absolute left-0 top-12 z-50 w-52 rounded-lg border p-1 shadow-xl">
-                    {resourceOptions.map((item, idx) => (
-                      <button
-                        key={item}
-                        onClick={() => {
-                          setResourceFilter(item)
-                          setResourceHighlightIndex(idx)
-                          navigateToResourceOption(item)
-                          setResourceMenuOpen(false)
-                        }}
-                        className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === resourceHighlightIndex ? 'bg-muted/80' : 'hover:bg-muted/80'}`}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className={`border-border bg-card absolute left-0 top-full z-50 mt-1.5 w-52 rounded-lg border p-1 shadow-xl transition-all duration-150 ${resourceMenuOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1 opacity-0'}`}>
+                  {resourceOptions.map((item, idx) => (
+                    <button
+                      key={item}
+                      onClick={() => { setResourceFilter(item); setResourceHighlightIndex(idx); navigateToResourceOption(item); setResourceMenuOpen(false) }}
+                      className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${idx === resourceHighlightIndex ? 'bg-muted/80' : 'hover:bg-muted/80'}`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -347,7 +325,7 @@ function RootComponent() {
         </div>
       </header>}
 
-      <main className={hidePublicChrome ? 'w-full' : 'w-full py-8'}>
+      <main className={hidePublicChrome ? 'w-full' : 'w-full pb-8'}>
         <Outlet />
       </main>
       <Toaster richColors />
