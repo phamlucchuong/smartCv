@@ -15,10 +15,14 @@ import vn.chuongpl.user_service.features.candidate.CandidateService;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,5 +46,30 @@ class CandidateServiceTest {
 
         AppException ex = assertThrows(AppException.class, () -> candidateService.create(request));
         assertEquals(ErrorCode.CANDIDATE_EXISTED, ex.getErrorCode());
+    }
+
+    @Test
+    void mergeSkills_shouldAppendOnlyNewSkills_caseInsensitive() {
+        Candidate candidate = Candidate.builder()
+                .id("c1")
+                .userId("u1")
+                .skills(List.of("Java", "Docker"))
+                .build();
+        when(candidateRepository.findByUserIdAndDeletedFalse("u1")).thenReturn(Optional.of(candidate));
+
+        candidateService.mergeSkills("u1", Arrays.asList(null, " ", "java", "Kubernetes", "DOCKER", "Spring Boot", "kubernetes"));
+
+        assertEquals(List.of("Java", "Docker", "Kubernetes", "Spring Boot"), candidate.getSkills());
+        assertNotNull(candidate.getUpdatedAt());
+        verify(candidateRepository).save(candidate);
+    }
+
+    @Test
+    void mergeSkills_shouldThrowWhenCandidateMissing() {
+        when(candidateRepository.findByUserIdAndDeletedFalse("missing")).thenReturn(Optional.empty());
+
+        AppException ex = assertThrows(AppException.class, () -> candidateService.mergeSkills("missing", List.of("Java")));
+
+        assertEquals(ErrorCode.CANDIDATE_NOT_FOUND, ex.getErrorCode());
     }
 }
