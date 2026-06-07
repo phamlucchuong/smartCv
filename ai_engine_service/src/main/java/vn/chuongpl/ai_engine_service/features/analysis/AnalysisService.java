@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvImproveRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.InterviewQuestionsRequest;
@@ -45,7 +46,20 @@ public class AnalysisService {
     public CvAnalysisResponse analyze(CvAnalyzeRequest request) {
         String cvText = cvTextExtractor.resolveCvText(request.cvText(), request.cvUrl());
         JobSummary job = jobClient.getJobById(request.jobId());
+        return analyzeCvText(cvText, job);
+    }
 
+    public CvAnalysisResponse analyzeUploadedCv(MultipartFile file, String jobId) {
+        if (jobId == null || jobId.isBlank()) {
+            throw new AppException(ErrorCode.JOB_ID_REQUIRED);
+        }
+
+        String cvText = cvTextExtractor.extractFromUpload(file);
+        JobSummary job = jobClient.getJobById(jobId);
+        return analyzeCvText(cvText, job);
+    }
+
+    private CvAnalysisResponse analyzeCvText(String cvText, JobSummary job) {
         String prompt = promptBuilder.buildAnalyzePrompt(Map.of(
                 "CV_TEXT", cvText,
                 "JOB_TITLE", nvl(job.title()),

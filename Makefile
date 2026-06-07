@@ -36,6 +36,17 @@ run-noti:
 
 run: run-user run-gateway run-job run-application run-ai run-noti
 
+# run migrations without manual cd (process auto-stops after timeout)
+migrate-user:
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	timeout 45s sh -c 'cd user-service && ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=0 --spring.main.web-application-type=none"' || [ $$? -eq 124 ]
+
+migrate-job:
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	timeout 45s sh -c 'cd job_service && ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=0 --spring.main.web-application-type=none --app.search.enabled=false --spring.data.elasticsearch.repositories.enabled=false"' || [ $$? -eq 124 ]
+
+migrate-all: migrate-user migrate-job
+
 
 # docker compose commands
 compose-up:
