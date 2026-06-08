@@ -241,7 +241,7 @@ export const useCandidateStore = create<CandidateState>()(
             },
           ],
       })),
-      clearAccountState: () => set({ ...defaultState }),
+      clearAccountState: () => set({ count: 0, searchQuery: '', ...defaultState }),
     }),
     {
       name: 'smartcv_account',
