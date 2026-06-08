@@ -83,7 +83,7 @@ function ApplicationsPage() {
                     <p className="text-sm text-muted-foreground">{job.company}</p>
                   </div>
                 </div>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusMap[job.status].className}`}>{t(statusMap[job.status].labelKey as any)}</span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusMap[job.status].className}`}>{t(statusMap[job.status].labelKey)}</span>
               </div>
 
               <div className="mb-3 flex flex-wrap gap-2 text-xs">
