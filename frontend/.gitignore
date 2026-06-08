@@ -39,3 +39,8 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+# Superpowers artifacts
+.superpowers/
+**/.superpowers/
+docs/superpowers/
+
