@@ -27,6 +27,10 @@ function toInitials(name: string) {
 function ProfilePage() {
   const { t } = useTranslation()
   const user = useCandidateStore((s) => s.user)
+
+  React.useEffect(() => {
+    document.title = t('page_title_profile')
+  }, [t])
   const experiences = useCandidateStore((s) => s.experiences)
   const educations = useCandidateStore((s) => s.educations)
   const skills = useCandidateStore((s) => s.skills)

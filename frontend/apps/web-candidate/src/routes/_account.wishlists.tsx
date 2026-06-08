@@ -10,39 +10,49 @@ export const Route = createFileRoute('/_account/wishlists')({
   component: WishlistsPage,
 })
 
-const chips = ['Tất cả', 'Công nghệ', 'Thiết kế', 'Marketing']
-
 function WishlistsPage() {
   const { t } = useTranslation()
-  const [selectedChip, setSelectedChip] = React.useState(chips[0])
+  const [selectedChip, setSelectedChip] = React.useState('all')
   const [query, setQuery] = React.useState('')
   const jobs = useCandidateStore((s) => s.wishlistJobs)
   const removeFromWishlist = useCandidateStore((s) => s.removeFromWishlist)
 
+  React.useEffect(() => {
+    document.title = t('page_title_wishlists')
+  }, [t])
+
+  const chips = [
+    { key: 'all', label: t('wishlists_filter_all') },
+    { key: 'tech', label: t('wishlists_filter_tech'), val: 'Công nghệ' },
+    { key: 'design', label: t('wishlists_filter_design'), val: 'Thiết kế' },
+    { key: 'marketing', label: t('wishlists_filter_marketing'), val: 'Marketing' },
+  ]
+
   const filtered = jobs.filter((job) => {
     const q = query.trim().toLowerCase()
     const matchText = q === '' || job.title.toLowerCase().includes(q) || job.company.toLowerCase().includes(q)
-    const matchChip = selectedChip === 'Tất cả' || job.category === selectedChip
+    const activeChip = chips.find((c) => c.key === selectedChip)
+    const matchChip = selectedChip === 'all' || job.category === activeChip?.val
     return matchText && matchChip
   })
 
   return (
     <div className="space-y-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Danh sách yêu thích</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{filtered.length} việc làm đã lưu</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('wishlists_page_title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t('wishlists_count', { count: filtered.length })}</p>
       </header>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm trong danh sách..." className="h-10 max-w-sm border-input bg-background" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('wishlists_search_placeholder')} className="h-10 max-w-sm border-input bg-background" />
         <div className="flex flex-wrap gap-2">
           {chips.map((chip) => (
             <button
-              key={chip}
-              onClick={() => setSelectedChip(chip)}
-              className={selectedChip === chip ? 'cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm text-primary-foreground' : 'cursor-pointer rounded-full border border-border px-4 py-1.5 text-sm text-foreground hover:bg-muted/50'}
+              key={chip.key}
+              onClick={() => setSelectedChip(chip.key)}
+              className={selectedChip === chip.key ? 'cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm text-primary-foreground' : 'cursor-pointer rounded-full border border-border px-4 py-1.5 text-sm text-foreground hover:bg-muted/50'}
             >
-              {chip}
+              {chip.label}
             </button>
           ))}
         </div>
@@ -51,8 +61,8 @@ function WishlistsPage() {
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-24 text-muted-foreground">
           <Heart className="h-12 w-12" />
-          <p>{t('account_no_results')}</p>
-          <Link to="/"><Button variant="outline">Browse Jobs</Button></Link>
+          <p>{t('wishlists_empty')}</p>
+          <Link to="/"><Button variant="outline">{t('job_find_jobs')}</Button></Link>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

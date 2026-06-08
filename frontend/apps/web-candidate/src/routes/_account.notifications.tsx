@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import * as React from 'react'
 import { useTranslation } from '@smart-cv/i18n'
 import { Bell, BellOff } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,13 +22,21 @@ function NotificationsPage() {
   const markAllRead = useCandidateStore((s) => s.markAllRead)
   const unreadCount = notifications.filter((n) => n.unread).length
 
+  React.useEffect(() => {
+    document.title = t('page_title_notifications')
+  }, [t])
+
+  React.useEffect(() => {
+    // Empty effect to trigger re-renders on translation changes
+  }, [t])
+
   return (
     <div className="space-y-6">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Thông báo</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('notifications_page_title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Không có thông báo mới'}
+            {unreadCount > 0 ? t('notifications_unread_count', { count: unreadCount }) : t('notifications_no_unread')}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -38,7 +47,7 @@ function NotificationsPage() {
               toast.success(t('account_marked_all_read'))
             }}
           >
-            Đánh dấu tất cả đã đọc
+            {t('notifications_mark_all_read')}
           </button>
         )}
       </header>
@@ -46,7 +55,7 @@ function NotificationsPage() {
       {notifications.length === 0 ? (
         <div className="card-surface flex flex-col items-center justify-center gap-3 py-20 text-center">
           <BellOff className="h-10 w-10 text-muted-foreground opacity-40" />
-          <p className="font-medium text-muted-foreground">Chưa có thông báo nào</p>
+          <p className="font-medium text-muted-foreground">{t('notifications_empty')}</p>
         </div>
       ) : (
         <div className="card-surface divide-y divide-border overflow-hidden">

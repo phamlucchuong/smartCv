@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { Button, Input } from '@smart-cv/ui'
 import { Clock, ClipboardCheck, ChevronDown, ChevronLeft } from 'lucide-react'
+import { useTranslation } from '@smart-cv/i18n'
 
 export const Route = createFileRoute('/_account/assessments')({
   component: AssessmentsPage,
@@ -34,27 +35,17 @@ const statusStyle: Record<AssessmentStatus, string> = {
   'Expired': 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
 }
 
-const statusLabel: Record<AssessmentStatus, string> = {
-  'Not started': 'Chưa làm',
-  'In progress': 'Đang làm',
-  'Submitted': 'Đã nộp',
-  'Expired': 'Hết hạn',
-}
-
-const filterOptions: Array<{ key: 'all' | AssessmentStatus; label: string }> = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'Not started', label: 'Chưa làm' },
-  { key: 'In progress', label: 'Đang làm' },
-  { key: 'Submitted', label: 'Đã nộp' },
-  { key: 'Expired', label: 'Hết hạn' },
-]
-
 function AssessmentsPage() {
+  const { t } = useTranslation()
   const [taking, setTaking] = React.useState<string | null>(null)
   const [query, setQuery] = React.useState('')
   const [status, setStatus] = React.useState<'all' | AssessmentStatus>('all')
   const [statusMenuOpen, setStatusMenuOpen] = React.useState(false)
   const statusMenuRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    document.title = t('page_title_assessments')
+  }, [t])
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -66,11 +57,38 @@ function AssessmentsPage() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [t])
 
   if (taking) {
     return <TakeAssessment onClose={() => setTaking(null)} />
   }
+
+  const getFilterLabel = (key: 'all' | AssessmentStatus) => {
+    switch (key) {
+      case 'all': return t('assessments_filter_all')
+      case 'Not started': return t('assessments_filter_not_started')
+      case 'In progress': return t('assessments_filter_in_progress')
+      case 'Submitted': return t('assessments_filter_submitted')
+      case 'Expired': return t('assessments_filter_expired')
+    }
+  }
+
+  const getStatusLabel = (key: AssessmentStatus) => {
+    switch (key) {
+      case 'Not started': return t('assessments_status_not_started')
+      case 'In progress': return t('assessments_status_in_progress')
+      case 'Submitted': return t('assessments_status_submitted')
+      case 'Expired': return t('assessments_status_expired')
+    }
+  }
+
+  const filterOptions: Array<{ key: 'all' | AssessmentStatus }> = [
+    { key: 'all' },
+    { key: 'Not started' },
+    { key: 'In progress' },
+    { key: 'Submitted' },
+    { key: 'Expired' },
+  ]
 
   const filtered = ASSESSMENTS.filter((item) => {
     const byStatus = status === 'all' ? true : item.status === status
@@ -79,17 +97,17 @@ function AssessmentsPage() {
     return byStatus && byQuery
   })
 
-  const selectedStatusLabel = filterOptions.find((option) => option.key === status)?.label ?? 'Tất cả'
+  const selectedStatusLabel = getFilterLabel(status)
 
   return (
     <div className="space-y-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Bài kiểm tra</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Hoàn thành các bài đánh giá để tăng cơ hội trúng tuyển</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('assessments_page_title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t('assessments_page_subtitle')}</p>
       </header>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm bài kiểm tra..." className="h-10 max-w-sm" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('assessments_search_placeholder')} className="h-10 max-w-sm" />
         <div className="relative" ref={statusMenuRef}>
           <button
             type="button"
@@ -111,7 +129,7 @@ function AssessmentsPage() {
                   }}
                   className={`w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm ${status === option.key ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-muted'}`}
                 >
-                  {option.label}
+                  {getFilterLabel(option.key)}
                 </button>
               ))}
             </div>
@@ -128,7 +146,7 @@ function AssessmentsPage() {
               </div>
               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[a.status]}`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                {statusLabel[a.status]}
+                {getStatusLabel(a.status)}
               </span>
             </div>
 
@@ -140,18 +158,18 @@ function AssessmentsPage() {
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {a.duration} phút
+                {t('assessments_minutes', { count: a.duration })}
               </span>
               <span className="rounded-md bg-muted px-2 py-0.5">{a.type}</span>
             </div>
 
             {a.score !== null ? (
               <div className="rounded-lg border border-[var(--success)]/20 bg-[var(--success-soft)] px-3 py-2 text-center text-sm font-semibold text-[var(--success)]">
-                Điểm: {a.score}/100
+                {t('assessments_score', { score: a.score })}
               </div>
             ) : a.status === 'Expired' ? (
               <div className="rounded-lg border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-3 py-2 text-center text-sm text-[var(--danger)]">
-                Đã hết hạn
+                {t('assessments_expired_label')}
               </div>
             ) : (
               <Button
@@ -159,7 +177,7 @@ function AssessmentsPage() {
                 disabled={a.status === 'In progress' ? false : a.status !== 'Not started'}
                 onClick={() => setTaking(a.id)}
               >
-                {a.status === 'In progress' ? 'Tiếp tục làm bài' : 'Bắt đầu làm bài'}
+                {a.status === 'In progress' ? t('assessments_continue') : t('assessments_start')}
               </Button>
             )}
           </div>
@@ -188,6 +206,7 @@ const QUESTIONS = [
 ]
 
 function TakeAssessment({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
   const [currentQ, setCurrentQ] = React.useState(0)
   const [selected, setSelected] = React.useState<number | null>(null)
   const [done, setDone] = React.useState(false)
@@ -209,10 +228,10 @@ function TakeAssessment({ onClose }: { onClose: () => void }) {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
             <ClipboardCheck className="h-8 w-8" />
           </div>
-          <h2 className="text-2xl font-bold">Hoàn thành bài kiểm tra!</h2>
+          <h2 className="text-2xl font-bold">{t('assessment_completed')}</h2>
           <p className="text-5xl font-bold text-[var(--success)]">85/100</p>
-          <p className="text-sm text-muted-foreground">Bạn đạt yêu cầu. Kết quả đã được gửi đến nhà tuyển dụng.</p>
-          <Button onClick={onClose}>Quay lại danh sách</Button>
+          <p className="text-sm text-muted-foreground">{t('assessment_passed_desc')}</p>
+          <Button onClick={onClose}>{t('btn_back_to_list')}</Button>
         </div>
       </div>
     )
@@ -225,7 +244,7 @@ function TakeAssessment({ onClose }: { onClose: () => void }) {
       <div className="card-surface flex items-center justify-between p-4">
         <button onClick={onClose} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ChevronLeft className="h-4 w-4" />
-          Thoát
+          {t('btn_exit')}
         </button>
         <div className="text-sm text-muted-foreground">Backend Technical Test</div>
         <div className={`inline-flex items-center gap-2 font-mono text-lg font-bold ${timeLeft < 120 ? 'text-[var(--danger)]' : 'text-foreground'}`}>
@@ -235,7 +254,7 @@ function TakeAssessment({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="card-surface p-6 space-y-5">
-        <div className="text-sm text-muted-foreground">Câu {currentQ + 1} / {QUESTIONS.length}</div>
+        <div className="text-sm text-muted-foreground">{t('assessment_question_count', { current: currentQ + 1, total: QUESTIONS.length })}</div>
         <div className="h-1.5 w-full rounded-full bg-muted">
           <div
             className="h-1.5 rounded-full bg-primary transition-all"
@@ -270,21 +289,21 @@ function TakeAssessment({ onClose }: { onClose: () => void }) {
             disabled={currentQ === 0}
             onClick={() => { setCurrentQ((c) => c - 1); setSelected(null) }}
           >
-            Câu trước
+            {t('btn_prev_question')}
           </Button>
           {currentQ < QUESTIONS.length - 1 ? (
             <Button
               disabled={selected === null}
               onClick={() => { setCurrentQ((c) => c + 1); setSelected(null) }}
             >
-              Câu tiếp
+              {t('btn_next_question')}
             </Button>
           ) : (
             <Button
               disabled={selected === null}
               onClick={() => setDone(true)}
             >
-              Nộp bài
+              {t('btn_submit_assessment')}
             </Button>
           )}
         </div>

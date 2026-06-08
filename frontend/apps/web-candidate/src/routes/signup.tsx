@@ -25,8 +25,9 @@ function SignUpComponent() {
   )
 
   React.useEffect(() => {
+    document.title = t('page_title_signup')
     sessionStorage.setItem('auth_prev_route', '/signup')
-  }, [])
+  }, [t])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

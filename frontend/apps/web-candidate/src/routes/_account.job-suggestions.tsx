@@ -10,40 +10,50 @@ export const Route = createFileRoute('/_account/job-suggestions')({
   component: JobSuggestionsPage,
 })
 
-const chips = ['Tất cả', 'React', 'TypeScript', 'Next.js', 'Node.js']
-
 function JobSuggestionsPage() {
   const { t } = useTranslation()
-  const [selectedChip, setSelectedChip] = React.useState(chips[0])
+  const [selectedChip, setSelectedChip] = React.useState('all')
   const [query, setQuery] = React.useState('')
   const suggestions = useCandidateStore((s) => s.jobSuggestions)
   const appliedJobIds = useCandidateStore((s) => s.appliedJobIds)
   const applyToJob = useCandidateStore((s) => s.applyToJob)
 
+  React.useEffect(() => {
+    document.title = t('page_title_job_suggestions')
+  }, [t])
+
+  const chips = [
+    { key: 'all', label: t('job_suggestions_filter_all') },
+    { key: 'React', label: 'React' },
+    { key: 'TypeScript', label: 'TypeScript' },
+    { key: 'Next.js', label: 'Next.js' },
+    { key: 'Node.js', label: 'Node.js' },
+  ]
+
   const filtered = suggestions.filter((job) => {
     const q = query.trim().toLowerCase()
     const matchText = q === '' || job.title.toLowerCase().includes(q) || job.company.toLowerCase().includes(q)
-    const matchChip = selectedChip === 'Tất cả' || job.skills.some((skill) => skill.toLowerCase().includes(selectedChip.toLowerCase()))
+    const matchChip = selectedChip === 'all' || job.skills.some((skill) => skill.toLowerCase().includes(selectedChip.toLowerCase()))
     return matchText && matchChip
   })
 
   return (
     <div className="space-y-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Gợi ý việc làm</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Dựa trên hồ sơ và kỹ năng của bạn</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('job_suggestions_page_title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t('job_suggestions_subtitle')}</p>
       </header>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Lọc gợi ý..." className="h-10 max-w-sm border-input bg-background" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('job_suggestions_search_placeholder')} className="h-10 max-w-sm border-input bg-background" />
         <div className="flex flex-wrap gap-2">
           {chips.map((chip) => (
             <button
-              key={chip}
-              onClick={() => setSelectedChip(chip)}
-              className={selectedChip === chip ? 'cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm text-primary-foreground' : 'cursor-pointer rounded-full border border-border px-4 py-1.5 text-sm text-foreground hover:bg-muted/50'}
+              key={chip.key}
+              onClick={() => setSelectedChip(chip.key)}
+              className={selectedChip === chip.key ? 'cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm text-primary-foreground' : 'cursor-pointer rounded-full border border-border px-4 py-1.5 text-sm text-foreground hover:bg-muted/50'}
             >
-              {chip}
+              {chip.label}
             </button>
           ))}
         </div>
@@ -65,7 +75,7 @@ function JobSuggestionsPage() {
                       <p className="text-sm text-muted-foreground">{job.company}</p>
                     </div>
                   </div>
-                  <span className="rounded-full border border-ai/20 bg-ai-soft px-2.5 py-1 text-xs font-semibold text-ai">{job.matchScore}% phù hợp</span>
+                  <span className="rounded-full border border-ai/20 bg-ai-soft px-2.5 py-1 text-xs font-semibold text-ai">{t('job_match_score_pct', { score: job.matchScore })}</span>
                 </div>
 
                 <div className="mb-3 flex flex-wrap gap-2 text-xs">
@@ -90,7 +100,7 @@ function JobSuggestionsPage() {
                       toast.success(t('account_applied_toast'))
                     }}
                   >
-                    {applied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}
+                    {applied ? t('job_applied') : t('job_apply_now')}
                   </Button>
                 </div>
               </article>

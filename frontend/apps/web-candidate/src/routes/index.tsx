@@ -176,9 +176,14 @@ const faqs = [
 function IndexComponent() {
   const { t } = useTranslation()
   const [page, setPage] = React.useState(1)
+  const aiMatchScore = 82
   const jobsPerPage = 6
   const totalPages = Math.ceil(jobs.length / jobsPerPage)
   const paginatedJobs = jobs.slice((page - 1) * jobsPerPage, page * jobsPerPage)
+
+  React.useEffect(() => {
+    document.title = t('page_title_home')
+  }, [t])
 
   return (
     <div className="space-y-12 pb-12">
@@ -211,8 +216,15 @@ function IndexComponent() {
                   <div className="text-lg font-semibold">Backend Java Developer</div>
                   <div className="text-sm text-muted-foreground">FPT Software</div>
                 </div>
-                <div className="flex h-20 w-20 items-center justify-center rounded-full border-[6px] border-success text-lg font-bold text-success">
-                  82%
+                <div
+                  className="flex h-20 w-20 items-center justify-center rounded-full text-lg font-bold text-success"
+                  style={{
+                    background: `conic-gradient(from 180deg, var(--success) 0deg ${aiMatchScore * 3.6}deg, color-mix(in oklch, var(--success) 14%, white) ${aiMatchScore * 3.6}deg 360deg)`,
+                  }}
+                >
+                  <div className="flex h-[calc(100%-12px)] w-[calc(100%-12px)] items-center justify-center rounded-full bg-card">
+                    {aiMatchScore}%
+                  </div>
                 </div>
               </div>
               <div className="space-y-3">
@@ -240,7 +252,7 @@ function IndexComponent() {
                 </div>
               </div>
             </div>
-            <div className="absolute -right-4 -top-4 hidden items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-sm md:flex">
+            <div className="absolute -right-8 -top-10 z-20 hidden items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-sm md:flex">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ai text-ai-foreground"><Brain className="h-4 w-4" /></div>
               <div className="text-xs"><div className="font-semibold">AI Analysis</div><div className="text-muted-foreground">Live</div></div>
             </div>
@@ -371,7 +383,7 @@ function IndexComponent() {
                 <p className="text-sm text-muted-foreground">{company.pitch}</p>
                 <div className="flex items-center justify-between text-sm">
                   <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.hiring} Open Positions</span>
-                  <a href="#" className="text-primary hover:underline">View Profile</a>
+                  <Link to="/companies/$companyId" params={{ companyId: company.name.toLowerCase().replace(/\s+/g, '-') }} className="text-primary hover:underline">View Profile</Link>
                 </div>
               </CardContent>
             </Card>

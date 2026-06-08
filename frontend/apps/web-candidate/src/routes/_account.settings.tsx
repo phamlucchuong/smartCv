@@ -18,6 +18,10 @@ function SettingsPage() {
   const [activeSection, setActiveSection] = React.useState<SectionKey>('account')
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false)
 
+  React.useEffect(() => {
+    document.title = t('page_title_settings')
+  }, [t])
+
   const settings = useCandidateStore((s) => s.settings)
   const setSettingsEmail = useCandidateStore((s) => s.setSettingsEmail)
   const setNotificationSetting = useCandidateStore((s) => s.setNotificationSetting)
