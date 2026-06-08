@@ -124,6 +124,10 @@ function JobDetailPage() {
   const heroRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
+    document.title = t('page_title_job_detail', { title: mockJob.title, company: mockJob.company })
+  }, [t])
+
+  React.useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyBar(!entry.isIntersecting),
       { threshold: 0 }
@@ -387,9 +391,15 @@ function JobDetailPage() {
                     <span className="font-medium text-foreground text-right max-w-[55%]">{value}</span>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full border-primary text-primary mt-1">
-                  {t('job_view_company')} →
-                </Button>
+                <Link
+                  to="/companies/$companyId"
+                  params={{ companyId: mockJob.company.toLowerCase().replace(/\s+/g, '-') }}
+                  className="block w-full mt-1"
+                >
+                  <Button variant="outline" className="w-full border-primary text-primary">
+                    {t('job_view_company')} →
+                  </Button>
+                </Link>
                 <a href="#" className="block text-center text-xs text-muted-foreground hover:text-foreground">
                   {t('job_report')}
                 </a>

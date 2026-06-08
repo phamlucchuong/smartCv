@@ -181,6 +181,10 @@ function IndexComponent() {
   const totalPages = Math.ceil(jobs.length / jobsPerPage)
   const paginatedJobs = jobs.slice((page - 1) * jobsPerPage, page * jobsPerPage)
 
+  React.useEffect(() => {
+    document.title = t('page_title_home')
+  }, [t])
+
   return (
     <div className="space-y-12 pb-12">
       <section className="relative overflow-hidden border-y border-border" aria-label="Hero Banner">
@@ -379,7 +383,7 @@ function IndexComponent() {
                 <p className="text-sm text-muted-foreground">{company.pitch}</p>
                 <div className="flex items-center justify-between text-sm">
                   <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.hiring} Open Positions</span>
-                  <a href="#" className="text-primary hover:underline">View Profile</a>
+                  <Link to="/companies/$companyId" params={{ companyId: company.name.toLowerCase().replace(/\s+/g, '-') }} className="text-primary hover:underline">View Profile</Link>
                 </div>
               </CardContent>
             </Card>

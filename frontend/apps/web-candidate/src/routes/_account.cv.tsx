@@ -35,6 +35,10 @@ function MyCVPage() {
   const removeCV = useCandidateStore((s) => s.removeCV)
   const updateCVStatus = useCandidateStore((s) => s.updateCVStatus)
 
+  React.useEffect(() => {
+    document.title = t('page_title_cv')
+  }, [t])
+
   const [selected, setSelected] = React.useState(cvList[0]?.id ?? '')
   const fileRef = React.useRef<HTMLInputElement>(null)
 

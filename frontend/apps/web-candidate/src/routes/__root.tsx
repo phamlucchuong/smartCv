@@ -60,10 +60,14 @@ function RootComponent() {
   const accountMenuRef = React.useRef<HTMLDivElement>(null)
   const closeMenuTimerRef = React.useRef<number | null>(null)
 
-  const jobOptions = [t('nav_all_jobs'), t('nav_top_companies'), t('nav_remote_jobs'), t('nav_internships')]
+  const jobOptions = [t('nav_all_jobs'), t('nav_companies'), t('nav_top_companies'), t('nav_remote_jobs'), t('nav_internships')]
   const resourceOptions = [t('nav_career_resources'), t('nav_cv_templates'), t('nav_interview_guides'), t('nav_salary_report')]
 
   const navigateToJobOption = (item: string) => {
+    if (item === t('nav_companies')) {
+      navigate({ to: '/companies' })
+      return
+    }
     if (item === t('nav_top_companies')) {
       window.location.hash = 'companies'
       return
@@ -354,7 +358,7 @@ function RootComponent() {
               <h3 className="text-foreground mb-3 text-sm font-semibold uppercase tracking-wide">For Candidates</h3>
               <ul className="text-muted-foreground space-y-2 text-sm">
                 <li><a href="#" className="hover:opacity-80">Browse Jobs</a></li>
-                <li><a href="#" className="hover:opacity-80">Top Companies</a></li>
+                <li><Link to="/companies" className="hover:opacity-80">Top Companies</Link></li>
                 <li><a href="#" className="hover:opacity-80">Salary Insights</a></li>
                 <li><a href="#" className="hover:opacity-80">Career Blog</a></li>
               </ul>

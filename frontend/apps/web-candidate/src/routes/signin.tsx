@@ -26,8 +26,9 @@ function SignInComponent() {
   )
 
   React.useEffect(() => {
+    document.title = t('page_title_signin')
     sessionStorage.setItem('auth_prev_route', '/signin')
-  }, [])
+  }, [t])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
