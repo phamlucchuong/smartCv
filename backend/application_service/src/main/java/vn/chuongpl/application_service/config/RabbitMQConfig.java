@@ -3,6 +3,7 @@ package vn.chuongpl.application_service.config;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,17 +24,17 @@ public class RabbitMQConfig {
     @Bean Queue withdrawnQueue() { return new Queue("application.withdrawn.queue"); }
 
     @Bean
-    Binding acceptedBinding(DirectExchange e) {
+    Binding acceptedBinding(@Qualifier("applicationExchange") DirectExchange e) {
         return BindingBuilder.bind(acceptedQueue()).to(e).with(APPLICATION_ACCEPTED_KEY);
     }
 
     @Bean
-    Binding rejectedBinding(DirectExchange e) {
+    Binding rejectedBinding(@Qualifier("applicationExchange") DirectExchange e) {
         return BindingBuilder.bind(rejectedQueue()).to(e).with(APPLICATION_REJECTED_KEY);
     }
 
     @Bean
-    Binding withdrawnBinding(DirectExchange e) {
+    Binding withdrawnBinding(@Qualifier("applicationExchange") DirectExchange e) {
         return BindingBuilder.bind(withdrawnQueue()).to(e).with(APPLICATION_WITHDRAWN_KEY);
     }
 
