@@ -28,6 +28,8 @@ spring:
 app:
   gateway:
     internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
+  user-service:
+    base-url: ${USER_SERVICE_URL:http://localhost:8081/user}
   job-service:
     base-url: ${JOB_SERVICE_URL:http://localhost:8082/job}
   application-service:

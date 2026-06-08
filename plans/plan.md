@@ -1,8 +1,15 @@
 # SmartCV Backend — Project Status & Remaining Work
 
-**Updated:** 2026-05-29
+**Updated:** 2026-05-30
 **Branch:** `feat/ai-scoring` (R7 + R8 merged via commit `4c1f4d7`)
 **Companion plan:** [20260526-0003-r9-r10-r11-completion.md](20260526-0003-r9-r10-r11-completion.md)
+
+### Recent Update (2026-05-30)
+- Added gateway JWT bypass-token configuration for faster local testing.
+- Added `user-service` Mongock migration `V1_003__Init_mock_candidate_for_bypass_token` to seed a default verified candidate user/profile (`mock-candidate-user`) for bypass-token flows.
+- Added `job_service` Mongock setup + migration `V1_001__Init_mock_jobs_for_ai_scoring` to seed 2 ACTIVE mock jobs for AI CV scoring tests (high-pass Java backend and low-pass embedded profile).
+- Added root `Makefile` targets `migrate-user`, `migrate-job`, `migrate-all` to run migrations from repository root without manual `cd`.
+- Added test endpoint `POST /api/ai/analyze-upload-test` in `ai_engine_service` to accept direct CV file upload (`multipart/form-data`: `file`, `jobId`) and return AI analysis result without requiring pre-uploaded `cvUrl`.
 
 ---
 

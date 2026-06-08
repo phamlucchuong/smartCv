@@ -14,3 +14,8 @@ postman/
 
 # --- Docker ---
 docker-compose.override.yml
+# --- Superpowers artifacts ---
+.superpowers/
+**/.superpowers/
+docs/superpowers/
+
