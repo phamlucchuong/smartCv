@@ -13,10 +13,18 @@ on:
         required: false
         type: string
         default: ./mvnw test
+      lint_command:
+        required: false
+        type: string
+        default: ./mvnw -B -ntp checkstyle:check -Dcheckstyle.config.location=../tools/checkstyle/checkstyle.xml -Dcheckstyle.includeTestSourceDirectory=true -Dcheckstyle.consoleOutput=true
+      build_command:
+        required: false
+        type: string
+        default: ./mvnw -B -ntp -DskipTests compile
 
 jobs:
   test:
-    name: Test ${{ inputs.service_name }}
+    name: Validate ${{ inputs.service_name }}
     runs-on: ubuntu-latest
 
     steps:
@@ -34,6 +42,18 @@ jobs:
           java-version: "21"
           distribution: temurin
           cache: maven
+
+      - name: Lint
+        working-directory: ${{ inputs.service_path }}
+        run: |
+          chmod +x mvnw
+          ${{ inputs.lint_command }}
+
+      - name: Compile
+        working-directory: ${{ inputs.service_path }}
+        run: |
+          chmod +x mvnw
+          ${{ inputs.build_command }}
 
       - name: Run tests
         working-directory: ${{ inputs.service_path }}

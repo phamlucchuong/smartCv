@@ -3,7 +3,6 @@ package vn.chuongpl.user_service.features.role;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.user_service.dtos.request.CreateRoleRequest;
 import vn.chuongpl.user_service.dtos.response.RoleResponse;
