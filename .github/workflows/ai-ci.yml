@@ -1,41 +1,23 @@
-name: ai-ci.yml
+name: AI Engine Service CI
 
 on:
   push:
     branches: ["dev"]
     paths:
-      - 'ai_engine_service/**'
+      - "ai_engine_service/**"
+      - ".github/workflows/ai-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
   pull_request:
     branches: ["main", "dev"]
     paths:
-      - 'ai_engine_service/**'
+      - "ai_engine_service/**"
+      - ".github/workflows/ai-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
 
 jobs:
   build-and-test-ai:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Prepare env file
-        run: |
-          if [ -f .env.example ]; then
-            cp .env.example .env
-          fi
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Build
-        run: |
-          cd ai_engine_service
-          chmod +x mvnw
-          ./mvnw compile -DskipTests
-
-      - name: Run Tests
-        run: |
-          cd ai_engine_service
-          ./mvnw test -Dspring.ai.ollama.chat.enabled=false
+    uses: ./.github/workflows/_java-service-ci.yml
+    with:
+      service_name: ai_engine_service
+      service_path: ai_engine_service
+      test_command: ./mvnw test -Dspring.ai.ollama.chat.enabled=false
