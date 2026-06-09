@@ -5,10 +5,10 @@ import (
 )
 
 type Config struct {
-	Port        string `mapstructure:"NOTI_SERVICE_PORT"`
-	PSQL_DSN    string `mapstructure:"PSQL_DSN"`
-	RedisHost   string `mapstructure:"REDIS_HOST"`
-	RedisPort   string `mapstructure:"REDIS_PORT"`
+	Port      string `mapstructure:"NOTI_SERVICE_PORT"`
+	PSQL_DSN  string `mapstructure:"PSQL_DSN"`
+	RedisHost string `mapstructure:"REDIS_HOST"`
+	RedisPort string `mapstructure:"REDIS_PORT"`
 	// AllowedOrigins []string `mapstructure:"ALLOWED_ORIGINS"`
 	Environment string `mapstructure:"ENVIRONMENT"`
 
@@ -24,7 +24,7 @@ type Config struct {
 	TwilioAccountSID string `mapstructure:"TWILIO_ACCOUNT_SID"`
 	TwilioAuthToken  string `mapstructure:"TWILIO_AUTH_TOKEN"`
 	TwilioFromNumber string `mapstructure:"TWILIO_FROM_NUMBER"`
- 
+
 	// RabbitMQ configuration
 	RabbitMQHost     string `mapstructure:"RABBITMQ_HOST"`
 	RabbitMQPort     string `mapstructure:"RABBITMQ_PORT"`
