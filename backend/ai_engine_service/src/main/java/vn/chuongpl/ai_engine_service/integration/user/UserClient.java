@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,7 @@ public class UserClient {
 
     public void mergeSkills(String userId, List<String> skills) {
         try {
+            List<String> safeSkills = skills == null ? Collections.emptyList() : skills;
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("X-Gateway-Secret", gatewaySecret);
@@ -37,7 +39,7 @@ public class UserClient {
             restTemplate.exchange(
                     baseUrl + "/api/internal/candidates/by-user/" + userId + "/skills",
                     HttpMethod.PATCH,
-                    new HttpEntity<>(Map.of("skills", skills), headers),
+                    new HttpEntity<>(Map.of("skills", safeSkills), headers),
                     Void.class
             );
         } catch (Exception e) {

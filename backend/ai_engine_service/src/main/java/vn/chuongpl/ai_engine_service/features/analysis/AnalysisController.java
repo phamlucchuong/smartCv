@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.ai_engine_service.dtos.ApiResponse;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvImproveRequest;
@@ -27,6 +28,16 @@ public class AnalysisController {
         return ApiResponse.<CvAnalysisResponse>builder()
                 .data(analysisService.analyze(request))
                 .message("Analyze CV successfully")
+                .build();
+    }
+
+    @PostMapping(value = "/analyze-upload-test", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyAuthority('ROLE_CANDIDATE','ROLE_ADMIN')")
+    public ApiResponse<CvAnalysisResponse> analyzeUploadTest(@RequestParam("file") MultipartFile file,
+                                                             @RequestParam("jobId") String jobId) {
+        return ApiResponse.<CvAnalysisResponse>builder()
+                .data(analysisService.analyzeUploadedCv(file, jobId))
+                .message("Analyze uploaded CV successfully")
                 .build();
     }
 

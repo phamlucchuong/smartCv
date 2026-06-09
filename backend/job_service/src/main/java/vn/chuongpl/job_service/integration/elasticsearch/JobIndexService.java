@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "app.search.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class JobIndexService {

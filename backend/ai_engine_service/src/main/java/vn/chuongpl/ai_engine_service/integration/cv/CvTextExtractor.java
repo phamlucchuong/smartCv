@@ -5,6 +5,7 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.client.RestTemplate;
 import vn.chuongpl.ai_engine_service.enums.ErrorCode;
 import vn.chuongpl.ai_engine_service.exception.AppException;
@@ -41,6 +42,32 @@ public class CvTextExtractor {
             throw e;
         } catch (Exception e) {
             log.error("Failed to extract CV text: {}", e.getMessage());
+            throw new AppException(ErrorCode.AI_PROCESSING_FAILED);
+        }
+    }
+
+    public String extractFromUpload(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.CV_TEXT_REQUIRED);
+        }
+
+        try {
+            byte[] fileBytes = file.getBytes();
+            if (fileBytes.length == 0) {
+                throw new AppException(ErrorCode.CV_TEXT_REQUIRED);
+            }
+
+            if (looksLikePdf(fileBytes)) {
+                try (PDDocument document = Loader.loadPDF(fileBytes)) {
+                    return new PDFTextStripper().getText(document).trim();
+                }
+            }
+
+            return new String(fileBytes, StandardCharsets.UTF_8).trim();
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to extract uploaded CV text: {}", e.getMessage());
             throw new AppException(ErrorCode.AI_PROCESSING_FAILED);
         }
     }
