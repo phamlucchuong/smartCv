@@ -135,4 +135,15 @@ class AuthServiceTest {
         assertTrue(tokens.containsKey("accessToken"));
         assertTrue(tokens.containsKey("refreshToken"));
     }
+
+    @Test
+    void register_shouldThrowWhenRoleIsUnsupported() {
+        RegisterRequest request = new RegisterRequest("User C", "c@b.com", "12345678", "0907", "EMAIL", "ADMIN");
+        when(userService.verifyEmail("c@b.com")).thenReturn(true);
+
+        AppException ex = assertThrows(AppException.class, () -> authService.register(request));
+
+        assertEquals(ErrorCode.ROLE_NOT_FOUND, ex.getErrorCode());
+        verifyNoInteractions(userMapper, roleService, notificationClient);
+    }
 }

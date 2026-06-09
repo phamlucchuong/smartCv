@@ -11,6 +11,13 @@ postman/
 .env
 .env.local
 *.pem
+.m2/
 
 # --- Docker ---
 docker-compose.override.yml
+# --- Superpowers artifacts ---
+.superpowers/
+**/.superpowers/
+docs/superpowers/
+.cache/
+notification-service/server
