@@ -15,7 +15,7 @@ const OUTPUT_BASE = {
 export default defineConfig({
   userService: {
     input: {
-      target: process.env.USER_SERVICE_URL ?? 'http://localhost:8081/user/v3/api-docs',
+      target: process.env.USER_SERVICE_URL ?? './openapi/live/user-service.json',
     },
     output: {
       ...OUTPUT_BASE,
@@ -26,7 +26,7 @@ export default defineConfig({
 
   jobService: {
     input: {
-      target: process.env.JOB_SERVICE_URL ?? 'http://localhost:8082/job/v3/api-docs',
+      target: process.env.JOB_SERVICE_URL ?? './openapi/live/job-service.json',
     },
     output: {
       ...OUTPUT_BASE,
@@ -37,7 +37,7 @@ export default defineConfig({
 
   applicationService: {
     input: {
-      target: process.env.APP_SERVICE_URL ?? 'http://localhost:8083/application/v3/api-docs',
+      target: process.env.APP_SERVICE_URL ?? './openapi/live/application-service.json',
     },
     output: {
       ...OUTPUT_BASE,
@@ -48,7 +48,7 @@ export default defineConfig({
 
   aiService: {
     input: {
-      target: process.env.AI_SERVICE_URL ?? 'http://localhost:8085/ai/v3/api-docs',
+      target: process.env.AI_SERVICE_URL ?? './openapi/live/ai-service.json',
     },
     output: {
       ...OUTPUT_BASE,

@@ -6,11 +6,12 @@
   "module": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "generate": "orval",
-    "generate:user": "orval --config orval.config.ts userService",
-    "generate:job": "orval --config orval.config.ts jobService",
-    "generate:application": "orval --config orval.config.ts applicationService",
-    "generate:ai": "orval --config orval.config.ts aiService",
+    "fetch-specs": "node scripts/fetch-specs.mjs",
+    "generate": "node scripts/fetch-specs.mjs && orval",
+    "generate:user": "node scripts/fetch-specs.mjs && orval --config orval.config.ts userService",
+    "generate:job": "node scripts/fetch-specs.mjs && orval --config orval.config.ts jobService",
+    "generate:application": "node scripts/fetch-specs.mjs && orval --config orval.config.ts applicationService",
+    "generate:ai": "node scripts/fetch-specs.mjs && orval --config orval.config.ts aiService",
     "build": "tsc"
   },
   "dependencies": {

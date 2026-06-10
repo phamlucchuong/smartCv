@@ -39,6 +39,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+# Generated API specs (downloaded from live backend, not committed)
+packages/api/openapi/live/
+
 # Superpowers artifacts
 .superpowers/
 **/.superpowers/
