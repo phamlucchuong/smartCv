@@ -1,13 +1,12 @@
 export * from './axios-instance';
 
-// user-service: Auth, Users, Candidates, Companies + Settings + CV management
-export * from './generated/user';
+// Generated from static web-candidate.openapi.yaml (baseline snapshot).
+// Run `pnpm generate:api` with backend running to regenerate with live specs
+// and update these paths to: generated/user, generated/job, generated/application, generated/ai
 
-// job-service: Jobs, Home
-export * from './generated/job';
-
-// application-service: Applications
-export * from './generated/application';
-
-// ai-service: AI
-export * from './generated/ai';
+export * from './generated/auth/auth';
+export * from './generated/users/users';
+export * from './generated/candidates/candidates';
+export * from './generated/jobs/jobs';
+export * from './generated/applications/applications';
+export * from './generated/model';
