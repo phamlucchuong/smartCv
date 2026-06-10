@@ -6,9 +6,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 import vn.chuongpl.user_service.enums.JobType;
+import vn.chuongpl.user_service.features.candidate.settings.CandidateSettings;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "candidates")
@@ -74,6 +76,28 @@ public class Candidate {
     // ── CV ────────────────────────────────────────────────────────────────────
     @Field(name = "cv_url")
     String cvUrl;
+
+    @Builder.Default
+    @Field(name = "cvs")
+    List<CvItem> cvs = new ArrayList<>();
+
+    // ── Settings ──────────────────────────────────────────────────────────────
+    @Builder.Default
+    @Field(name = "settings")
+    CandidateSettings settings = new CandidateSettings();
+
+    // ── Job suggestions cache ─────────────────────────────────────────────────
+    @Builder.Default
+    @Field(name = "job_suggestions")
+    List<JobSuggestion> jobSuggestions = new ArrayList<>();
+
+    @Field(name = "suggestions_updated_at")
+    LocalDateTime suggestionsUpdatedAt;
+
+    // ── Company follows ───────────────────────────────────────────────────────
+    @Builder.Default
+    @Field(name = "followed_company_ids")
+    List<String> followedCompanyIds = new ArrayList<>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")

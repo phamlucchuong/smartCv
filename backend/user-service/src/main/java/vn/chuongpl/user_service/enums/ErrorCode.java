@@ -22,6 +22,7 @@ public enum ErrorCode {
     WRONG_PASSWORD(3005, "Current password is incorrect"),
     CANDIDATE_EXISTED(4001, "Candidate profile already exists"),
     CANDIDATE_NOT_FOUND(4002, "Candidate profile not found"),
+    CV_NOT_FOUND(4003, "CV not found"),
     RECRUITER_EXISTED(5001, "Recruiter profile already exists"),
     RECRUITER_NOT_FOUND(5002, "Recruiter profile not found"),
     COMPANY_NOT_FOUND(5003, "Company not found"),
