@@ -1,0 +1,33 @@
+package vn.chuongpl.job_service.features.home;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import vn.chuongpl.job_service.dtos.ApiResponse;
+import vn.chuongpl.job_service.dtos.response.JobResponse;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/home")
+@RequiredArgsConstructor
+public class HomeController {
+
+    final HomeService homeService;
+
+    @GetMapping("/stats")
+    public ApiResponse<HomeStatsResponse> getStats() {
+        return ApiResponse.<HomeStatsResponse>builder().data(homeService.getStats()).build();
+    }
+
+    @GetMapping("/categories")
+    public ApiResponse<List<JobCategoryResponse>> getCategories() {
+        return ApiResponse.<List<JobCategoryResponse>>builder().data(homeService.getCategories()).build();
+    }
+
+    @GetMapping("/featured-jobs")
+    public ApiResponse<List<JobResponse>> getFeaturedJobs() {
+        return ApiResponse.<List<JobResponse>>builder().data(homeService.getFeaturedJobs()).build();
+    }
+}

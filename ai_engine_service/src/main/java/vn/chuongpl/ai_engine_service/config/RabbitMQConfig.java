@@ -48,6 +48,14 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(skillExtractQueue()).to(skillExchange()).with(SKILL_ROUTING_KEY);
     }
 
+    public static final String JOB_SUGGESTIONS_EXCHANGE = "job.suggestions.exchange";
+    public static final String JOB_SUGGESTIONS_ROUTING_KEY = "job.suggestions";
+
+    @Bean
+    DirectExchange jobSuggestionsExchange() {
+        return new DirectExchange(JOB_SUGGESTIONS_EXCHANGE);
+    }
+
     @Bean
     MessageConverter jackson2MessageConverter() {
         return new Jackson2JsonMessageConverter();

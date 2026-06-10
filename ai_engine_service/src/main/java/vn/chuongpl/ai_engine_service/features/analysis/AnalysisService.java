@@ -22,6 +22,8 @@ import vn.chuongpl.ai_engine_service.exception.AppException;
 import vn.chuongpl.ai_engine_service.integration.cv.CvTextExtractor;
 import vn.chuongpl.ai_engine_service.integration.job.JobClient;
 import vn.chuongpl.ai_engine_service.integration.job.JobSummary;
+import vn.chuongpl.ai_engine_service.integration.user.JobSuggestionsMessage;
+import vn.chuongpl.ai_engine_service.integration.user.JobSuggestionsPublisher;
 
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +38,7 @@ public class AnalysisService {
     private final PromptBuilder promptBuilder;
     private final CvTextExtractor cvTextExtractor;
     private final JobClient jobClient;
+    private final JobSuggestionsPublisher jobSuggestionsPublisher;
 
     @Value("${app.ai.recommend-batch-size:20}")
     private int recommendBatchSize;
@@ -114,6 +117,10 @@ public class AnalysisService {
     }
 
     public JobRecommendationResponse recommend(JobRecommendRequest request) {
+        return recommend(request, null);
+    }
+
+    public JobRecommendationResponse recommend(JobRecommendRequest request, String candidateId) {
         String cvText = cvTextExtractor.resolveCvText(request.cvText(), request.cvUrl());
         int topK = request.topK() == null ? 5 : request.topK();
 
@@ -135,7 +142,17 @@ public class AnalysisService {
         )) + "\n\nTop-K: " + topK;
 
         String aiContent = callAi(prompt);
-        return parse(aiContent, JobRecommendationResponse.class);
+        JobRecommendationResponse response = parse(aiContent, JobRecommendationResponse.class);
+
+        if (candidateId != null && !candidateId.isBlank() && response.recommendations() != null) {
+            List<JobSuggestionsMessage.JobSuggestionItem> suggestions = response.recommendations().stream()
+                    .map(r -> new JobSuggestionsMessage.JobSuggestionItem(
+                            r.jobId(), r.matchScore(), r.matchReason(), r.alignedSkills()))
+                    .toList();
+            jobSuggestionsPublisher.publish(new JobSuggestionsMessage(candidateId, suggestions));
+        }
+
+        return response;
     }
 
     public InterviewQuestionsResponse generateInterviewQuestions(InterviewQuestionsRequest request) {

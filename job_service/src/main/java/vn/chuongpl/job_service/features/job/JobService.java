@@ -129,6 +129,16 @@ public class JobService {
         removeFromIndexIfEnabled(id);
     }
 
+    public java.util.List<JobResponse> getRelatedJobs(String id) {
+        Job job = jobRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new AppException(ErrorCode.JOB_NOT_FOUND));
+        java.util.List<String> skills = job.getSkills() != null ? job.getSkills() : java.util.List.of();
+        if (skills.isEmpty()) return java.util.List.of();
+        return jobRepository
+                .findTop5ByStatusAndSkillsInAndIdNotAndDeletedFalse(JobStatus.ACTIVE, skills, id)
+                .stream().map(jobMapper::toJobResponse).toList();
+    }
+
     public PageResponse<JobResponse> searchJobs(JobSearchRequest request) {
         JobIndexService jobIndexService = jobIndexServiceProvider.getIfAvailable();
         if (jobIndexService == null) {
