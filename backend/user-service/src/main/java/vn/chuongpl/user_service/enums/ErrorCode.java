@@ -24,6 +24,7 @@ public enum ErrorCode {
     CANDIDATE_NOT_FOUND(4002, "Candidate profile not found"),
     RECRUITER_EXISTED(5001, "Recruiter profile already exists"),
     RECRUITER_NOT_FOUND(5002, "Recruiter profile not found"),
+    COMPANY_NOT_FOUND(5003, "Company not found"),
     FILE_REQUIRED(6001, "File is required"),
     FILE_TOO_LARGE(6002, "File must not exceed 5MB"),
     INVALID_FILE_TYPE(6003, "Only PDF files are accepted"),
