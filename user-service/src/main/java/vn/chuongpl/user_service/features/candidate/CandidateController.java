@@ -12,7 +12,12 @@ import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.CandidateRequest;
 import vn.chuongpl.user_service.dtos.response.CandidateResponse;
 import vn.chuongpl.user_service.dtos.response.CvUploadResponse;
+import vn.chuongpl.user_service.features.candidate.settings.CandidateSettings;
+import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferences;
+import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.integration.ai.SkillExtractPublisher;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/candidates")
@@ -68,6 +73,7 @@ public class CandidateController {
                                                    @AuthenticationPrincipal String userId) {
         String url = s3Service.uploadCv(file, userId);
         candidateService.saveCvUrl(userId, url);
+        candidateService.addCvToList(userId, url, file.getOriginalFilename());
         skillExtractPublisher.publish(userId, url);
         return ApiResponse.<CvUploadResponse>builder()
                 .message("CV uploaded successfully")
@@ -80,5 +86,89 @@ public class CandidateController {
     public ApiResponse<Void> delete(@PathVariable String id) {
         candidateService.delete(id);
         return ApiResponse.<Void>builder().build();
+    }
+
+    // ── CV Management ──────────────────────────────────────────────────────────
+
+    @GetMapping("/cvs")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<List<CvItem>> listCvs(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<CvItem>>builder()
+                .data(candidateService.listCvs(userId))
+                .build();
+    }
+
+    @PatchMapping("/cvs/{cvId}/default")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<Void> setDefaultCv(@PathVariable String cvId, @AuthenticationPrincipal String userId) {
+        candidateService.setDefaultCv(userId, cvId);
+        return ApiResponse.<Void>builder().message("Default CV updated").build();
+    }
+
+    @DeleteMapping("/cvs/{cvId}")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<Void> deleteCv(@PathVariable String cvId, @AuthenticationPrincipal String userId) {
+        candidateService.deleteCv(userId, cvId);
+        return ApiResponse.<Void>builder().message("CV deleted").build();
+    }
+
+    @PostMapping("/cvs/{cvId}/reanalyze")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<Void> reanalyzeCv(@PathVariable String cvId, @AuthenticationPrincipal String userId) {
+        CvItem cv = candidateService.getCvAnalysis(userId, cvId);
+        candidateService.markCvReanalyzing(userId, cvId);
+        skillExtractPublisher.publish(userId, cv.getUrl());
+        return ApiResponse.<Void>builder().message("CV re-analysis triggered").build();
+    }
+
+    @GetMapping("/cvs/{cvId}/analysis")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<CvItem> getCvAnalysis(@PathVariable String cvId, @AuthenticationPrincipal String userId) {
+        return ApiResponse.<CvItem>builder()
+                .data(candidateService.getCvAnalysis(userId, cvId))
+                .build();
+    }
+
+    // ── Settings ───────────────────────────────────────────────────────────────
+
+    @GetMapping("/settings")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<CandidateSettings> getSettings(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<CandidateSettings>builder()
+                .data(candidateService.getSettings(userId))
+                .build();
+    }
+
+    @PutMapping("/settings/notifications")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<Void> updateNotifications(@RequestBody NotificationPreferences prefs,
+                                                  @AuthenticationPrincipal String userId) {
+        candidateService.updateNotificationPreferences(userId, prefs);
+        return ApiResponse.<Void>builder().message("Notification preferences updated").build();
+    }
+
+    @PutMapping("/settings/privacy")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<Void> updatePrivacy(@RequestBody PrivacySettings privacy,
+                                            @AuthenticationPrincipal String userId) {
+        candidateService.updatePrivacySettings(userId, privacy);
+        return ApiResponse.<Void>builder().message("Privacy settings updated").build();
+    }
+
+    @DeleteMapping("/me")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<Void> deleteMyAccount(@AuthenticationPrincipal String userId) {
+        candidateService.deleteAccount(userId);
+        return ApiResponse.<Void>builder().message("Account deactivated").build();
+    }
+
+    // ── Job Suggestions ────────────────────────────────────────────────────────
+
+    @GetMapping("/job-suggestions")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<List<JobSuggestion>> getJobSuggestions(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<JobSuggestion>>builder()
+                .data(candidateService.getJobSuggestions(userId))
+                .build();
     }
 }

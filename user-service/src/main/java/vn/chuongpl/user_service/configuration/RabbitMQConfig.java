@@ -48,6 +48,25 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(skillExtractQueue()).to(skillExchange()).with(SKILL_ROUTING_KEY);
     }
  
+    public static final String JOB_SUGGESTIONS_QUEUE = "job.suggestions.queue";
+    public static final String JOB_SUGGESTIONS_EXCHANGE = "job.suggestions.exchange";
+    public static final String JOB_SUGGESTIONS_ROUTING_KEY = "job.suggestions";
+
+    @Bean
+    public Queue jobSuggestionsQueue() {
+        return new Queue(JOB_SUGGESTIONS_QUEUE, true);
+    }
+
+    @Bean
+    public DirectExchange jobSuggestionsExchange() {
+        return new DirectExchange(JOB_SUGGESTIONS_EXCHANGE);
+    }
+
+    @Bean
+    public Binding jobSuggestionsBinding() {
+        return BindingBuilder.bind(jobSuggestionsQueue()).to(jobSuggestionsExchange()).with(JOB_SUGGESTIONS_ROUTING_KEY);
+    }
+
     @Bean
     public MessageConverter converter() {
         return new Jackson2JsonMessageConverter();

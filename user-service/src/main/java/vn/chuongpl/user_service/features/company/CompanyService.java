@@ -16,6 +16,7 @@ import vn.chuongpl.user_service.features.recruiter.Recruiter;
 import vn.chuongpl.user_service.features.recruiter.RecruiterRepository;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -55,5 +56,15 @@ public class CompanyService {
                 .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
         return CompanyResponse.from(recruiter);
+    }
+
+    public List<CompanyResponse> getByIds(List<String> ids) {
+        return ids.stream()
+                .map(id -> recruiterRepository.findByIdAndDeletedFalse(id)
+                        .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
+                        .map(CompanyResponse::from)
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .toList();
     }
 }
