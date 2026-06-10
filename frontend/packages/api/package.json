@@ -7,6 +7,10 @@
   "types": "./src/index.ts",
   "scripts": {
     "generate": "orval",
+    "generate:user": "orval --config orval.config.ts userService",
+    "generate:job": "orval --config orval.config.ts jobService",
+    "generate:application": "orval --config orval.config.ts applicationService",
+    "generate:ai": "orval --config orval.config.ts aiService",
     "build": "tsc"
   },
   "dependencies": {
