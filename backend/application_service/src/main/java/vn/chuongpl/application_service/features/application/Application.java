@@ -37,6 +37,24 @@ public class Application {
     @Field("job_title")
     String jobTitle;
 
+    @Field("company_name")
+    String companyName;
+
+    @Field("job_location")
+    String jobLocation;
+
+    @Field("salary_min")
+    Double salaryMin;
+
+    @Field("salary_max")
+    Double salaryMax;
+
+    @Field("job_skills")
+    java.util.List<String> jobSkills;
+
+    @Field("job_type")
+    String jobType;
+
     @Builder.Default
     ApplicationStatus status = ApplicationStatus.PENDING;
 

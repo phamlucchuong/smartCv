@@ -59,6 +59,11 @@ public class JobController {
         return ApiResponse.<JobResponse>builder().data(jobService.getJobById(id)).build();
     }
 
+    @GetMapping("/{id}/related")
+    public ApiResponse<java.util.List<JobResponse>> getRelatedJobs(@PathVariable String id) {
+        return ApiResponse.<java.util.List<JobResponse>>builder().data(jobService.getRelatedJobs(id)).build();
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
     public ApiResponse<JobResponse> updateJob(@PathVariable String id,

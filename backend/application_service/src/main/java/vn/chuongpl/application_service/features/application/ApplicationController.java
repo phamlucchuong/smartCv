@@ -90,6 +90,15 @@ public class ApplicationController {
                 .build();
     }
 
+    @GetMapping("/by-job/{jobId}/mine")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<ApplicationResponse> getMyApplicationForJob(@PathVariable String jobId,
+                                                                    @AuthenticationPrincipal String userId) {
+        return ApiResponse.<ApplicationResponse>builder()
+                .data(applicationService.getMyApplicationForJob(userId, jobId))
+                .build();
+    }
+
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<ApplicationDetailResponse>> getAll(@RequestParam(defaultValue = "1") int page,
