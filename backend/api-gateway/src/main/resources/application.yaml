@@ -95,6 +95,14 @@ app:
       path: /notification/api/otp/verify
     - method: POST
       path: /notification/api/otp/send
+    - method: GET
+      path: /user/api/companies
+    - method: GET
+      path: /user/api/companies/**
+    - method: GET
+      path: /job/api/home/**
+    - method: GET
+      path: /job/api/jobs/*/related
 
 logging:
   level:

@@ -69,3 +69,6 @@ app:
   user-default-page-size: ${USER_DEFAULT_PAGE_SIZE:10}
   gateway:
     internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
+
+integration:
+  job-service-url: ${JOB_SERVICE_URL:http://localhost:8082/job}

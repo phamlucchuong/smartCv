@@ -3,6 +3,7 @@ package vn.chuongpl.ai_engine_service.features.analysis;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.ai_engine_service.dtos.ApiResponse;
@@ -52,9 +53,10 @@ public class AnalysisController {
 
     @PostMapping("/recommend")
     @PreAuthorize("hasAnyAuthority('ROLE_CANDIDATE','ROLE_ADMIN')")
-    public ApiResponse<JobRecommendationResponse> recommend(@RequestBody @Valid JobRecommendRequest request) {
+    public ApiResponse<JobRecommendationResponse> recommend(@RequestBody @Valid JobRecommendRequest request,
+                                                            @AuthenticationPrincipal String userId) {
         return ApiResponse.<JobRecommendationResponse>builder()
-                .data(analysisService.recommend(request))
+                .data(analysisService.recommend(request, userId))
                 .message("Recommend jobs successfully")
                 .build();
     }

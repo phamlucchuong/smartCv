@@ -22,4 +22,6 @@ public interface ApplicationRepository extends MongoRepository<Application, Stri
     Page<Application> findAllByDeletedFalse(Pageable pageable);
 
     Optional<Application> findByIdAndDeletedFalse(String id);
+
+    Optional<Application> findByCandidateIdAndJobIdAndDeletedFalse(String candidateId, String jobId);
 }
