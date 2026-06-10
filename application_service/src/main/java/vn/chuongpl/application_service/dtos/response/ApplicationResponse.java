@@ -20,6 +20,13 @@ public class ApplicationResponse {
     String candidateId;
     String jobId;
     String recruiterId;
+    String jobTitle;
+    String companyName;
+    String jobLocation;
+    Double salaryMin;
+    Double salaryMax;
+    java.util.List<String> jobSkills;
+    String jobType;
     ApplicationStatus status;
     String coverLetter;
     String cvUrl;

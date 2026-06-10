@@ -62,6 +62,12 @@ public class ApplicationService {
                 .jobId(request.getJobId())
                 .jobTitle(job.getTitle())
                 .recruiterId(job.getRecruiterId())
+                .companyName(job.getCompany())
+                .jobLocation(job.getLocation())
+                .salaryMin(job.getSalaryMin())
+                .salaryMax(job.getSalaryMax())
+                .jobSkills(job.getSkills())
+                .jobType(job.getJobType())
                 .coverLetter(request.getCoverLetter())
                 .cvUrl(request.getCvUrl())
                 .appliedAt(LocalDateTime.now())
@@ -152,6 +158,13 @@ public class ApplicationService {
         app.setAiStatus(request.getAiStatus() != null ? request.getAiStatus() : AiScoringStatus.SCORED);
         app.setUpdatedAt(LocalDateTime.now());
         applicationRepository.save(app);
+    }
+
+    public ApplicationResponse getMyApplicationForJob(String candidateId, String jobId) {
+        Application app = applicationRepository
+                .findByCandidateIdAndJobIdAndDeletedFalse(candidateId, jobId)
+                .orElseThrow(() -> new AppException(ErrorCode.APPLICATION_NOT_FOUND));
+        return applicationMapper.toResponse(app);
     }
 
     public void delete(String id) {

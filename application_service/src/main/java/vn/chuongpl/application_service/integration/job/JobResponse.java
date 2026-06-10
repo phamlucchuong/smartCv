@@ -15,4 +15,9 @@ public class JobResponse {
     String status;
     String title;
     String company;
+    String location;
+    Double salaryMin;
+    Double salaryMax;
+    java.util.List<String> skills;
+    String jobType;
 }

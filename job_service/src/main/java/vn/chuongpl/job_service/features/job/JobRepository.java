@@ -19,4 +19,9 @@ public interface JobRepository extends MongoRepository<Job, String> {
     Page<Job> findByStatusAndDeletedFalse(JobStatus status, Pageable pageable);
 
     boolean existsByIdAndRecruiterId(String id, String recruiterId);
+
+    java.util.List<Job> findTop5ByStatusAndSkillsInAndIdNotAndDeletedFalse(
+            vn.chuongpl.job_service.enums.JobStatus status,
+            java.util.List<String> skills,
+            String id);
 }
