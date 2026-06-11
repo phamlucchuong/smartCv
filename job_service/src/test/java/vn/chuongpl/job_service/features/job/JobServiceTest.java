@@ -7,6 +7,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +45,8 @@ class JobServiceTest {
     JobMapper jobMapper;
     @Mock
     RabbitTemplate rabbitTemplate;
+    @Mock
+    ObjectProvider<JobIndexService> jobIndexServiceProvider;
 
     @InjectMocks
     JobService jobService;
@@ -99,6 +102,7 @@ class JobServiceTest {
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
         when(jobRepository.save(job)).thenReturn(job);
         when(jobMapper.toJobResponse(job)).thenReturn(response);
+        when(jobIndexServiceProvider.getIfAvailable()).thenReturn(jobIndexService);
 
         JobResponse actual = jobService.publishJob("job-1", "recruiter-1", false);
 
@@ -112,6 +116,7 @@ class JobServiceTest {
     void deleteJob_shouldSoftDeleteAndRemoveIndex() {
         Job job = Job.builder().id("job-1").deleted(false).build();
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(jobIndexServiceProvider.getIfAvailable()).thenReturn(jobIndexService);
 
         jobService.deleteJob("job-1");
 

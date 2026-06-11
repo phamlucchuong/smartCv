@@ -22,6 +22,7 @@ public class ApplicationResponse {
     String recruiterId;
     String jobTitle;
     String companyName;
+    String companyLogoInitials;
     String jobLocation;
     Double salaryMin;
     Double salaryMax;

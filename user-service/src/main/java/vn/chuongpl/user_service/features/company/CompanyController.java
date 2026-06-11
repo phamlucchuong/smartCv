@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.features.candidate.CandidateService;
+import vn.chuongpl.user_service.integration.job.JobSummary;
 
 import java.util.List;
 
@@ -58,6 +59,20 @@ public class CompanyController {
     public ApiResponse<List<CompanyResponse>> getFollowed(@AuthenticationPrincipal String userId) {
         return ApiResponse.<List<CompanyResponse>>builder()
                 .data(companyService.getByIds(candidateService.getFollowedCompanyIds(userId)))
+                .build();
+    }
+
+    @GetMapping("/{id}/jobs")
+    public ApiResponse<List<JobSummary>> getCompanyJobs(@PathVariable String id) {
+        return ApiResponse.<List<JobSummary>>builder()
+                .data(companyService.getCompanyJobs(id))
+                .build();
+    }
+
+    @GetMapping("/{id}/related")
+    public ApiResponse<List<CompanyResponse>> getRelatedCompanies(@PathVariable String id) {
+        return ApiResponse.<List<CompanyResponse>>builder()
+                .data(companyService.getRelatedCompanies(id))
                 .build();
     }
 }

@@ -27,6 +27,9 @@ public class RecruiterRequest {
 
     Integer foundedYear;
     String industry;
+    java.util.List<String> benefits;
+    Double rating;
+    Integer reviewCount;
 
     // ── Media ─────────────────────────────────────────────────────────────────
     String logoUrl;

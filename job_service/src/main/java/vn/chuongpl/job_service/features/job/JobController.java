@@ -14,6 +14,9 @@ import vn.chuongpl.job_service.dtos.request.JobSearchRequest;
 import vn.chuongpl.job_service.dtos.request.JobUpdateRequest;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
 
+import java.util.Arrays;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/jobs")
 @RequiredArgsConstructor
@@ -62,6 +65,23 @@ public class JobController {
     @GetMapping("/{id}/related")
     public ApiResponse<java.util.List<JobResponse>> getRelatedJobs(@PathVariable String id) {
         return ApiResponse.<java.util.List<JobResponse>>builder().data(jobService.getRelatedJobs(id)).build();
+    }
+
+    @GetMapping("/batch")
+    public ApiResponse<List<JobResponse>> getJobsByIds(@RequestParam String ids) {
+        List<String> idList = ids == null || ids.isBlank()
+                ? List.of()
+                : Arrays.asList(ids.split(","));
+        return ApiResponse.<List<JobResponse>>builder()
+                .data(jobService.getJobsByIds(idList))
+                .build();
+    }
+
+    @GetMapping("/by-recruiter/{recruiterId}")
+    public ApiResponse<List<JobResponse>> getByRecruiter(@PathVariable String recruiterId) {
+        return ApiResponse.<List<JobResponse>>builder()
+                .data(jobService.getActiveJobsByRecruiter(recruiterId))
+                .build();
     }
 
     @PutMapping("/{id}")
