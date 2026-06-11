@@ -17,6 +17,8 @@ import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferen
 import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
+import vn.chuongpl.user_service.integration.job.JobClient;
+import vn.chuongpl.user_service.integration.job.JobSummary;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,6 +38,7 @@ public class CandidateService {
     CandidateRepository candidateRepository;
     UserRepository userRepository;
     CandidateMapper candidateMapper;
+    JobClient jobClient;
 
     public CandidateResponse create(CandidateRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -274,6 +278,26 @@ public class CandidateService {
         return candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND))
                 .getJobSuggestions();
+    }
+
+    public List<EnrichedJobSuggestion> getEnrichedJobSuggestions(String userId) {
+        List<JobSuggestion> suggestions = getJobSuggestions(userId);
+        if (suggestions.isEmpty()) return List.of();
+
+        List<String> jobIds = suggestions.stream().map(JobSuggestion::getJobId).toList();
+        Map<String, JobSummary> jobMap = jobClient.getJobsByIds(jobIds).stream()
+                .collect(Collectors.toMap(JobSummary::getId, j -> j));
+
+        return suggestions.stream()
+                .map(s -> EnrichedJobSuggestion.builder()
+                        .jobId(s.getJobId())
+                        .matchScore(s.getMatchScore())
+                        .matchReason(s.getMatchReason())
+                        .alignedSkills(s.getAlignedSkills())
+                        .suggestedAt(s.getSuggestedAt())
+                        .job(jobMap.get(s.getJobId()))
+                        .build())
+                .toList();
     }
 
     public void updateJobSuggestions(String userId, List<JobSuggestion> suggestions) {
