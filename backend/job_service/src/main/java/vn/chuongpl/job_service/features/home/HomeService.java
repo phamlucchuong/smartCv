@@ -3,7 +3,6 @@ package vn.chuongpl.job_service.features.home;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -17,10 +16,7 @@ import vn.chuongpl.job_service.enums.JobType;
 import vn.chuongpl.job_service.features.job.Job;
 import vn.chuongpl.job_service.features.job.JobMapper;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

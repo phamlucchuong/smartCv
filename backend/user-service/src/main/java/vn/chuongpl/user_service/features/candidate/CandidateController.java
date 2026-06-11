@@ -18,7 +18,6 @@ import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.integration.ai.SkillExtractPublisher;
 
 import java.util.List;
-import vn.chuongpl.user_service.features.candidate.EnrichedJobSuggestion;
 
 @RestController
 @RequestMapping("/api/candidates")
