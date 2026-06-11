@@ -74,4 +74,21 @@ public class HomeService {
                 .limit(6);
         return mongoTemplate.find(q, Job.class).stream().map(jobMapper::toJobResponse).toList();
     }
+
+    @Cacheable(value = "home:top-companies", unless = "#result == null")
+    public List<TopCompanyResponse> getTopCompanies() {
+        Aggregation agg = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("status").is(JobStatus.ACTIVE).and("deleted").is(false)),
+                Aggregation.group("recruiterId")
+                        .count().as("activeJobCount")
+                        .first("company").as("name")
+                        .first("location").as("location"),
+                Aggregation.project("activeJobCount", "name", "location").and("_id").as("recruiterId"),
+                Aggregation.sort(Sort.by(Sort.Direction.DESC, "activeJobCount")),
+                Aggregation.limit(8)
+        );
+        AggregationResults<TopCompanyResponse> results =
+                mongoTemplate.aggregate(agg, "jobs", TopCompanyResponse.class);
+        return results.getMappedResults();
+    }
 }
