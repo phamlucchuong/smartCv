@@ -30,6 +30,26 @@ public class HomeService {
     MongoTemplate mongoTemplate;
     JobMapper jobMapper;
 
+    private static final List<ResourceItem> STATIC_RESOURCES = List.of(
+            new ResourceItem("1", "How to Write a Winning CV", "Practical tips to make your CV stand out to recruiters.", "/resources/cv-guide", "guide"),
+            new ResourceItem("2", "Top 10 Interview Questions", "Prepare for the most common questions and nail your next interview.", "/resources/interview-prep", "article"),
+            new ResourceItem("3", "Salary Negotiation Tips", "How to negotiate your offer confidently and professionally.", "/resources/salary-negotiation", "guide"),
+            new ResourceItem("4", "Remote Work Best Practices", "Stay productive and visible when working from home.", "/resources/remote-work", "article")
+    );
+
+    private static final List<TestimonialItem> STATIC_TESTIMONIALS = List.of(
+            new TestimonialItem("1", "Nguyen Van A", "Software Engineer", "TechCorp", "SmartCV helped me land my dream job in just 3 weeks. The AI matching is spot on!"),
+            new TestimonialItem("2", "Tran Thi B", "Product Manager", "StartupXYZ", "I uploaded my CV and had interview invitations within days. Highly recommend!"),
+            new TestimonialItem("3", "Le Van C", "Data Analyst", "FinanceGroup", "The job suggestions were surprisingly accurate for my background. Great platform.")
+    );
+
+    private static final List<FaqItem> STATIC_FAQS = List.of(
+            new FaqItem("1", "Is SmartCV free to use for job seekers?", "Yes, creating an account and applying for jobs is completely free for candidates.", "general"),
+            new FaqItem("2", "How does the AI job matching work?", "Our AI analyzes your CV skills and experience to rank jobs by relevance, so you see the best matches first.", "ai"),
+            new FaqItem("3", "Can I upload multiple CVs?", "Yes, you can upload and manage multiple CV versions and choose which one to send per application.", "cv"),
+            new FaqItem("4", "How do I withdraw a job application?", "Go to My Applications, find the application, and click Withdraw. This is available while the application is still Pending or Under Review.", "applications")
+    );
+
     @Cacheable(value = "home:stats", unless = "#result == null")
     public HomeStatsResponse getStats() {
         Criteria active = Criteria.where("status").is(JobStatus.ACTIVE).and("deleted").is(false);
@@ -90,5 +110,17 @@ public class HomeService {
         AggregationResults<TopCompanyResponse> results =
                 mongoTemplate.aggregate(agg, "jobs", TopCompanyResponse.class);
         return results.getMappedResults();
+    }
+
+    public List<ResourceItem> getResources() {
+        return STATIC_RESOURCES;
+    }
+
+    public List<TestimonialItem> getTestimonials() {
+        return STATIC_TESTIMONIALS;
+    }
+
+    public List<FaqItem> getFaqs() {
+        return STATIC_FAQS;
     }
 }
