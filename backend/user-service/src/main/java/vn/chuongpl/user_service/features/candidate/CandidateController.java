@@ -166,9 +166,9 @@ public class CandidateController {
 
     @GetMapping("/job-suggestions")
     @PreAuthorize("hasRole('CANDIDATE')")
-    public ApiResponse<List<JobSuggestion>> getJobSuggestions(@AuthenticationPrincipal String userId) {
-        return ApiResponse.<List<JobSuggestion>>builder()
-                .data(candidateService.getJobSuggestions(userId))
+    public ApiResponse<List<EnrichedJobSuggestion>> getJobSuggestions(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<EnrichedJobSuggestion>>builder()
+                .data(candidateService.getEnrichedJobSuggestions(userId))
                 .build();
     }
 }

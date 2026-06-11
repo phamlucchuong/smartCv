@@ -139,6 +139,20 @@ public class JobService {
                 .stream().map(jobMapper::toJobResponse).toList();
     }
 
+    public java.util.List<JobResponse> getJobsByIds(java.util.List<String> ids) {
+        if (ids == null || ids.isEmpty()) return java.util.List.of();
+        return jobRepository.findAllByIdInAndDeletedFalse(ids).stream()
+                .map(jobMapper::toJobResponse)
+                .toList();
+    }
+
+    public java.util.List<JobResponse> getActiveJobsByRecruiter(String recruiterId) {
+        return jobRepository.findTop20ByRecruiterIdAndStatusAndDeletedFalse(recruiterId, JobStatus.ACTIVE)
+                .stream()
+                .map(jobMapper::toJobResponse)
+                .toList();
+    }
+
     public PageResponse<JobResponse> searchJobs(JobSearchRequest request) {
         JobIndexService jobIndexService = jobIndexServiceProvider.getIfAvailable();
         if (jobIndexService == null) {

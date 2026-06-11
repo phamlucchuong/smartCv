@@ -14,6 +14,8 @@ import vn.chuongpl.user_service.enums.RecruiterStatus;
 import vn.chuongpl.user_service.exception.AppException;
 import vn.chuongpl.user_service.features.recruiter.Recruiter;
 import vn.chuongpl.user_service.features.recruiter.RecruiterRepository;
+import vn.chuongpl.user_service.integration.job.JobClient;
+import vn.chuongpl.user_service.integration.job.JobSummary;
 
 import java.util.List;
 import java.util.Objects;
@@ -24,6 +26,7 @@ import java.util.Objects;
 public class CompanyService {
     RecruiterRepository recruiterRepository;
     MongoTemplate mongoTemplate;
+    JobClient jobClient;
 
     public PageResponse<CompanyResponse> getAll(int page, int size, String query,
                                                  String industry, String companySize, String location) {
@@ -65,6 +68,23 @@ public class CompanyService {
                         .map(CompanyResponse::from)
                         .orElse(null))
                 .filter(Objects::nonNull)
+                .toList();
+    }
+
+    public List<JobSummary> getCompanyJobs(String companyId) {
+        return jobClient.getJobsByRecruiter(companyId);
+    }
+
+    public List<CompanyResponse> getRelatedCompanies(String companyId) {
+        Recruiter current = recruiterRepository.findByIdAndDeletedFalse(companyId)
+                .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
+        if (current.getIndustry() == null || current.getIndustry().isBlank()) {
+            return List.of();
+        }
+        return recruiterRepository.findTop5ByIndustryAndIdNotAndStatusAndDeletedFalse(
+                        current.getIndustry(), companyId, RecruiterStatus.APPROVED)
+                .stream()
+                .map(CompanyResponse::from)
                 .toList();
     }
 }
