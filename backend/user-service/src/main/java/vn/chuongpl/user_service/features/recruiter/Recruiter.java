@@ -50,6 +50,17 @@ public class Recruiter {
 
     String industry;
 
+    // ── Enrichment ────────────────────────────────────────────────────────────
+    @Builder.Default
+    @Field(name = "benefits")
+    java.util.List<String> benefits = new java.util.ArrayList<>();
+
+    @Field(name = "rating")
+    Double rating;
+
+    @Field(name = "review_count")
+    Integer reviewCount;
+
     // ── Media ─────────────────────────────────────────────────────────────────
     @Field(name = "logo_url")
     String logoUrl;
