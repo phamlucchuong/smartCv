@@ -18,6 +18,7 @@ import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.integration.ai.SkillExtractPublisher;
 
 import java.util.List;
+import vn.chuongpl.user_service.features.candidate.EnrichedJobSuggestion;
 
 @RestController
 @RequestMapping("/api/candidates")
@@ -166,9 +167,9 @@ public class CandidateController {
 
     @GetMapping("/job-suggestions")
     @PreAuthorize("hasRole('CANDIDATE')")
-    public ApiResponse<List<JobSuggestion>> getJobSuggestions(@AuthenticationPrincipal String userId) {
-        return ApiResponse.<List<JobSuggestion>>builder()
-                .data(candidateService.getJobSuggestions(userId))
+    public ApiResponse<List<EnrichedJobSuggestion>> getJobSuggestions(@AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<EnrichedJobSuggestion>>builder()
+                .data(candidateService.getEnrichedJobSuggestions(userId))
                 .build();
     }
 }
