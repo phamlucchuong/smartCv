@@ -8,6 +8,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -32,5 +34,41 @@ public class JobClient {
             log.warn("Failed to fetch job {}: {}", jobId, e.getMessage());
         }
         return null;
+    }
+
+    public List<JobSummary> getJobsByRecruiter(String recruiterId) {
+        try {
+            var response = restTemplate.exchange(
+                    jobServiceUrl + "/api/jobs/by-recruiter/" + recruiterId,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<JobApiResponse<List<JobSummary>>>() {}
+            );
+            if (response.getBody() != null && response.getBody().getData() != null) {
+                return response.getBody().getData();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch jobs for recruiter {}: {}", recruiterId, e.getMessage());
+        }
+        return List.of();
+    }
+
+    public List<JobSummary> getJobsByIds(List<String> jobIds) {
+        if (jobIds == null || jobIds.isEmpty()) return List.of();
+        String ids = jobIds.stream().collect(java.util.stream.Collectors.joining(","));
+        try {
+            var response = restTemplate.exchange(
+                    jobServiceUrl + "/api/jobs/batch?ids=" + ids,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<JobApiResponse<List<JobSummary>>>() {}
+            );
+            if (response.getBody() != null && response.getBody().getData() != null) {
+                return response.getBody().getData();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch jobs by ids {}: {}", ids, e.getMessage());
+        }
+        return List.of();
     }
 }
