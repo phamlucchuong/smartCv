@@ -6,10 +6,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.chuongpl.job_service.dtos.ApiResponse;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
-import vn.chuongpl.job_service.features.home.TopCompanyResponse;
-import vn.chuongpl.job_service.features.home.ResourceItem;
-import vn.chuongpl.job_service.features.home.TestimonialItem;
-import vn.chuongpl.job_service.features.home.FaqItem;
 
 import java.util.List;
 
