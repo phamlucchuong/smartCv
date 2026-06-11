@@ -4,6 +4,8 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.chuongpl.user_service.features.recruiter.Recruiter;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,6 +23,9 @@ public class CompanyResponse {
     String description;
     Integer foundedYear;
     Integer activeJobCount;
+    List<String> benefits;
+    Double rating;
+    Integer reviewCount;
 
     public static CompanyResponse from(Recruiter r) {
         return CompanyResponse.builder()
@@ -34,6 +39,9 @@ public class CompanyResponse {
                 .website(r.getCompanyWebsite())
                 .description(r.getCompanyDescription())
                 .foundedYear(r.getFoundedYear())
+                .benefits(r.getBenefits())
+                .rating(r.getRating())
+                .reviewCount(r.getReviewCount())
                 .build();
     }
 }
