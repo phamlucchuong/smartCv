@@ -6,6 +6,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.chuongpl.job_service.dtos.ApiResponse;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
+import vn.chuongpl.job_service.features.home.TopCompanyResponse;
+import vn.chuongpl.job_service.features.home.ResourceItem;
+import vn.chuongpl.job_service.features.home.TestimonialItem;
+import vn.chuongpl.job_service.features.home.FaqItem;
 
 import java.util.List;
 
@@ -29,5 +33,25 @@ public class HomeController {
     @GetMapping("/featured-jobs")
     public ApiResponse<List<JobResponse>> getFeaturedJobs() {
         return ApiResponse.<List<JobResponse>>builder().data(homeService.getFeaturedJobs()).build();
+    }
+
+    @GetMapping("/top-companies")
+    public ApiResponse<List<TopCompanyResponse>> getTopCompanies() {
+        return ApiResponse.<List<TopCompanyResponse>>builder().data(homeService.getTopCompanies()).build();
+    }
+
+    @GetMapping("/resources")
+    public ApiResponse<List<ResourceItem>> getResources() {
+        return ApiResponse.<List<ResourceItem>>builder().data(homeService.getResources()).build();
+    }
+
+    @GetMapping("/testimonials")
+    public ApiResponse<List<TestimonialItem>> getTestimonials() {
+        return ApiResponse.<List<TestimonialItem>>builder().data(homeService.getTestimonials()).build();
+    }
+
+    @GetMapping("/faqs")
+    public ApiResponse<List<FaqItem>> getFaqs() {
+        return ApiResponse.<List<FaqItem>>builder().data(homeService.getFaqs()).build();
     }
 }
