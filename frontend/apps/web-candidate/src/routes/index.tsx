@@ -349,16 +349,16 @@ function IndexComponent() {
         </Card>
       </section>
 
-      <section className=”space-y-4” aria-label=”Candidate Success Stories”>
-        <h2 className=”text-2xl font-semibold”>Candidate Success Stories</h2>
-        <div className=”grid gap-4 md:grid-cols-3”>
+      <section className="space-y-4" aria-label="Candidate Success Stories">
+        <h2 className="text-2xl font-semibold">Candidate Success Stories</h2>
+        <div className="grid gap-4 md:grid-cols-3">
           {testimonials.map((item) => (
-            <Card key={item.id ?? item.name} className=”card-surface”>
-              <CardContent className=”space-y-3 p-5”>
-                <p className=”text-sm leading-6 text-muted-foreground”>”{item.quote}”</p>
+            <Card key={item.id ?? item.name} className="card-surface">
+              <CardContent className="space-y-3 p-5">
+                <p className="text-sm leading-6 text-muted-foreground">"{item.quote}"</p>
                 <div>
-                  <p className=”font-semibold”>{item.name}</p>
-                  <p className=”text-sm text-muted-foreground”>{item.role}</p>
+                  <p className="font-semibold">{item.name}</p>
+                  <p className="text-sm text-muted-foreground">{item.role}</p>
                 </div>
               </CardContent>
             </Card>
