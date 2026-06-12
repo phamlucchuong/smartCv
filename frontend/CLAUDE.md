@@ -67,3 +67,8 @@ VITE_I18N_FALLBACK_LOCALE
 ```
 
 All Vite env vars must be prefixed with `VITE_` to be accessible in the browser bundle.
+
+### Important github rule:
+
+**Commit rule:** Always write commit message in English, do not add "Claude" to the commit message.
+**Brand name rule:** The brand name must describe the task in branch, do not name general like "plan xyz", "missing api", ...

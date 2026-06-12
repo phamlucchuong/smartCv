@@ -31,7 +31,7 @@ const SPECS = [
   },
 ];
 
-let failed = false;
+let missingSpec = false;
 
 for (const spec of SPECS) {
   process.stdout.write(`Fetching ${spec.name} ... `);
@@ -39,13 +39,16 @@ for (const spec of SPECS) {
     execFileSync('curl', ['-sf', '--max-time', '10', spec.url, '-o', spec.out]);
     console.log(`saved -> ${path.relative(process.cwd(), spec.out)}`);
   } catch {
-    console.error(`FAILED (is ${spec.url} reachable?)`);
-    if (fs.existsSync(spec.out)) fs.unlinkSync(spec.out);
-    failed = true;
+    if (fs.existsSync(spec.out)) {
+      console.warn(`SKIPPED (service unreachable, using cached spec)`);
+    } else {
+      console.error(`FAILED (is ${spec.url} reachable? No cached spec available)`);
+      missingSpec = true;
+    }
   }
 }
 
-if (failed) {
-  console.error('\nOne or more specs could not be fetched. Make sure backend services are running.');
+if (missingSpec) {
+  console.error('\nSome specs have no cache. Start the missing services and run again.');
   process.exit(1);
 }
