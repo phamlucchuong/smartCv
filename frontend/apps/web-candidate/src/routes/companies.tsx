@@ -3,7 +3,8 @@ import * as React from 'react'
 import { Badge, Button } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { ChevronLeft, ChevronRight, MapPin, Search, Star } from 'lucide-react'
-import { mockCompanies, INDUSTRIES, SIZES, LOCATIONS, type MockCompany } from '../data/mockCompanies'
+import { useGetAll2 } from '@smart-cv/api'
+import type { UserModels } from '@smart-cv/api'
 
 export const Route = createFileRoute('/companies')({
   component: CompaniesPage,
@@ -19,18 +20,26 @@ function CompaniesPage() {
   const [location, setLocation] = React.useState('')
   const [page, setPage] = React.useState(1)
 
+  const { data, isLoading } = useGetAll2()
+  const companies = data?.data ?? []
+
   React.useEffect(() => {
     document.title = t('page_title_companies')
   }, [t])
 
-  const filtered = mockCompanies.filter((c) => {
+  const filtered = companies.filter((c: UserModels.CompanyResponse) => {
     const q = query.trim().toLowerCase()
-    const matchQuery = q === '' || c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q) || c.location.toLowerCase().includes(q)
+    const matchQuery = q === '' || (c.name ?? '').toLowerCase().includes(q) || (c.industry ?? '').toLowerCase().includes(q) || (c.location ?? '').toLowerCase().includes(q)
     const matchIndustry = industry === '' || c.industry === industry
     const matchSize = size === '' || c.size === size
     const matchLocation = location === '' || c.location === location
     return matchQuery && matchIndustry && matchSize && matchLocation
   })
+
+  // Derive filter options from live data
+  const INDUSTRIES = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.industry).filter(Boolean) as string[])).sort(), [companies])
+  const SIZES = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.size).filter(Boolean) as string[])).sort(), [companies])
+  const LOCATIONS = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.location).filter(Boolean) as string[])).sort(), [companies])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / COMPANIES_PER_PAGE))
   const safePage = Math.min(page, totalPages)
@@ -52,7 +61,7 @@ function CompaniesPage() {
           <h1 className="mb-6 text-3xl font-bold text-primary-foreground md:text-4xl">
             {t('company_list_title')}
             <span className="ml-2 text-2xl font-normal opacity-80 md:text-3xl">
-              — {t('company_list_subtitle', { count: 420 })}
+              — {t('company_list_subtitle', { count: companies.length })}
             </span>
           </h1>
           <div className="flex max-w-xl items-center gap-2 rounded-xl bg-white/15 px-4 py-3">
@@ -102,11 +111,17 @@ function CompaniesPage() {
         </div>
 
         {/* Grid */}
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {paginated.map((company) => (
-            <CompanyCard key={company.id} company={company} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-muted-foreground">Loading companies...</p>
+          </div>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {paginated.map((company: UserModels.CompanyResponse) => (
+              <CompanyCard key={company.id} company={company} />
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -139,33 +154,49 @@ function CompaniesPage() {
   )
 }
 
-function CompanyCard({ company }: { company: MockCompany }) {
+function CompanyCard({ company }: { company: UserModels.CompanyResponse }) {
   const { t } = useTranslation()
   return (
-    <Link to="/companies/$companyId" params={{ companyId: company.id }} className="block">
+    <Link to="/companies/$companyId" params={{ companyId: company.id ?? '' }} className="block">
       <article className="elevate-card overflow-hidden rounded-2xl border border-border bg-card hover:shadow-md transition-shadow">
         {/* Cover */}
-        <div className="h-[52px] bg-muted" style={{ backgroundColor: company.coverColor }} />
+        <div className="h-[52px] bg-muted">
+          {company.coverImageUrl && (
+            <img src={company.coverImageUrl} alt="" className="h-full w-full object-cover" />
+          )}
+        </div>
         <div className="px-4 pb-4 pt-0">
           {/* Logo overlapping cover */}
           <div
-            className="-mt-5 mb-3 flex h-10 w-10 items-center justify-center rounded-xl border-2 border-background bg-primary/10 text-sm font-bold text-primary shadow-sm"
+            className="-mt-5 mb-3 flex h-10 w-10 items-center justify-center rounded-xl border-2 border-background bg-primary/10 text-sm font-bold text-primary shadow-sm overflow-hidden"
           >
-            {company.logoPlaceholder}
+            {company.logoUrl
+              ? <img src={company.logoUrl} alt={company.name ?? ''} className="h-full w-full object-cover" />
+              : (company.name?.slice(0, 2).toUpperCase() ?? '?')}
           </div>
           <h3 className="font-semibold text-foreground">{company.name}</h3>
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Star className="h-3 w-3 fill-current text-yellow-500" />
-            {company.rating} ({company.reviewCount})
-            <span className="mx-1">·</span>
-            <MapPin className="h-3 w-3" />
-            {company.location}
+            {company.rating != null && (
+              <>
+                <Star className="h-3 w-3 fill-current text-yellow-500" />
+                {company.rating} ({company.reviewCount ?? 0})
+                <span className="mx-1">·</span>
+              </>
+            )}
+            {company.location && (
+              <>
+                <MapPin className="h-3 w-3" />
+                {company.location}
+              </>
+            )}
           </div>
-          <div className="mt-2">
-            <Badge variant="secondary" className="text-xs">{company.industry}</Badge>
-          </div>
+          {company.industry && (
+            <div className="mt-2">
+              <Badge variant="secondary" className="text-xs">{company.industry}</Badge>
+            </div>
+          )}
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
-            <span className="font-medium text-success">● {t('company_list_active_jobs', { count: company.activeJobCount })}</span>
+            <span className="font-medium text-success">● {t('company_list_active_jobs', { count: company.activeJobCount ?? 0 })}</span>
             <span className="font-medium text-primary">{t('company_list_view_profile')} →</span>
           </div>
         </div>
