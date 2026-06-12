@@ -1,28 +1,102 @@
 import axios, { AxiosRequestConfig } from 'axios';
 
+const ACCESS_COOKIE = 'smart_cv_token';
+const REFRESH_COOKIE = 'smart_cv_refresh';
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.split('; ').find((row) => row.startsWith(`${name}=`));
+  return match ? match.split('=').slice(1).join('=') : null;
+}
+
+function setCookieRaw(name: string, value: string, days: number) {
+  document.cookie = `${name}=${value}; Max-Age=${days * 86400}; path=/; SameSite=Lax`;
+}
+
+function removeCookieRaw(name: string) {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
+}
+
+type SignOutHandler = () => void;
+let _signOutHandler: SignOutHandler | null = null;
+export function registerSignOutHandler(fn: SignOutHandler) {
+  _signOutHandler = fn;
+}
+
 export const AXIOS_INSTANCE = axios.create({
   baseURL: (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080',
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Add a request interceptor for auth tokens
-AXIOS_INSTANCE.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+AXIOS_INSTANCE.interceptors.request.use((config) => {
+  const token = getCookie(ACCESS_COOKIE);
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+let isRefreshing = false;
+let failedQueue: { resolve: (token: string) => void; reject: (err: unknown) => void }[] = [];
+
+function processQueue(error: unknown, token: string | null) {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token!);
+  });
+  failedQueue = [];
+}
+
+AXIOS_INSTANCE.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config as AxiosRequestConfig & { _retry?: boolean };
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error);
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+
+    const refreshToken = getCookie(REFRESH_COOKIE);
+    if (!refreshToken) {
+      _signOutHandler?.();
+      if (typeof window !== 'undefined') window.location.href = '/signin';
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve: (token) => {
+            original.headers = { ...original.headers, Authorization: `Bearer ${token}` };
+            resolve(AXIOS_INSTANCE(original));
+          },
+          reject,
+        });
+      });
+    }
+
+    original._retry = true;
+    isRefreshing = true;
+
+    try {
+      const res = await AXIOS_INSTANCE.post('/user/api/auth/refresh', { refreshToken });
+      const newToken: string = res.data?.data?.token ?? res.data?.data?.accessToken;
+      if (!newToken) throw new Error('No token in refresh response');
+      setCookieRaw(ACCESS_COOKIE, newToken, 1);
+      processQueue(null, newToken);
+      original.headers = { ...original.headers, Authorization: `Bearer ${newToken}` };
+      return AXIOS_INSTANCE(original);
+    } catch (err) {
+      processQueue(err, null);
+      removeCookieRaw(ACCESS_COOKIE);
+      removeCookieRaw(REFRESH_COOKIE);
+      _signOutHandler?.();
+      if (typeof window !== 'undefined') window.location.href = '/signin';
+      return Promise.reject(err);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
-// Custom instance for Orval
 export const customInstance = <T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig
@@ -33,12 +107,8 @@ export const customInstance = <T>(
     ...options,
     cancelToken: source.token,
   }).then(({ data }) => data);
-
   // @ts-ignore
-  promise.cancel = () => {
-    source.cancel('Query was cancelled');
-  };
-
+  promise.cancel = () => source.cancel('Query was cancelled');
   return promise;
 };
 
