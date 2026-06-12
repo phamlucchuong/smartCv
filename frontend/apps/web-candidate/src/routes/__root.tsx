@@ -21,8 +21,10 @@ import {
 } from 'lucide-react'
 import { Button } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
+import { registerSignOutHandler } from '@smart-cv/api'
 import { Toaster } from 'sonner'
 import { useCandidateStore } from '../store/useCandidateStore'
+import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -130,6 +132,10 @@ function RootComponent() {
     toggleLanguage()
     i18n.changeLanguage(language === 'EN' ? 'vi' : 'en')
   }
+
+  React.useEffect(() => {
+    registerSignOutHandler(() => useAuthStore.getState().signOut())
+  }, [])
 
   React.useEffect(() => {
     refreshAuthState()
