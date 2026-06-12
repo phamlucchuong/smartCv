@@ -21,5 +21,11 @@ export * from './generated/application/assessment-controller/assessment-controll
 export * from './generated/ai/analysis/analysis';
 export * from './generated/ai/ai-admin/ai-admin';
 
-// Models
+// Models (root static spec)
 export * from './generated/model';
+
+// Per-service model types (namespaced to avoid collisions with root model)
+export * as UserModels from './generated/user/model';
+export * as JobModels from './generated/job/model';
+export * as ApplicationModels from './generated/application/model';
+export * as AiModels from './generated/ai/model';
