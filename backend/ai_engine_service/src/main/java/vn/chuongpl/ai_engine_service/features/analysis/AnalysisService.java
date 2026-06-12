@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
+import vn.chuongpl.ai_engine_service.model.AiModelGatewayRouter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
@@ -34,7 +34,7 @@ import java.util.Map;
 @Slf4j
 public class AnalysisService {
 
-    private final ChatClient chatClient;
+    private final AiModelGatewayRouter modelRouter;
     private final PromptBuilder promptBuilder;
     private final CvTextExtractor cvTextExtractor;
     private final JobClient jobClient;
@@ -178,11 +178,9 @@ public class AnalysisService {
 
     private String callAi(String prompt) {
         try {
-            return chatClient.prompt()
-                    .system(promptBuilder.systemPrompt())
-                    .user(prompt)
-                    .call()
-                    .content();
+            return modelRouter.call(promptBuilder.systemPrompt(), prompt);
+        } catch (AppException e) {
+            throw e;
         } catch (Exception e) {
             log.error("AI call failed: {}", e.getMessage());
             throw new AppException(ErrorCode.AI_PROCESSING_FAILED);
