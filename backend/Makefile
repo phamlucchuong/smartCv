@@ -34,7 +34,25 @@ run-ai:
 run-noti:
 	cd notification-service/ && go run cmd/server/main.go
 
-run: run-user run-gateway run-job run-application run-ai run-noti
+run:
+	@mkdir -p logs
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+	(cd user-service && ./mvnw spring-boot:run 2>&1 | tee ../logs/user-service.log) & \
+	(cd api-gateway && ./mvnw spring-boot:run 2>&1 | tee ../logs/api-gateway.log) & \
+	(cd job_service && ./mvnw spring-boot:run 2>&1 | tee ../logs/job-service.log) & \
+	(cd application_service && ./mvnw spring-boot:run 2>&1 | tee ../logs/application-service.log) & \
+	(cd ai_engine_service && ./mvnw spring-boot:run 2>&1 | tee ../logs/ai-engine-service.log) & \
+	(cd notification-service && go run cmd/server/main.go 2>&1 | tee ../logs/notification-service.log) & \
+	echo "All services starting. Logs in ./logs/ — Ctrl+C or 'make stop' to stop all."; \
+	wait
+
+stop:
+	@-pkill -f "spring-boot:run" 2>/dev/null; true
+	@-pkill -f "go run cmd/server/main.go" 2>/dev/null; true
+	@echo "Services stopped."
+
+logs:
+	@tail -f logs/*.log
 
 # run migrations without manual cd (process auto-stops after timeout)
 migrate-user:
