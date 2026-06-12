@@ -30,7 +30,6 @@ function SignUpComponent() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name || !email || !password) return
-    localStorage.setItem('isAuthenticated', 'true')
     navigate({ to: '/' })
   }
 

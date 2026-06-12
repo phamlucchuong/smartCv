@@ -34,7 +34,6 @@ function SignInComponent() {
       setError('Please enter both email and password.')
       return
     }
-    localStorage.setItem('isAuthenticated', 'true')
     navigate({ to: '/' })
   }
 
