@@ -18,167 +18,50 @@ import {
   MapPin,
   Search,
   Sparkles,
-  Star,
   TrendingUp,
 } from 'lucide-react'
+import {
+  useGetFeaturedJobs,
+  useGetTopCompanies,
+  useGetStats,
+  useGetCategories,
+  useGetTestimonials,
+  useGetResources,
+  useGetFaqs,
+} from '@smart-cv/api'
 
 export const Route = createFileRoute('/')({
   component: IndexComponent,
 })
 
-const stats = [
-  { label: 'Open jobs', value: '1,284+' },
-  { label: 'Hiring companies', value: '420+' },
-  { label: 'Avg response time', value: '36h' },
-  { label: 'Remote roles', value: '310+' },
-]
-
-const categories = [
-  { name: 'Frontend Engineering', jobs: 188, icon: Layers3 },
-  { name: 'Backend Engineering', jobs: 234, icon: BriefcaseBusiness },
-  { name: 'Data & AI', jobs: 116, icon: ChartColumn },
-  { name: 'DevOps / Cloud', jobs: 97, icon: TrendingUp },
-]
-
-const jobs = [
-  {
-    id: 'senior-nodejs',
-    title: 'Senior Node.js Backend Developer',
-    company: 'NexusTech Solutions',
-    salary: '$2,500 - $3,500',
-    location: 'Ho Chi Minh City (Hybrid)',
-    skills: ['Node.js', 'TypeScript', 'AWS', 'PostgreSQL'],
-    posted: 'Posted 2 hours ago',
-  },
-  {
-    id: 'frontend-react-nextjs',
-    title: 'Frontend Engineer (React + Next.js)',
-    company: 'Nova Product Studio',
-    salary: '$2,000 - $2,800',
-    location: 'Ha Noi (Onsite)',
-    skills: ['React', 'Next.js', 'Tailwind', 'GraphQL'],
-    posted: 'Posted 6 hours ago',
-  },
-  {
-    id: 'fullstack-python-react',
-    title: 'Fullstack Developer (Python/React)',
-    company: 'Skyline Labs',
-    salary: '$2,200 - $3,000',
-    location: 'Da Nang (Remote)',
-    skills: ['Python', 'Django', 'React', 'Docker'],
-    posted: 'Posted 1 day ago',
-  },
-  {
-    id: 'senior-qa-automation',
-    title: 'Senior QA Automation Engineer',
-    company: 'Finverse Digital',
-    salary: '$1,800 - $2,500',
-    location: 'Ho Chi Minh City (Onsite)',
-    skills: ['Playwright', 'Cypress', 'CI/CD', 'API Testing'],
-    posted: 'Posted 1 day ago',
-  },
-  {
-    id: 'devops-aws-kubernetes',
-    title: 'DevOps Engineer (AWS/Kubernetes)',
-    company: 'CloudBridge Tech',
-    salary: '$2,700 - $3,600',
-    location: 'Remote (Vietnam)',
-    skills: ['Kubernetes', 'Terraform', 'AWS', 'Prometheus'],
-    posted: 'Posted 2 days ago',
-  },
-  {
-    id: 'data-engineer-python-spark',
-    title: 'Data Engineer (Python/Spark)',
-    company: 'DataNova Analytics',
-    salary: '$2,300 - $3,200',
-    location: 'Ha Noi (Hybrid)',
-    skills: ['Python', 'Spark', 'Airflow', 'BigQuery'],
-    posted: 'Posted 3 days ago',
-  },
-  {
-    id: 'mobile-react-native',
-    title: 'Mobile Engineer (React Native)',
-    company: 'BluePixel Ventures',
-    salary: '$1,900 - $2,700',
-    location: 'Ho Chi Minh City (Hybrid)',
-    skills: ['React Native', 'TypeScript', 'Redux', 'Firebase'],
-    posted: 'Posted 3 days ago',
-  },
-  {
-    id: 'engineering-manager',
-    title: 'Engineering Manager',
-    company: 'ScaleOne Labs',
-    salary: '$4,000 - $5,500',
-    location: 'Remote (APAC)',
-    skills: ['Leadership', 'System Design', 'Agile', 'Hiring'],
-    posted: 'Posted 4 days ago',
-  },
-  {
-    id: 'product-designer-ux-ui',
-    title: 'Product Designer (UX/UI)',
-    company: 'PixelCraft Studio',
-    salary: '$1,600 - $2,400',
-    location: 'Da Nang (Onsite)',
-    skills: ['Figma', 'Design System', 'Research', 'Prototyping'],
-    posted: 'Posted 5 days ago',
-  },
-]
-
-const companies = [
-  { name: 'InnovateHub Vietnam', reviews: 45, hiring: 12, pitch: 'AI-first product studio scaling cloud-native platforms globally.' },
-  { name: 'ByteForge', reviews: 30, hiring: 8, pitch: 'Engineering-focused environment for high-load fintech products.' },
-  { name: 'CloudBridge Tech', reviews: 52, hiring: 16, pitch: 'Remote-friendly team building data and DevOps tooling.' },
-  { name: 'ScaleOne Labs', reviews: 38, hiring: 10, pitch: 'Fast-growth SaaS team with strong product engineering culture.' },
-]
-
-const resources = [
-  'How to craft a developer CV that passes ATS in 2026',
-  'Technical interview prep roadmap for mid-level engineers',
-  'Remote compensation benchmark in Vietnam IT market',
-  'How to evaluate engineering culture before accepting an offer',
-  'Backend system design checklist for senior-level interviews',
-  'Salary negotiation guide for software engineers in SEA',
-]
-
-const testimonials = [
-  {
-    name: 'Nguyen Minh Anh',
-    role: 'Frontend Engineer',
-    quote: 'I found a better role in 2 weeks thanks to transparent salary ranges and quality job descriptions.',
-  },
-  {
-    name: 'Tran Hoang Vu',
-    role: 'DevOps Engineer',
-    quote: 'The filters are practical. I could quickly narrow to remote AWS roles with growth-focused teams.',
-  },
-  {
-    name: 'Le Thu Ha',
-    role: 'Product Designer',
-    quote: 'Company profile details helped me avoid poor-fit interviews and focus on culture I value.',
-  },
-]
-
-const faqs = [
-  {
-    q: 'How do I apply for a job?',
-    a: 'Open a job card, review requirements, and click Quick Apply. Your profile is attached automatically.',
-  },
-  {
-    q: 'Can I filter only remote jobs?',
-    a: 'Yes. Use location filter and select Remote to see distributed opportunities only.',
-  },
-  {
-    q: 'Do companies see my profile publicly?',
-    a: 'No. Your profile is shared only when you apply or explicitly allow visibility.',
-  },
-]
-
 function IndexComponent() {
   const { t } = useTranslation()
   const [page, setPage] = React.useState(1)
   const aiMatchScore = 82
+
+  const { data: featuredJobsData } = useGetFeaturedJobs()
+  const jobs = featuredJobsData?.data ?? []
+
+  const { data: companiesData } = useGetTopCompanies()
+  const topCompanies = companiesData?.data ?? []
+
+  const { data: statsData } = useGetStats()
+  const stats = statsData?.data
+
+  const { data: categoriesData } = useGetCategories()
+  const categories = categoriesData?.data ?? []
+
+  const { data: testimonialsData } = useGetTestimonials()
+  const testimonials = testimonialsData?.data ?? []
+
+  const { data: resourcesData } = useGetResources()
+  const resources = resourcesData?.data ?? []
+
+  const { data: faqsData } = useGetFaqs()
+  const faqs = faqsData?.data ?? []
+
   const jobsPerPage = 6
-  const totalPages = Math.ceil(jobs.length / jobsPerPage)
+  const totalPages = Math.max(1, Math.ceil(jobs.length / jobsPerPage))
   const paginatedJobs = jobs.slice((page - 1) * jobsPerPage, page * jobsPerPage)
 
   React.useEffect(() => {
@@ -279,14 +162,30 @@ function IndexComponent() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Platform Stats">
-        {stats.map((item) => (
-          <Card key={item.label} className="card-surface">
-            <CardContent className="p-5">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
-              <p className="mt-2 text-3xl font-bold">{item.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="card-surface">
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Open jobs</p>
+            <p className="mt-2 text-3xl font-bold">{stats?.activeJobs ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="card-surface">
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Hiring companies</p>
+            <p className="mt-2 text-3xl font-bold">{stats?.activeCompanies ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="card-surface">
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Avg response time</p>
+            <p className="mt-2 text-3xl font-bold">36h</p>
+          </CardContent>
+        </Card>
+        <Card className="card-surface">
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Remote roles</p>
+            <p className="mt-2 text-3xl font-bold">{stats?.remoteJobs ?? 0}</p>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="space-y-4" aria-label="Popular Categories">
@@ -295,18 +194,35 @@ function IndexComponent() {
           <a href="#" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">View all categories <ChevronRight className="h-4 w-4" /></a>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {categories.map((category) => {
-            const Icon = category.icon
-            return (
+          {categories.length === 0 ? (
+            [
+              { name: 'Frontend Engineering', icon: Layers3 },
+              { name: 'Backend Engineering', icon: BriefcaseBusiness },
+              { name: 'Data & AI', icon: ChartColumn },
+              { name: 'DevOps / Cloud', icon: TrendingUp },
+            ].map((category) => {
+              const Icon = category.icon
+              return (
+                <Card key={category.name} className="elevate-card card-surface">
+                  <CardContent className="space-y-3 p-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary"><Icon className="h-5 w-5" /></div>
+                    <h3 className="text-base font-semibold">{category.name}</h3>
+                    <p className="text-sm text-muted-foreground">— open positions</p>
+                  </CardContent>
+                </Card>
+              )
+            })
+          ) : (
+            categories.map((category) => (
               <Card key={category.name} className="elevate-card card-surface">
                 <CardContent className="space-y-3 p-5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary"><Icon className="h-5 w-5" /></div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary"><Layers3 className="h-5 w-5" /></div>
                   <h3 className="text-base font-semibold">{category.name}</h3>
-                  <p className="text-sm text-muted-foreground">{category.jobs} open positions this week</p>
+                  <p className="text-sm text-muted-foreground">{category.jobCount ?? 0} open positions this week</p>
                 </CardContent>
               </Card>
-            )
-          })}
+            ))
+          )}
         </div>
       </section>
 
@@ -318,7 +234,7 @@ function IndexComponent() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {paginatedJobs.map((job) => (
-            <Link key={job.title} to="/jobs/$jobId" params={{ jobId: job.id }} className="block">
+            <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id ?? '' }} className="block">
               <article className="elevate-card rounded-2xl card-surface p-5 h-full">
                 <div className="mb-3 flex items-start justify-between gap-4">
                   <div>
@@ -329,16 +245,30 @@ function IndexComponent() {
                 </div>
 
                 <div className="mb-3 flex flex-wrap gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1"><DollarSign className="h-3.5 w-3.5" />{job.salary}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                  {(job.salaryMin != null || job.salaryMax != null) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      {job.salaryMin != null && job.salaryMax != null
+                        ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
+                        : job.salaryMin != null
+                          ? `From $${job.salaryMin.toLocaleString()}`
+                          : `Up to $${job.salaryMax!.toLocaleString()}`}
+                    </span>
+                  )}
+                  {job.location && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                  )}
                 </div>
 
                 <div className="mb-4 flex flex-wrap gap-2">
-                  {job.skills.map((skill) => <Badge key={skill} variant="outline" className="border-border text-xs">{skill}</Badge>)}
+                  {(job.skills ?? []).map((skill) => <Badge key={skill} variant="outline" className="border-border text-xs">{skill}</Badge>)}
                 </div>
 
                 <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{job.posted}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {job.createdAt ? `Posted ${new Date(job.createdAt).toLocaleDateString()}` : 'Recently posted'}
+                  </span>
                   <Button size="sm" onClick={(e) => e.preventDefault()}>Quick Apply</Button>
                 </div>
               </article>
@@ -347,7 +277,7 @@ function IndexComponent() {
         </div>
 
         <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border bg-white/5 p-4 text-sm md:flex-row">
-          <p className="text-muted-foreground">Page {page} of {totalPages} • Showing {(page - 1) * jobsPerPage + 1}-{Math.min(page * jobsPerPage, jobs.length)} of {jobs.length} jobs</p>
+          <p className="text-muted-foreground">Page {page} of {totalPages} • Showing {jobs.length === 0 ? 0 : (page - 1) * jobsPerPage + 1}-{Math.min(page * jobsPerPage, jobs.length)} of {jobs.length} jobs</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="border-border bg-white/5">
               <ChevronLeft className="h-4 w-4" /> Prev
@@ -373,17 +303,18 @@ function IndexComponent() {
       <section id="companies" className="space-y-4" aria-label="Top Companies Spotlight">
         <h2 className="text-2xl font-semibold">Top Companies Spotlight</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {companies.map((company) => (
-            <Card key={company.name} className="elevate-card overflow-hidden border border-border bg-card">
+          {topCompanies.map((company) => (
+            <Card key={company.recruiterId ?? company.name} className="elevate-card overflow-hidden border border-border bg-card">
               <div className="h-24 bg-gradient-to-r from-primary to-brand-blue" />
               <CardContent className="space-y-3 p-5">
                 <div className="-mt-11 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background"><Building2 className="h-5 w-5" /></div>
                 <h3 className="text-base font-semibold">{company.name}</h3>
-                <p className="flex items-center gap-1 text-sm text-primary"><Star className="h-4 w-4 fill-current" />4.5 ({company.reviews} reviews)</p>
-                <p className="text-sm text-muted-foreground">{company.pitch}</p>
+                {company.location && (
+                  <p className="flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="h-4 w-4" />{company.location}</p>
+                )}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.hiring} Open Positions</span>
-                  <Link to="/companies/$companyId" params={{ companyId: company.name.toLowerCase().replace(/\s+/g, '-') }} className="text-primary hover:underline">View Profile</Link>
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.activeJobCount ?? 0} Open Positions</span>
+                  <Link to="/companies/$companyId" params={{ companyId: company.recruiterId ?? '' }} className="text-primary hover:underline">View Profile</Link>
                 </div>
               </CardContent>
             </Card>
@@ -418,16 +349,16 @@ function IndexComponent() {
         </Card>
       </section>
 
-      <section className="space-y-4" aria-label="Candidate Success Stories">
-        <h2 className="text-2xl font-semibold">Candidate Success Stories</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <section className=”space-y-4” aria-label=”Candidate Success Stories”>
+        <h2 className=”text-2xl font-semibold”>Candidate Success Stories</h2>
+        <div className=”grid gap-4 md:grid-cols-3”>
           {testimonials.map((item) => (
-            <Card key={item.name} className="card-surface">
-              <CardContent className="space-y-3 p-5">
-                <p className="text-sm leading-6 text-muted-foreground">“{item.quote}”</p>
+            <Card key={item.id ?? item.name} className=”card-surface”>
+              <CardContent className=”space-y-3 p-5”>
+                <p className=”text-sm leading-6 text-muted-foreground”>”{item.quote}”</p>
                 <div>
-                  <p className="font-semibold">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">{item.role}</p>
+                  <p className=”font-semibold”>{item.name}</p>
+                  <p className=”text-sm text-muted-foreground”>{item.role}</p>
                 </div>
               </CardContent>
             </Card>
@@ -457,11 +388,11 @@ function IndexComponent() {
       <section id="resources" className="space-y-4" aria-label="Career Resources">
         <h2 className="text-2xl font-semibold">Career Resources & Blog Hub</h2>
         <div id="cv-templates" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {resources.map((title) => (
-            <Card key={title} className="card-surface">
+          {resources.map((resource) => (
+            <Card key={resource.id ?? resource.title} className="card-surface">
               <CardContent className="p-5">
-                <p className="mb-3 inline-flex items-center gap-1 text-xs text-primary"><BookOpen className="h-3.5 w-3.5" />Career Guide</p>
-                <h3 className="text-base font-semibold">{title}</h3>
+                <p className="mb-3 inline-flex items-center gap-1 text-xs text-primary"><BookOpen className="h-3.5 w-3.5" />{resource.category ?? 'Career Guide'}</p>
+                <h3 className="text-base font-semibold">{resource.title}</h3>
               </CardContent>
             </Card>
           ))}
@@ -472,10 +403,10 @@ function IndexComponent() {
         <h2 className="text-2xl font-semibold">Frequently Asked Questions</h2>
         <div className="space-y-3">
           {faqs.map((item) => (
-            <Card key={item.q} className="card-surface">
+            <Card key={item.id ?? item.question} className="card-surface">
               <CardContent className="space-y-2 p-5">
-                <h3 className="font-semibold">{item.q}</h3>
-                <p className="text-sm text-muted-foreground">{item.a}</p>
+                <h3 className="font-semibold">{item.question}</h3>
+                <p className="text-sm text-muted-foreground">{item.answer}</p>
               </CardContent>
             </Card>
           ))}
