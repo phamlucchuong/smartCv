@@ -4,6 +4,8 @@ import { Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogH
 import { useTranslation } from '@smart-cv/i18n'
 import { Bell, Settings, Shield, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
+import { useGetSettings } from '@smart-cv/api'
+import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,
@@ -14,6 +16,10 @@ type SectionKey = 'account' | 'notifications' | 'privacy' | 'danger'
 function SettingsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { isAuthenticated, signOut } = useAuthStore()
+  const { data: settingsData } = useGetSettings({ query: { enabled: isAuthenticated } })
+  const settingsPayload = settingsData?.data
+
   const [activeSection, setActiveSection] = React.useState<SectionKey>('account')
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false)
 
@@ -21,21 +27,23 @@ function SettingsPage() {
     document.title = t('page_title_settings')
   }, [t])
 
-  const settings = {
-    email: '',
-    notifications: { jobRecommendations: false, applicationUpdates: false, newMessages: false, promotionalEmails: false },
-    privacy: { publicProfile: false, showSalaryExpectation: false, activityStatus: false },
+  const notifications = {
+    jobRecommendations: settingsPayload?.notifications?.emailJobSuggestions ?? false,
+    applicationUpdates: settingsPayload?.notifications?.emailApplicationUpdates ?? false,
+    newMessages: settingsPayload?.notifications?.pushNotifications ?? false,
+    promotionalEmails: settingsPayload?.notifications?.marketingEmails ?? false,
   }
-  const setSettingsEmail = (_email: string) => {}
-  const setNotificationSetting = (_key: string, _value: boolean) => {}
-  const setPrivacySetting = (_key: string, _value: boolean) => {}
-  const signOut = () => {}
-  const clearAccountState = () => {}
+
+  const privacy = {
+    publicProfile: settingsPayload?.privacy?.showCvToRecruiters ?? false,
+    showSalaryExpectation: settingsPayload?.privacy?.showContactInfo ?? false,
+    activityStatus: false,
+  }
 
   const [currentPassword, setCurrentPassword] = React.useState('')
   const [newPassword, setNewPassword] = React.useState('')
   const [confirmPassword, setConfirmPassword] = React.useState('')
-  const [email, setEmail] = React.useState(settings.email)
+  const [email, setEmail] = React.useState('')
 
   const menuItems: Array<{ key: SectionKey; label: string; icon: React.ReactNode }> = [
     { key: 'account', label: 'Account', icon: <Settings className="h-4 w-4" /> },
@@ -53,11 +61,11 @@ function SettingsPage() {
       toast.error(t('account_password_mismatch'))
       return
     }
-
+    // Password update coming soon
+    toast.info('Password update coming soon')
     setCurrentPassword('')
     setNewPassword('')
     setConfirmPassword('')
-    toast.success(t('account_password_updated'))
   }
 
   const handleEmailUpdate = () => {
@@ -65,9 +73,8 @@ function SettingsPage() {
       toast.error(t('account_email_invalid'))
       return
     }
-
-    setSettingsEmail(email)
-    toast.success(t('account_email_updated'))
+    // Email update coming soon
+    toast.info('Email update coming soon')
   }
 
   return (
@@ -118,10 +125,10 @@ function SettingsPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-xl font-semibold text-foreground">Notification Preferences</h2>
-              <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={settings.notifications.jobRecommendations} onToggle={() => setNotificationSetting('jobRecommendations', !settings.notifications.jobRecommendations)} />
-              <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={settings.notifications.applicationUpdates} onToggle={() => setNotificationSetting('applicationUpdates', !settings.notifications.applicationUpdates)} />
-              <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={settings.notifications.newMessages} onToggle={() => setNotificationSetting('newMessages', !settings.notifications.newMessages)} />
-              <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={settings.notifications.promotionalEmails} onToggle={() => setNotificationSetting('promotionalEmails', !settings.notifications.promotionalEmails)} />
+              <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={notifications.jobRecommendations} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={notifications.applicationUpdates} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={notifications.newMessages} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={notifications.promotionalEmails} onToggle={() => toast.info('Settings update coming soon')} />
             </CardContent>
           </Card>
         )}
@@ -130,9 +137,9 @@ function SettingsPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-xl font-semibold text-foreground">Privacy Settings</h2>
-              <ToggleRow label="Public Profile" subLabel="Allow recruiters to find your profile" checked={settings.privacy.publicProfile} onToggle={() => setPrivacySetting('publicProfile', !settings.privacy.publicProfile)} />
-              <ToggleRow label="Show Salary Expectation" subLabel="Display your salary expectation on profile" checked={settings.privacy.showSalaryExpectation} onToggle={() => setPrivacySetting('showSalaryExpectation', !settings.privacy.showSalaryExpectation)} />
-              <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={settings.privacy.activityStatus} onToggle={() => setPrivacySetting('activityStatus', !settings.privacy.activityStatus)} />
+              <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => toast.info('Settings update coming soon')} />
             </CardContent>
           </Card>
         )}
@@ -160,7 +167,6 @@ function SettingsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
             <Button variant="destructive" onClick={() => {
-              clearAccountState()
               signOut()
               toast.success(t('account_deleted_toast'))
               navigate({ to: '/signin' })
