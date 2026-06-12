@@ -4,7 +4,6 @@ import { Badge, Button, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Clock3, DollarSign, Heart, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createFileRoute('/_account/wishlists')({
   component: WishlistsPage,
@@ -14,8 +13,9 @@ function WishlistsPage() {
   const { t } = useTranslation()
   const [selectedChip, setSelectedChip] = React.useState('all')
   const [query, setQuery] = React.useState('')
-  const jobs = useCandidateStore((s) => s.wishlistJobs)
-  const removeFromWishlist = useCandidateStore((s) => s.removeFromWishlist)
+  type WishlistJob = { id: string; title: string; company: string; initials: string; salary: string; location: string; skills: string[]; postedAt?: string; savedAt: string; category: 'Công nghệ' | 'Thiết kế' | 'Marketing' }
+  const jobs: WishlistJob[] = []
+  const removeFromWishlist = (_id: string) => {}
 
   React.useEffect(() => {
     document.title = t('page_title_wishlists')

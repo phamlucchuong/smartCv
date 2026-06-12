@@ -4,7 +4,7 @@ import { Button } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Upload, FileText, Star, Trash2, RefreshCw, Eye, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
-import { type CVItem, useCandidateStore } from '../store/useCandidateStore'
+type CVItem = { id: string; name: string; type: 'PDF' | 'DOC'; uploaded: string; status: 'Parsed' | 'Processing' | 'Active'; isDefault: boolean }
 
 export const Route = createFileRoute('/_account/cv')({
   component: MyCVPage,
@@ -29,11 +29,11 @@ function formatToday() {
 
 function MyCVPage() {
   const { t } = useTranslation()
-  const cvList = useCandidateStore((s) => s.cvList)
-  const addCV = useCandidateStore((s) => s.addCV)
-  const setDefaultCV = useCandidateStore((s) => s.setDefaultCV)
-  const removeCV = useCandidateStore((s) => s.removeCV)
-  const updateCVStatus = useCandidateStore((s) => s.updateCVStatus)
+  const cvList: CVItem[] = []
+  const addCV = (_cv: CVItem) => {}
+  const setDefaultCV = (_id: string) => {}
+  const removeCV = (_id: string) => {}
+  const updateCVStatus = (_id: string, _status: CVItem['status']) => {}
 
   React.useEffect(() => {
     document.title = t('page_title_cv')

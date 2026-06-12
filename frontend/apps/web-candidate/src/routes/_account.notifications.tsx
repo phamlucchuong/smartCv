@@ -3,7 +3,6 @@ import * as React from 'react'
 import { useTranslation } from '@smart-cv/i18n'
 import { Bell, BellOff } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createFileRoute('/_account/notifications')({
   component: NotificationsPage,
@@ -17,9 +16,10 @@ const typeColor: Record<'job' | 'application' | 'system', string> = {
 
 function NotificationsPage() {
   const { t } = useTranslation()
-  const notifications = useCandidateStore((s) => s.notifications)
-  const markRead = useCandidateStore((s) => s.markRead)
-  const markAllRead = useCandidateStore((s) => s.markAllRead)
+  type CandidateNotification = { id: string; title: string; message: string; time: string; unread: boolean; type: 'job' | 'application' | 'system' }
+  const notifications: CandidateNotification[] = []
+  const markRead = (_id: string) => {}
+  const markAllRead = () => {}
   const unreadCount = notifications.filter((n) => n.unread).length
 
   React.useEffect(() => {

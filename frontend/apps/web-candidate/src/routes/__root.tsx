@@ -23,7 +23,7 @@ import { Button } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
 import { registerSignOutHandler } from '@smart-cv/api'
 import { Toaster } from 'sonner'
-import { useCandidateStore } from '../store/useCandidateStore'
+import { usePreferencesStore } from '../store/usePreferencesStore'
 import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createRootRoute({
@@ -47,15 +47,12 @@ function RootComponent() {
   const [jobHighlightIndex, setJobHighlightIndex] = React.useState(0)
   const [resourceHighlightIndex, setResourceHighlightIndex] = React.useState(0)
 
-  const isAuthenticated = useCandidateStore((state) => state.isAuthenticated)
-  const user = useCandidateStore((state) => state.user)
-  const theme = useCandidateStore((state) => state.theme)
-  const language = useCandidateStore((state) => state.language)
-  const toggleTheme = useCandidateStore((state) => state.toggleTheme)
-  const toggleLanguage = useCandidateStore((state) => state.toggleLanguage)
-  const syncLanguageFromI18n = useCandidateStore((state) => state.syncLanguageFromI18n)
-  const signOut = useCandidateStore((state) => state.signOut)
-  const refreshAuthState = useCandidateStore((state) => state.refreshAuthState)
+  const { isAuthenticated, email, signOut } = useAuthStore()
+  const theme = usePreferencesStore((state) => state.theme)
+  const language = usePreferencesStore((state) => state.language)
+  const toggleTheme = usePreferencesStore((state) => state.toggleTheme)
+  const toggleLanguage = usePreferencesStore((state) => state.toggleLanguage)
+  const syncLanguageFromI18n = usePreferencesStore((state) => state.syncLanguageFromI18n)
 
   const jobMenuRef = React.useRef<HTMLDivElement>(null)
   const resourceMenuRef = React.useRef<HTMLDivElement>(null)
@@ -137,9 +134,7 @@ function RootComponent() {
     registerSignOutHandler(() => useAuthStore.getState().signOut())
   }, [])
 
-  React.useEffect(() => {
-    refreshAuthState()
-  }, [pathname, refreshAuthState])
+  // auth state is derived from cookies in useAuthStore directly
 
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -257,9 +252,9 @@ function RootComponent() {
               >
                 <div className="rounded-full bg-primary/20 border border-primary/30 flex items-center gap-2 px-3 py-1.5 cursor-pointer">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
-                    {user.initials}
+                    {email?.charAt(0).toUpperCase() ?? '?'}
                   </div>
-                  <span className="text-sm font-medium text-foreground">{user.firstName}</span>
+                  <span className="text-sm font-medium text-foreground">{email?.split('@')[0] ?? 'Account'}</span>
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
                 </div>
 
@@ -267,10 +262,10 @@ function RootComponent() {
                   className={`absolute right-0 top-full mt-2 min-w-[220px] rounded-xl border border-border bg-card shadow-xl z-50 transition-opacity duration-150 ${accountMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                 >
                   <div className="flex items-center gap-3 px-3 py-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">{user.initials}</div>
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">{email?.charAt(0).toUpperCase() ?? '?'}</div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{user.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      <p className="text-sm font-semibold text-foreground">{email?.split('@')[0] ?? 'Account'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{email ?? ''}</p>
                     </div>
                   </div>
                   <hr className="border-border my-1" />

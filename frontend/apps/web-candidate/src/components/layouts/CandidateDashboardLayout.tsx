@@ -17,7 +17,8 @@ import {
 import * as React from 'react'
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, cn } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
-import { useCandidateStore } from '../../store/useCandidateStore'
+import { usePreferencesStore } from '../../store/usePreferencesStore'
+import { useAuthStore } from '../../store/useAuthStore'
 
 interface NavItem {
   key: string
@@ -44,12 +45,11 @@ export function CandidateDashboardLayout() {
     other: true,
   })
 
-  const user = useCandidateStore((s) => s.user)
-  const theme = useCandidateStore((s) => s.theme)
-  const language = useCandidateStore((s) => s.language)
-  const toggleTheme = useCandidateStore((s) => s.toggleTheme)
-  const toggleLanguage = useCandidateStore((s) => s.toggleLanguage)
-  const signOut = useCandidateStore((s) => s.signOut)
+  const { email, signOut } = useAuthStore()
+  const theme = usePreferencesStore((s) => s.theme)
+  const language = usePreferencesStore((s) => s.language)
+  const toggleTheme = usePreferencesStore((s) => s.toggleTheme)
+  const toggleLanguage = usePreferencesStore((s) => s.toggleLanguage)
 
   const navGroups: NavGroup[] = [
     {
@@ -183,10 +183,10 @@ export function CandidateDashboardLayout() {
               <DropdownMenuTrigger asChild>
                 <button className="hover:bg-accent flex items-center gap-2 rounded-lg px-1.5 py-1">
                   <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold">
-                    {user.initials}
+                    {email?.charAt(0).toUpperCase() ?? '?'}
                   </div>
                   <div className="hidden text-left leading-tight md:block">
-                    <div className="text-sm font-medium">{user.name}</div>
+                    <div className="text-sm font-medium">{email?.split('@')[0] ?? 'Account'}</div>
                   </div>
                 </button>
               </DropdownMenuTrigger>

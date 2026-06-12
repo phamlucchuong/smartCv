@@ -4,7 +4,6 @@ import { Badge, Button, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Clock3, DollarSign, MapPin, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createFileRoute('/_account/job-suggestions')({
   component: JobSuggestionsPage,
@@ -14,9 +13,10 @@ function JobSuggestionsPage() {
   const { t } = useTranslation()
   const [selectedChip, setSelectedChip] = React.useState('all')
   const [query, setQuery] = React.useState('')
-  const suggestions = useCandidateStore((s) => s.jobSuggestions)
-  const appliedJobIds = useCandidateStore((s) => s.appliedJobIds)
-  const applyToJob = useCandidateStore((s) => s.applyToJob)
+  type JobSuggestion = { id: string; title: string; company: string; initials: string; salary: string; location: string; skills: string[]; postedAt?: string; matchReason: string; matchScore: number }
+  const suggestions: JobSuggestion[] = []
+  const appliedJobIds: string[] = []
+  const applyToJob = (_id: string) => {}
 
   React.useEffect(() => {
     document.title = t('page_title_job_suggestions')

@@ -3,15 +3,13 @@ import * as React from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@smart-cv/ui'
 import { Award, ShieldCheck, Zap, Sparkles } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
-import { useCandidateStore } from '../store/useCandidateStore'
-
 export const Route = createFileRoute('/about')({
   component: AboutComponent,
 })
 
 function AboutComponent() {
   const { t } = useTranslation()
-  const { count } = useCandidateStore()
+  const count = 0
 
   React.useEffect(() => {
     document.title = t('page_title_about')

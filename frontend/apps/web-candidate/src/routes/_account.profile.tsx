@@ -4,7 +4,9 @@ import { Badge, Button, Card, CardContent, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Briefcase, Eye, MapPin, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { type CVItem, type Education, type Experience, useCandidateStore } from '../store/useCandidateStore'
+type CVItem = { id: string; name: string; type: 'PDF' | 'DOC'; uploaded: string; status: 'Parsed' | 'Processing' | 'Active'; isDefault: boolean }
+type Experience = { id: string; title: string; company: string; type: string; dateRange: string; location: string; achievements: string[] }
+type Education = { id: string; school: string; degree: string; dateRange: string }
 
 export const Route = createFileRoute('/_account/profile')({
   component: ProfilePage,
@@ -24,27 +26,29 @@ function toInitials(name: string) {
     .join('')
 }
 
+const emptyUser = { name: '', firstName: '', email: '', phone: '', initials: '', title: '', location: '', bio: '', avatarColor: '' }
+
 function ProfilePage() {
   const { t } = useTranslation()
-  const user = useCandidateStore((s) => s.user)
+  const user = emptyUser
 
   React.useEffect(() => {
     document.title = t('page_title_profile')
   }, [t])
-  const experiences = useCandidateStore((s) => s.experiences)
-  const educations = useCandidateStore((s) => s.educations)
-  const skills = useCandidateStore((s) => s.skills)
-  const appliedJobIds = useCandidateStore((s) => s.appliedJobIds)
-  const wishlistJobs = useCandidateStore((s) => s.wishlistJobs)
-  const updateUser = useCandidateStore((s) => s.updateUser)
-  const setSkills = useCandidateStore((s) => s.setSkills)
-  const addExperience = useCandidateStore((s) => s.addExperience)
-  const updateExperience = useCandidateStore((s) => s.updateExperience)
-  const removeExperience = useCandidateStore((s) => s.removeExperience)
-  const addEducation = useCandidateStore((s) => s.addEducation)
-  const updateEducation = useCandidateStore((s) => s.updateEducation)
-  const removeEducation = useCandidateStore((s) => s.removeEducation)
-  const addCV = useCandidateStore((s) => s.addCV)
+  const experiences: Experience[] = []
+  const educations: Education[] = []
+  const skills: string[] = []
+  const appliedJobIds: string[] = []
+  const wishlistJobs: { id: string }[] = []
+  const updateUser = (_partial: Partial<typeof emptyUser>) => {}
+  const setSkills = (_skills: string[]) => {}
+  const addExperience = (_payload: Omit<Experience, 'id'>) => {}
+  const updateExperience = (_id: string, _payload: Omit<Experience, 'id'>) => {}
+  const removeExperience = (_id: string) => {}
+  const addEducation = (_payload: Omit<Education, 'id'>) => {}
+  const updateEducation = (_id: string, _payload: Omit<Education, 'id'>) => {}
+  const removeEducation = (_id: string) => {}
+  const addCV = (_cv: CVItem) => {}
 
   const [editMode, setEditMode] = React.useState(false)
   const [draft, setDraft] = React.useState(user)

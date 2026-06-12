@@ -4,7 +4,6 @@ import { Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogH
 import { useTranslation } from '@smart-cv/i18n'
 import { Bell, Settings, Shield, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,
@@ -22,12 +21,16 @@ function SettingsPage() {
     document.title = t('page_title_settings')
   }, [t])
 
-  const settings = useCandidateStore((s) => s.settings)
-  const setSettingsEmail = useCandidateStore((s) => s.setSettingsEmail)
-  const setNotificationSetting = useCandidateStore((s) => s.setNotificationSetting)
-  const setPrivacySetting = useCandidateStore((s) => s.setPrivacySetting)
-  const signOut = useCandidateStore((s) => s.signOut)
-  const clearAccountState = useCandidateStore((s) => s.clearAccountState)
+  const settings = {
+    email: '',
+    notifications: { jobRecommendations: false, applicationUpdates: false, newMessages: false, promotionalEmails: false },
+    privacy: { publicProfile: false, showSalaryExpectation: false, activityStatus: false },
+  }
+  const setSettingsEmail = (_email: string) => {}
+  const setNotificationSetting = (_key: string, _value: boolean) => {}
+  const setPrivacySetting = (_key: string, _value: boolean) => {}
+  const signOut = () => {}
+  const clearAccountState = () => {}
 
   const [currentPassword, setCurrentPassword] = React.useState('')
   const [newPassword, setNewPassword] = React.useState('')

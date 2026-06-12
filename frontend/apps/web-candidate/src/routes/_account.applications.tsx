@@ -3,7 +3,6 @@ import * as React from 'react'
 import { Badge, Button, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Clock3, DollarSign, MapPin } from 'lucide-react'
-import { useCandidateStore } from '../store/useCandidateStore'
 
 export const Route = createFileRoute('/_account/applications')({
   component: ApplicationsPage,
@@ -23,7 +22,8 @@ function ApplicationsPage() {
   const { t } = useTranslation()
   const [selectedChip, setSelectedChip] = React.useState('all')
   const [query, setQuery] = React.useState('')
-  const applications = useCandidateStore((s) => s.appliedJobs)
+  type AppliedJob = { id: string; title: string; company: string; initials: string; salary: string; location: string; skills: string[]; status: ApplicationStatus; appliedAt: string }
+  const applications: AppliedJob[] = []
 
   React.useEffect(() => {
     document.title = t('page_title_applications')
