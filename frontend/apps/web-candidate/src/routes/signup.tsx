@@ -1,15 +1,13 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import * as React from 'react'
+import Cookies from 'js-cookie'
 import { Badge, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input } from '@smart-cv/ui'
 import { ArrowRight, Lock, Mail, Sparkles, UserRound } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 
 export const Route = createFileRoute('/signup')({
   beforeLoad: () => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-    if (isAuthenticated) {
-      throw redirect({ to: '/' })
-    }
+    if (Cookies.get('smart_cv_token')) throw redirect({ to: '/' })
   },
   component: SignUpComponent,
 })
