@@ -69,7 +69,7 @@ function SignUpComponent() {
       setOtpOpen(true)
     } catch (err: any) {
       const code = err?.response?.data?.code
-      if (code === 1002) {
+      if (code === 3001) {
         setErrors((prev) => ({ ...prev, email: 'Email already registered' }))
       } else {
         toast.error(err?.response?.data?.message ?? 'Registration failed. Please try again.')
