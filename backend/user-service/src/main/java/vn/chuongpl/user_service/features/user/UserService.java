@@ -43,6 +43,10 @@ public class UserService {
         return !userRepository.existsByEmailAndDeletedFalse(email);
     }
 
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
     public Optional<User> findByEmailAndDeletedFalse(String email) {
         return userRepository.findByEmailAndDeletedFalse(email);
     }

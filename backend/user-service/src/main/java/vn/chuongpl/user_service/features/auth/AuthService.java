@@ -83,7 +83,10 @@ public class AuthService {
     }
 
     public UserResponse register(RegisterRequest request) {
-        if (!userService.verifyEmail(request.getEmail())) throw new AppException(ErrorCode.EMAIL_EXISTED);
+        userService.findByEmail(request.getEmail()).ifPresent(existing -> {
+            if (existing.isVerified()) throw new AppException(ErrorCode.EMAIL_EXISTED);
+            userService.deleteUser(existing.getId());
+        });
 
         String roleName = request.getRole().toUpperCase();
         if (!roleName.equals("CANDIDATE") && !roleName.equals("RECRUITER")) {
