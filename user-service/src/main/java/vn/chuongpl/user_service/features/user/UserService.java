@@ -47,6 +47,10 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
+    public List<User> findAllByEmail(String email) {
+        return userRepository.findAllByEmail(email);
+    }
+
     public Optional<User> findByEmailAndDeletedFalse(String email) {
         return userRepository.findByEmailAndDeletedFalse(email);
     }
