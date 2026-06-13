@@ -86,7 +86,7 @@ public class AuthService {
         List<User> existing = userService.findAllByEmail(request.getEmail());
         boolean hasVerified = existing.stream().anyMatch(User::isVerified);
         if (hasVerified) throw new AppException(ErrorCode.EMAIL_EXISTED);
-        existing.forEach(u -> userService.deleteUser(u.getId()));
+        existing.forEach(u -> userService.hardDeleteUser(u.getId()));
 
         String roleName = request.getRole().toUpperCase();
         if (!roleName.equals("CANDIDATE") && !roleName.equals("RECRUITER")) {

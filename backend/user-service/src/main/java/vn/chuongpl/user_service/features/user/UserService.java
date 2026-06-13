@@ -123,6 +123,10 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public void hardDeleteUser(String id) {
+        userRepository.deleteById(id);
+    }
+
     public UserResponse updateUserStatus(String userId, UserStatusRequest request) {
         User user = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
