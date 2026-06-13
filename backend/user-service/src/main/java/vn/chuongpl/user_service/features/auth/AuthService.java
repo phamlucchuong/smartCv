@@ -83,10 +83,10 @@ public class AuthService {
     }
 
     public UserResponse register(RegisterRequest request) {
-        userService.findByEmail(request.getEmail()).ifPresent(existing -> {
-            if (existing.isVerified()) throw new AppException(ErrorCode.EMAIL_EXISTED);
-            userService.deleteUser(existing.getId());
-        });
+        List<User> existing = userService.findAllByEmail(request.getEmail());
+        boolean hasVerified = existing.stream().anyMatch(User::isVerified);
+        if (hasVerified) throw new AppException(ErrorCode.EMAIL_EXISTED);
+        existing.forEach(u -> userService.deleteUser(u.getId()));
 
         String roleName = request.getRole().toUpperCase();
         if (!roleName.equals("CANDIDATE") && !roleName.equals("RECRUITER")) {
