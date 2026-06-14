@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk ls *)",
+      "Bash(rtk find *)",
+      "Bash(rtk tree *)",
+      "WebFetch(domain:www.topcv.vn)",
+      "Bash(rtk read *)",
+      "Bash(rtk grep *)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(rtk wc *)",
+      "Bash(sed -n '60,80p' packages/i18n/src/locales/en/common.json)",
+      "Bash(sed -n '60,80p' packages/i18n/src/locales/vi/common.json)",
+      "Bash(pnpm *)",
+      "Bash(rtk tsc *)"
+    ]
+  }
+}
