@@ -12,15 +12,24 @@ on:
       - "backend/notification-service/**"
       - ".github/workflows/noti-ci.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test-noti:
+  validate:
     name: Validate notification-service
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     env:
       GOCACHE: ${{ github.workspace }}/.cache/go-build
       GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Prepare env file
         run: |
@@ -34,13 +43,9 @@ jobs:
           go-version: "1.25.6"
           cache-dependency-path: backend/notification-service/go.sum
 
-      - name: Prepare Go cache directories
-        run: mkdir -p "$GOCACHE" "$GOMODCACHE"
-
       - name: Check formatting
         working-directory: backend/notification-service
-        run: |
-          test -z "$(gofmt -l .)"
+        run: test -z "$(gofmt -l .)"
 
       - name: Install dependencies
         working-directory: backend/notification-service
@@ -50,7 +55,7 @@ jobs:
         working-directory: backend/notification-service
         run: go vet ./...
 
-      - name: Run Tests
+      - name: Run tests
         working-directory: backend/notification-service
         run: go test ./... -v
 
