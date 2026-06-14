@@ -1,111 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.005 247);
+  --foreground: oklch(0.18 0.04 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.04 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.04 265);
+  --primary: oklch(0.33 0.13 265);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.965 0.01 250);
+  --secondary-foreground: oklch(0.25 0.07 265);
+  --muted: oklch(0.965 0.01 250);
+  --muted-foreground: oklch(0.55 0.03 257);
+  --accent: oklch(0.95 0.02 260);
+  --accent-foreground: oklch(0.25 0.07 265);
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.92 0.012 255);
+  --input: oklch(0.92 0.012 255);
+  --ring: oklch(0.55 0.18 265);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.18 0.04 265);
+  --sidebar-accent: oklch(0.965 0.01 250);
+  --sidebar-border: oklch(0.92 0.012 255);
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --brand-blue: oklch(0.55 0.2 263);
+  --ai: oklch(0.51 0.25 295);
+  --success: oklch(0.62 0.17 145);
+  --warning: oklch(0.78 0.16 75);
+  --danger: oklch(0.58 0.22 27);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+.dark {
+  --background: oklch(0.12 0.03 265);
+  --foreground: oklch(0.95 0.01 255);
+  --card: oklch(0.16 0.03 265);
+  --card-foreground: oklch(0.95 0.01 255);
+  --popover: oklch(0.16 0.03 265);
+  --popover-foreground: oklch(0.95 0.01 255);
+  --primary: oklch(0.55 0.2 263);
+  --secondary: oklch(0.22 0.04 265);
+  --secondary-foreground: oklch(0.85 0.01 255);
+  --muted: oklch(0.22 0.04 265);
+  --muted-foreground: oklch(0.65 0.02 255);
+  --accent: oklch(0.22 0.04 265);
+  --accent-foreground: oklch(0.85 0.01 255);
+  --border: oklch(0.25 0.03 265);
+  --input: oklch(0.25 0.03 265);
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --sidebar: oklch(0.14 0.03 265);
+  --sidebar-foreground: oklch(0.92 0.01 255);
+  --sidebar-accent: oklch(0.2 0.04 265);
+  --sidebar-border: oklch(0.25 0.03 265);
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
 body {
   margin: 0;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.card-surface {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.04);
 }

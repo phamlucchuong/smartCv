@@ -1,0 +1,19 @@
+package vn.chuongpl.user_service.dtos.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import vn.chuongpl.user_service.enums.RecruiterStatus;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class RecruiterProfileResponse {
+    String recruiterId;
+    String userId;
+    RecruiterStatus status;
+    int quotaJobPost;
+    int quotaCvViews;
+}

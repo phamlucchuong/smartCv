@@ -1,0 +1,59 @@
+package vn.chuongpl.user_service.dtos.response;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import vn.chuongpl.user_service.enums.RecruiterStatus;
+
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class RecruiterResponse {
+    String id;
+    String userId;
+
+    // ── From User ─────────────────────────────────────────────────────────────
+    String fullName;
+    String email;
+    String phone;
+
+    // ── Company info ──────────────────────────────────────────────────────────
+    String companyName;
+    String companyWebsite;
+    String companyAddress;
+    String companyDescription;
+    String companyPhone;
+    String companySize;
+    String companyType;
+    Integer foundedYear;
+    String industry;
+
+    // ── Media ─────────────────────────────────────────────────────────────────
+    String logoUrl;
+    String coverImageUrl;
+
+    // ── Legal ─────────────────────────────────────────────────────────────────
+    String taxCode;
+    String businessLicenseUrl;
+
+    // ── Social links ──────────────────────────────────────────────────────────
+    String linkedinUrl;
+    String facebookUrl;
+
+    // ── HR contact ────────────────────────────────────────────────────────────
+    String contactName;
+    String contactEmail;
+    String contactPhone;
+
+    // ── Status & quota ────────────────────────────────────────────────────────
+    RecruiterStatus status;
+    int quotaJobPost;
+    int quotaCvViews;
+
+    // ── Audit ─────────────────────────────────────────────────────────────────
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
+}

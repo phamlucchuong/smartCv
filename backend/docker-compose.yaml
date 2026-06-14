@@ -1,21 +1,49 @@
-
 services:
   mongodb:
     image: mongo:latest
     container_name: smartCv-mongodb
     restart: unless-stopped
     ports:
-      - "${DB_PORT:-27017}:27017"
+      - "${MONGO_DB_PORT:-27017}:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
     volumes:
       - mongodb_data_vol:/data/db
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - smartCv-net
+
+  postgresql:
+    image: postgres:16-alpine
+    container_name: smartCv-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+    volumes:
+      - postgres_data_vol:/var/lib/postgresql/data
+      # - ./infra/postgres/init-go-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "${POSTGRES_DB_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${POSTGRES_DB_USER}",
+          "-d",
+          "${POSTGRES_DB_NAME}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
       - smartCv-net
 
@@ -28,7 +56,7 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -36,9 +64,85 @@ services:
     networks:
       - smartCv-net
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: smartCv-rabbitmq
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"     # AMQP
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"   # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    restart: unless-stopped
+    networks:
+      - smartCv-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: smartCv-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - smartCv-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: smartCv-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - smartCv-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: smartCv-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY} &&
+      mc mb --ignore-existing local/${AWS_S3_BUCKET_NAME} &&
+      echo 'Bucket ready'
+      "
+    networks:
+      - smartCv-net
+
 volumes:
   mongodb_data_vol:
+  postgres_data_vol:
   redis_data:
+  elasticsearch_data:
+  rabbitmq_data:
+  minio_data:
 
 networks:
   smartCv-net:

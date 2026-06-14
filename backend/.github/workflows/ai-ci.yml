@@ -1,0 +1,23 @@
+name: AI Engine Service CI
+
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "ai_engine_service/**"
+      - ".github/workflows/ai-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - "ai_engine_service/**"
+      - ".github/workflows/ai-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+
+jobs:
+  build-and-test-ai:
+    uses: ./.github/workflows/_java-service-ci.yml
+    with:
+      service_name: ai_engine_service
+      service_path: ai_engine_service
+      test_command: ./mvnw test -Dspring.ai.ollama.chat.enabled=false

@@ -1,10 +1,10 @@
 package vn.chuongpl.user_service.dtos.response;
 
-
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -16,6 +16,10 @@ public class UserResponse {
     String id;
     String fullName;
     String email;
+    String phone;
+    Set<String> roles;
+    boolean verified;
+    boolean locked;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

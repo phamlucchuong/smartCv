@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls -lh)",
+      "Read(//home/chuongpl/projects/smartCv-fe/packages/ui/**)",
+      "Read(//home/chuongpl/projects/smartCv-fe/packages/ui/src/**)",
+      "Bash(wc -l *.tsx)",
+      "Bash(sed -n '1,120p' __root.tsx)"
+    ]
+  }
+}

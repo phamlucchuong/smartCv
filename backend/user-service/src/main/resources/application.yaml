@@ -1,17 +1,19 @@
-
-server: 
-    port: ${USER_SERVICE_PORT:8081}
-    servlet:
-        context-path: /user
+server:
+  port: ${USER_SERVICE_PORT:8081}
+  servlet:
+    context-path: /user
 
 spring:
+  config:
+    import: optional:file:../.env[.properties]
+
   application:
     name: UserService
   profiles:
-      include: local
+    include: local
   data:
     mongodb:
-      uri: mongodb://${DB_USERNAME}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?authSource=admin
+      uri: mongodb://${MONGO_DB_USERNAME:admin}:${MONGO_DB_PASSWORD:admin}@${MONGO_DB_HOST:localhost}:${MONGO_DB_PORT:27017}/${MONGO_DB_NAME:user_db}?authSource=admin
       auto-index-creation: true
 
   cache:
@@ -26,29 +28,47 @@ spring:
           min-idle: 0
           max-wait: -1ms
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   main:
-      banner-mode: "off"
+    banner-mode: "off"
 
   output:
-      ansi:
-          enabled: ALWAYS
+    ansi:
+      enabled: ALWAYS
 
 logging:
-    level:
-        root: WARN
-        "vn.chuongpl.user-service": INFO
-    pattern:
-        console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
+  level:
+    root: WARN
+    "vn.chuongpl.user_service": INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
 
 mongock:
   migration-scan-package:
     - vn.chuongpl.user_service.configuration.changelog
   transaction-enabled: false
 
-# Springdoc OpenAPI Configuration
 springdoc:
-    api-docs:
-        path: /v3/api-docs
-    swagger-ui:
-        path: /swagger-ui.html
-        enabled: true
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+app:
+  user-default-page-size: ${USER_DEFAULT_PAGE_SIZE:10}
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}
+
+integration:
+  job-service-url: ${JOB_SERVICE_URL:http://localhost:8082/job}

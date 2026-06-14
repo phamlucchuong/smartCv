@@ -1,29 +1,22 @@
-name: user-ci.yml
+name: User Service CI
+
 on:
   push:
-    branches: [ "main" ]
+    branches: ["dev"]
     paths:
-      - 'user-service/**'    # Chỉ chạy khi code trong thư mục này thay đổi
-      - '.github/workflows/ci-auth-service.yml'
+      - "user-service/**"
+      - ".github/workflows/user-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main", "dev"]
     paths:
-      - 'user-service/**'
+      - "user-service/**"
+      - ".github/workflows/user-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+
 jobs:
   test-user:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Run Auth Tests
-        # Lưu ý: Phải di chuyển vào thư mục service trước khi chạy lệnh
-        run: |
-          cd user-service
-          mvn clean test
+    uses: ./.github/workflows/_java-service-ci.yml
+    with:
+      service_name: user-service
+      service_path: user-service

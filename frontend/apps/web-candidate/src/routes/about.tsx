@@ -1,31 +1,36 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from '@smart-cv/ui'
+import * as React from 'react'
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@smart-cv/ui'
 import { Award, ShieldCheck, Zap, Sparkles } from 'lucide-react'
-import { useCandidateStore } from '../store/useCandidateStore'
-
+import { useTranslation } from '@smart-cv/i18n'
 export const Route = createFileRoute('/about')({
   component: AboutComponent,
 })
 
 function AboutComponent() {
-  const { count } = useCandidateStore()
+  const { t } = useTranslation()
+  const count = 0
+
+  React.useEffect(() => {
+    document.title = t('page_title_about')
+  }, [t])
 
   const features = [
     {
       icon: <Zap className="h-6 w-6 text-primary" />,
-      title: "Ứng tuyển nhanh chóng",
-      desc: "Nộp hồ sơ trực tuyến chỉ với 1 cú click chuột và nhận phản hồi tức thì từ nhà tuyển dụng."
+      title: t('about_feature_apply_title'),
+      desc: t('about_feature_apply_desc'),
     },
     {
       icon: <Award className="h-6 w-6 text-primary" />,
-      title: "Phân tích hồ sơ AI",
-      desc: "Hệ thống AI tự động tối ưu hóa và so sánh năng lực của bạn với yêu cầu công việc cụ thể."
+      title: t('about_feature_ai_title'),
+      desc: t('about_feature_ai_desc'),
     },
     {
       icon: <ShieldCheck className="h-6 w-6 text-primary" />,
-      title: "Bảo mật tuyệt đối",
-      desc: "Dữ liệu cá nhân và thông tin hồ sơ của bạn được mã hóa an toàn và chỉ hiển thị khi có sự cho phép."
-    }
+      title: t('about_feature_security_title'),
+      desc: t('about_feature_security_desc'),
+    },
   ]
 
   return (
@@ -33,11 +38,11 @@ function AboutComponent() {
       <div className="space-y-4">
         <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 gap-1 px-3 py-1">
           <Sparkles className="h-3 w-3" />
-          Về Chúng Tôi
+          {t('about_badge')}
         </Badge>
-        <h1 className="text-4xl font-extrabold tracking-tight">Smart CV - Nền Tảng Tuyển Dụng Thế Hệ Mới</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight">{t('about_title')}</h1>
         <p className="text-lg text-muted-foreground">
-          Chúng tôi mang đến giải pháp kết nối nhân tài và doanh nghiệp một cách nhanh chóng, minh bạch và hiệu quả thông qua công nghệ hiện đại.
+          {t('about_subtitle')}
         </p>
       </div>
 
@@ -45,13 +50,13 @@ function AboutComponent() {
       <Card className="bg-primary/5 border-primary/20 shadow-none">
         <CardContent className="p-6 space-y-2">
           <h3 className="font-bold text-lg text-primary flex items-center gap-2">
-            📊 Trạng thái Zustand được giữ nguyên!
+            {t('about_zustand_title')}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Khi bạn chuyển hướng từ Trang chủ sang trang Giới thiệu này, toàn bộ dữ liệu của bạn trong Zustand Store không hề bị mất đi.
+            {t('about_zustand_desc')}
           </p>
           <div className="text-sm font-semibold text-foreground pt-1">
-            Số lượt đếm hiện tại từ Zustand: <span className="text-primary text-base font-bold">{count}</span>
+            {t('about_zustand_count', { count })}
           </div>
         </CardContent>
       </Card>
@@ -77,7 +82,7 @@ function AboutComponent() {
       <div className="pt-6 flex justify-center">
         <Link to="/">
           <Button size="lg" className="px-8 font-semibold shadow-md shadow-primary/20">
-            Quay lại tìm việc làm
+            {t('about_back_to_jobs')}
           </Button>
         </Link>
       </div>

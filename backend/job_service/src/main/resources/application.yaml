@@ -1,0 +1,70 @@
+server:
+  port: ${JOB_SERVICE_PORT:8082}
+  servlet:
+    context-path: /job
+
+spring:
+  config:
+    import: optional:file:../.env[.properties]
+
+  application:
+    name: JobService
+
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_DB_USERNAME:admin}:${MONGO_DB_PASSWORD:admin}@${MONGO_DB_HOST:localhost}:${MONGO_DB_PORT:27017}/${JOB_MONGO_DB_NAME:job_db}?authSource=admin
+      auto-index-creation: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+
+  cache:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  main:
+    banner-mode: "off"
+
+  output:
+    ansi:
+      enabled: ALWAYS
+
+logging:
+  level:
+    root: WARN
+    "vn.chuongpl.job_service": INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+mongock:
+  migration-scan-package:
+    - vn.chuongpl.job_service.configuration.changelog
+  transaction-enabled: false
+
+app:
+  job-default-page-size: ${JOB_DEFAULT_PAGE_SIZE:10}
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:changeme}

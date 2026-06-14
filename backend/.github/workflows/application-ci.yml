@@ -1,0 +1,22 @@
+name: application-ci.yml
+
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "application_service/**"
+      - ".github/workflows/application-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - "application_service/**"
+      - ".github/workflows/application-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+
+jobs:
+  test-application:
+    uses: ./.github/workflows/_java-service-ci.yml
+    with:
+      service_name: application_service
+      service_path: application_service

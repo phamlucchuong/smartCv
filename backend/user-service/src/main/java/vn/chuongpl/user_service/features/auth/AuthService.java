@@ -14,28 +14,26 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import vn.chuongpl.user_service.dtos.request.AuthRequest;
-import vn.chuongpl.user_service.dtos.request.IntrospectRequest;
-import vn.chuongpl.user_service.dtos.request.RegisterRequest;
+import vn.chuongpl.user_service.dtos.request.*;
 import vn.chuongpl.user_service.dtos.response.AuthResponse;
 import vn.chuongpl.user_service.dtos.response.IntrospectResponse;
 import vn.chuongpl.user_service.dtos.response.UserResponse;
 import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
+import vn.chuongpl.user_service.features.candidate.CandidateService;
+import vn.chuongpl.user_service.features.recruiter.RecruiterService;
 import vn.chuongpl.user_service.features.role.Role;
 import vn.chuongpl.user_service.features.role.RoleService;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserMapper;
 import vn.chuongpl.user_service.features.user.UserService;
+import vn.chuongpl.user_service.integration.notification.NotificationClient;
 
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.StringJoiner;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -47,9 +45,12 @@ public class AuthService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     JwtBlacklistService jwtBlacklistService;
+    NotificationClient notificationClient;
+    CandidateService candidateService;
+    RecruiterService recruiterService;
 
     @NonFinal
-    @Value("${JWT_SIGNER_KEY}")
+    @Value("${JWT_SECRET_KEY}")
     protected String SIGNER_KEY;
     @NonFinal
     @Value("${JWT_VALID_DURATION}")
@@ -61,8 +62,7 @@ public class AuthService {
     @Value("${JWT_LONG_REFRESHABLE_DURATION}")
     protected long LONG_REFRESHABLE_DURATION;
 
-
-    public AuthResponse authenticated(AuthRequest request) {
+    public Map<String, String> authenticated(AuthRequest request) {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
         var user = userService.findByEmailAndDeletedFalse(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -71,27 +71,107 @@ public class AuthService {
         if (!authenticated) {
             throw new AppException(ErrorCode.AUTHENTICATION_FAILED);
         }
+        if (!user.isVerified()) {
+            notificationClient.sendOTP(user.getEmail(), "EMAIL", "VERIFY_ACCOUNT");
+            throw new AppException(ErrorCode.USER_NOT_VERIFIED);
+        }
+
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", generateToken(user, VALID_DURATION));
+        tokens.put("refreshToken", generateToken(user, REFRESHABLE_DURATION));
+
+        return tokens;
+    }
+
+    public UserResponse register(RegisterRequest request) {
+        List<User> existing = userService.findAllByEmail(request.getEmail());
+        boolean hasVerified = existing.stream().anyMatch(User::isVerified);
+        if (hasVerified) throw new AppException(ErrorCode.EMAIL_EXISTED);
+
+        User user;
+        if (!existing.isEmpty()) {
+            user = existing.get(0);
+            for (int i = 1; i < existing.size(); i++) {
+                userService.hardDeleteUser(existing.get(i).getId());
+            }
+            user.setUpdatedAt(LocalDateTime.now());
+        } else {
+            user = new User();
+            user.setCreatedAt(LocalDateTime.now());
+        }
+
+        user.setEmail(request.getEmail());
+        user.setFullName(request.getFullname());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPhone(request.getPhone());
+        user.setVerified(false);
+
+        String roleName = request.getRole().toUpperCase();
+        if (!roleName.equals("CANDIDATE") && !roleName.equals("RECRUITER")) {
+            throw new AppException(ErrorCode.ROLE_NOT_FOUND);
+        }
+
+        HashSet<Role> roles = new HashSet<>();
+        Role role = roleService.findById(roleName).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        roles.add(role);
+        user.setRoles(roles);
+
+        User savedUser = userService.saveUser(user);
+
+        String target = "SMS".equalsIgnoreCase(request.getPreferredVerification()) ? request.getPhone() : request.getEmail();
+        notificationClient.sendOTP(target, request.getPreferredVerification(), "VERIFY_ACCOUNT");
+
+        return userMapper.toUserResponse(savedUser);
+    }
+
+    public AuthResponse verifyRegistration(VerifyRegistrationRequest request) {
+        boolean isValid = notificationClient.verifyOTP(request.getContact(), request.getVerificationType(), request.getCode(), "VERIFY_ACCOUNT");
+        if (!isValid) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+
+        User user = findUserByContact(request.getContact(), request.getVerificationType());
+        user.setVerified(true);
+        user.setUpdatedAt(LocalDateTime.now());
+        userService.saveUser(user);
+
+        user.getRoles().forEach(role -> {
+            if ("CANDIDATE".equals(role.getName())) {
+                candidateService.createBasicProfile(user.getId());
+            } else if ("RECRUITER".equals(role.getName())) {
+                recruiterService.createBasicProfile(user.getId());
+            }
+        });
 
         return AuthResponse.builder()
                 .token(generateToken(user, VALID_DURATION))
                 .refreshToken(generateToken(user, REFRESHABLE_DURATION))
-                .authenticated(authenticated)
+                .authenticated(true)
                 .build();
     }
 
+    public void resendOtp(ResendOtpRequest request) {
+        User user = findUserByContact(request.getContact(), request.getPreferredVerification());
+        if (user.isVerified()) {
+            throw new AppException(ErrorCode.USER_ALREADY_VERIFIED);
+        }
+        notificationClient.sendOTP(request.getContact(), request.getPreferredVerification(), "VERIFY_ACCOUNT");
+    }
 
-    public UserResponse register(RegisterRequest request) {
-        if (!userService.verifyEmail(request.getEmail())) throw new AppException(ErrorCode.EMAIL_EXISTED);
+    public void forgotPassword(ForgotPasswordRequest request) {
+        findUserByContact(request.getContact(), request.getPreferredVerification());
+        notificationClient.sendOTP(request.getContact(), request.getPreferredVerification(), "RESET_PASSWORD");
+    }
 
-        User user = userMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-
-        HashSet<Role> roles = new HashSet<>();
-        roleService.findById("USER").ifPresent(roles::add);
-        user.setRoles(roles);
-        user.setCreatedAt(LocalDateTime.now());
-
-        return userMapper.toUserResponse(userService.saveUser(user));
+    public void resetPassword(ResetPasswordRequest request) {
+        boolean isValid = notificationClient.verifyOTP(request.getContact(), request.getVerificationType(), request.getCode(), "RESET_PASSWORD");
+        if (!isValid) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+        User user = findUserByContact(request.getContact(), request.getVerificationType());
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        userService.saveUser(user);
     }
 
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
@@ -102,9 +182,7 @@ public class AuthService {
         } catch (Exception e) {
             isValid = false;
         }
-        return IntrospectResponse.builder()
-                .authenticated(isValid)
-                .build();
+        return IntrospectResponse.builder().authenticated(isValid).build();
     }
 
     public void logout(String token) throws JOSEException, ParseException {
@@ -124,12 +202,7 @@ public class AuthService {
         SignedJWT signedJWT = SignedJWT.parse(token);
 
         Date expirityTime = (isRefresh)
-                ? new Date(signedJWT
-                .getJWTClaimsSet()
-                .getIssueTime()
-                .toInstant()
-                .plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS)
-                .toEpochMilli())
+                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS).toEpochMilli())
                 : signedJWT.getJWTClaimsSet().getExpirationTime();
 
         boolean verify = signedJWT.verify(verifier);
@@ -192,4 +265,10 @@ public class AuthService {
                 .build();
     }
 
+    private User findUserByContact(String contact, String targetType) {
+        if ("SMS".equalsIgnoreCase(targetType)) {
+            return userService.findByPhone(contact).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        }
+        return userService.findByEmailAndDeletedFalse(contact).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
 }

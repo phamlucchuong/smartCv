@@ -1,0 +1,1040 @@
+openapi: 3.0.3
+info:
+  title: SmartCV Web Candidate API
+  version: 1.0.0
+  description: |
+    Static OpenAPI contract for the backend endpoints currently implemented and relevant to web-candidate core flows.
+servers:
+  - url: http://localhost:8080
+    description: API Gateway
+tags:
+  - name: Auth
+  - name: Users
+  - name: Candidates
+  - name: Jobs
+  - name: Applications
+  - name: AI
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+paths:
+  /user/api/auth/register:
+    post:
+      tags: [Auth]
+      operationId: registerCandidate
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Registration accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseApiResponse'
+  /user/api/auth/verify-registration:
+    post:
+      tags: [Auth]
+      operationId: verifyCandidateRegistration
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRegistrationRequest'
+      responses:
+        '200':
+          description: Registration verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+  /user/api/auth/resend-otp:
+    post:
+      tags: [Auth]
+      operationId: resendRegistrationOtp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendOtpRequest'
+      responses:
+        '200':
+          description: OTP resent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+  /user/api/auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Forgot password requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+  /user/api/auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+  /user/api/auth/login:
+    post:
+      tags: [Auth]
+      operationId: loginCandidate
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Logged in
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Access and refresh tokens may be set as httpOnly cookies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+  /user/api/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutCandidate
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+  /user/api/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshAuthToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+  /user/api/users/verify-email/{email}:
+    get:
+      tags: [Users]
+      operationId: verifyEmailAvailability
+      security: []
+      parameters:
+        - in: path
+          name: email
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanApiResponse'
+  /user/api/users/me:
+    get:
+      tags: [Users]
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseApiResponse'
+  /user/api/users/{userId}:
+    put:
+      tags: [Users]
+      operationId: updateUser
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseApiResponse'
+  /user/api/users/me/password:
+    put:
+      tags: [Users]
+      operationId: changeMyPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+  /user/api/candidates/me:
+    get:
+      tags: [Candidates]
+      operationId: getMyCandidateProfile
+      responses:
+        '200':
+          description: Candidate profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateResponseApiResponse'
+  /user/api/candidates/{id}:
+    get:
+      tags: [Candidates]
+      operationId: getCandidateById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Candidate profile by id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateResponseApiResponse'
+    put:
+      tags: [Candidates]
+      operationId: updateCandidateProfile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateRequest'
+      responses:
+        '200':
+          description: Candidate updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateResponseApiResponse'
+  /user/api/candidates/cv/upload:
+    post:
+      tags: [Candidates]
+      operationId: uploadCandidateCv
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: CV uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CvUploadResponseApiResponse'
+  /job/api/jobs:
+    get:
+      tags: [Jobs]
+      operationId: getActiveJobs
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Active jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPageApiResponse'
+  /job/api/jobs/search:
+    get:
+      tags: [Jobs]
+      operationId: searchJobs
+      security: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
+        - in: query
+          name: location
+          schema:
+            type: string
+        - in: query
+          name: salaryMin
+          schema:
+            type: number
+            format: double
+        - in: query
+          name: salaryMax
+          schema:
+            type: number
+            format: double
+        - in: query
+          name: jobType
+          schema:
+            $ref: '#/components/schemas/JobType'
+        - in: query
+          name: experienceLevel
+          schema:
+            $ref: '#/components/schemas/ExperienceLevel'
+        - in: query
+          name: skills
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+        - in: query
+          name: sortDir
+          schema:
+            type: string
+            enum: [asc, desc]
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPageApiResponse'
+  /job/api/jobs/{id}:
+    get:
+      tags: [Jobs]
+      operationId: getJobById
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponseApiResponse'
+  /application/api/applications:
+    post:
+      tags: [Applications]
+      operationId: submitApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationCreateRequest'
+      responses:
+        '200':
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponseApiResponse'
+  /application/api/applications/my:
+    get:
+      tags: [Applications]
+      operationId: getMyApplications
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: My applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationPageApiResponse'
+  /application/api/applications/{id}:
+    get:
+      tags: [Applications]
+      operationId: getApplicationById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Application detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnyApiResponse'
+  /application/api/applications/{id}/withdraw:
+    patch:
+      tags: [Applications]
+      operationId: withdrawApplication
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Application withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponseApiResponse'
+  /ai/api/ai/recommend:
+    post:
+      tags: [AI]
+      operationId: recommendJobsFromCv
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRecommendRequest'
+      responses:
+        '200':
+          description: AI recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRecommendationResponseApiResponse'
+components:
+  parameters:
+    Page:
+      in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      in: query
+      name: size
+      schema:
+        type: integer
+        minimum: 1
+        default: 10
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken
+  schemas:
+    ApiResponseBase:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+    VoidApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              nullable: true
+    BooleanApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              type: boolean
+    AnyApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data: {}
+    UserResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/UserResponse'
+    AuthResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AuthResponse'
+    CandidateResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CandidateResponse'
+    CvUploadResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CvUploadResponse'
+    JobResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/JobResponse'
+    ApplicationResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ApplicationResponse'
+    JobRecommendationResponseApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/JobRecommendationResponse'
+    JobPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/JobPageResponse'
+    ApplicationPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponseBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ApplicationPageResponse'
+    AuthRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+    RegisterRequest:
+      type: object
+      properties:
+        fullname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        phone:
+          type: string
+        preferredVerification:
+          type: string
+          enum: [EMAIL, SMS]
+        role:
+          type: string
+          example: CANDIDATE
+      required: [fullname, email, password, role]
+    VerifyRegistrationRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+        verificationType:
+          type: string
+          enum: [EMAIL, SMS]
+        code:
+          type: string
+      required: [contact, verificationType, code]
+    ResendOtpRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+        preferredVerification:
+          type: string
+          enum: [EMAIL, SMS]
+      required: [contact, preferredVerification]
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+        preferredVerification:
+          type: string
+          enum: [EMAIL, SMS]
+      required: [contact, preferredVerification]
+    ResetPasswordRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+        verificationType:
+          type: string
+          enum: [EMAIL, SMS]
+        code:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+      required: [contact, verificationType, code, newPassword]
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required: [refreshToken]
+    ChangePasswordRequest:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+      required: [currentPassword, newPassword]
+    UserUpdateRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+        verified:
+          type: boolean
+        locked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+        authenticated:
+          type: boolean
+    CandidateRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        dob:
+          type: string
+          format: date
+        gender:
+          type: string
+        address:
+          type: string
+        bio:
+          type: string
+        title:
+          type: string
+        avatarUrl:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        yearsOfExperience:
+          type: integer
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkExperience'
+        educations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Education'
+        certifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certification'
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Language'
+        jobType:
+          $ref: '#/components/schemas/CandidateJobType'
+        preferredLocation:
+          type: string
+        expectedSalaryMin:
+          type: integer
+        expectedSalaryMax:
+          type: integer
+        portfolioUrl:
+          type: string
+        githubUrl:
+          type: string
+        linkedinUrl:
+          type: string
+    CandidateResponse:
+      allOf:
+        - $ref: '#/components/schemas/CandidateRequest'
+        - type: object
+          properties:
+            id:
+              type: string
+            fullName:
+              type: string
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+            cvUrl:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    CvUploadResponse:
+      type: object
+      properties:
+        cvUrl:
+          type: string
+    WorkExperience:
+      type: object
+      properties:
+        title:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        current:
+          type: boolean
+        description:
+          type: string
+    Education:
+      type: object
+      properties:
+        degree:
+          type: string
+        institution:
+          type: string
+        major:
+          type: string
+        startYear:
+          type: integer
+        endYear:
+          type: integer
+        gpa:
+          type: string
+    Certification:
+      type: object
+      properties:
+        name:
+          type: string
+        issuer:
+          type: string
+        issuedDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+        credentialUrl:
+          type: string
+    Language:
+      type: object
+      properties:
+        name:
+          type: string
+        proficiency:
+          type: string
+    JobType:
+      type: string
+      enum: [FULL_TIME, PART_TIME, REMOTE, CONTRACT, INTERNSHIP]
+    CandidateJobType:
+      type: string
+      enum: [FULL_TIME, PART_TIME, REMOTE, HYBRID, FREELANCE]
+    ExperienceLevel:
+      type: string
+      enum: [INTERN, JUNIOR, MIDDLE, SENIOR, LEAD]
+    JobStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, CLOSED, EXPIRED]
+    JobResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        recruiterId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+        salaryMin:
+          type: number
+          format: double
+        salaryMax:
+          type: number
+          format: double
+        jobType:
+          $ref: '#/components/schemas/JobType'
+        experienceLevel:
+          $ref: '#/components/schemas/ExperienceLevel'
+        skills:
+          type: array
+          items:
+            type: string
+        requirements:
+          type: array
+          items:
+            type: string
+        benefits:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        deadline:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    JobPageResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobResponse'
+    ApplicationCreateRequest:
+      type: object
+      properties:
+        jobId:
+          type: string
+        cvUrl:
+          type: string
+        coverLetter:
+          type: string
+      required: [jobId, cvUrl]
+    ApplicationStatus:
+      type: string
+      enum: [PENDING, REVIEWING, ACCEPTED, REJECTED, WITHDRAWN]
+    AiScoringStatus:
+      type: string
+      enum: [PENDING, SCORED, FAILED]
+    ApplicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        candidateId:
+          type: string
+        jobId:
+          type: string
+        recruiterId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        coverLetter:
+          type: string
+        cvUrl:
+          type: string
+        rejectionReason:
+          type: string
+        aiScore:
+          type: integer
+        matchedSkills:
+          type: array
+          items:
+            type: string
+        missingSkills:
+          type: array
+          items:
+            type: string
+        aiStatus:
+          $ref: '#/components/schemas/AiScoringStatus'
+        appliedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ApplicationPageResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationResponse'
+    JobRecommendRequest:
+      type: object
+      properties:
+        cvText:
+          type: string
+        cvUrl:
+          type: string
+        topK:
+          type: integer
+          minimum: 1
+          maximum: 50
+      required: [topK]
+    JobRecommendationResponse:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobMatch'
+    JobMatch:
+      type: object
+      properties:
+        jobId:
+          type: string
+        title:
+          type: string
+        company:
+          type: string
+        matchScore:
+          type: integer
+        matchReason:
+          type: string
+        alignedSkills:
+          type: array
+          items:
+            type: string
