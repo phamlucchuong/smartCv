@@ -81,7 +81,7 @@ export function OtpVerifyModal({ open, contact, verificationType, onSuccess, onC
     if (countdown > 0) return
     setError('')
     try {
-      await resend.mutateAsync({ data: { contact, verificationType } })
+      await resend.mutateAsync({ data: { contact, preferredVerification: verificationType } })
       setCountdown(60)
       const timer = setInterval(() => {
         setCountdown((c) => {
