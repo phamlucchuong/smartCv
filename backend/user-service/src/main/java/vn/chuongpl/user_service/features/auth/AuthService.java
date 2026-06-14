@@ -72,6 +72,7 @@ public class AuthService {
             throw new AppException(ErrorCode.AUTHENTICATION_FAILED);
         }
         if (!user.isVerified()) {
+            notificationClient.sendOTP(user.getEmail(), "EMAIL", "VERIFY_ACCOUNT");
             throw new AppException(ErrorCode.USER_NOT_VERIFIED);
         }
 
@@ -86,22 +87,34 @@ public class AuthService {
         List<User> existing = userService.findAllByEmail(request.getEmail());
         boolean hasVerified = existing.stream().anyMatch(User::isVerified);
         if (hasVerified) throw new AppException(ErrorCode.EMAIL_EXISTED);
-        existing.forEach(u -> userService.hardDeleteUser(u.getId()));
+
+        User user;
+        if (!existing.isEmpty()) {
+            user = existing.get(0);
+            for (int i = 1; i < existing.size(); i++) {
+                userService.hardDeleteUser(existing.get(i).getId());
+            }
+            user.setUpdatedAt(LocalDateTime.now());
+        } else {
+            user = new User();
+            user.setCreatedAt(LocalDateTime.now());
+        }
+
+        user.setEmail(request.getEmail());
+        user.setFullName(request.getFullname());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPhone(request.getPhone());
+        user.setVerified(false);
 
         String roleName = request.getRole().toUpperCase();
         if (!roleName.equals("CANDIDATE") && !roleName.equals("RECRUITER")) {
             throw new AppException(ErrorCode.ROLE_NOT_FOUND);
         }
 
-        User user = userMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setVerified(false);
-
         HashSet<Role> roles = new HashSet<>();
         Role role = roleService.findById(roleName).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
         roles.add(role);
         user.setRoles(roles);
-        user.setCreatedAt(LocalDateTime.now());
 
         User savedUser = userService.saveUser(user);
 
