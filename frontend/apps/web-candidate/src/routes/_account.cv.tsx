@@ -50,17 +50,12 @@ function MyCVPage() {
     document.title = t('page_title_cv')
   }, [t])
 
-  const [selected, setSelected] = React.useState('')
+  const [userSelected, setUserSelected] = React.useState<string | null>(null)
   const fileRef = React.useRef<HTMLInputElement>(null)
 
+  const defaultSelected = (cvList.find((c) => c.default) ?? cvList[0])?.id ?? ''
+  const selected = userSelected ?? defaultSelected
   const cv = cvList.find((c) => c.id === selected) ?? cvList[0]
-
-  React.useEffect(() => {
-    if (cvList.length > 0 && !selected) {
-      const defaultCv = cvList.find((c) => c.default) ?? cvList[0]
-      setSelected(defaultCv?.id ?? '')
-    }
-  }, [cvList, selected])
 
   const handleUpload = (file: File | null) => {
     if (!file) return
@@ -116,7 +111,7 @@ function MyCVPage() {
             return (
               <button
                 key={c.id}
-                onClick={() => setSelected(c.id ?? '')}
+                onClick={() => setUserSelected(c.id ?? '')}
                 className={`w-full rounded-lg border p-3 text-left transition-colors ${selected === c.id ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50'}`}
               >
                 <div className="flex items-start gap-3">

@@ -56,12 +56,16 @@ function SignUpComponent() {
     sessionStorage.setItem('auth_prev_route', '/signup')
   }, [t])
 
-  // Timer Effect when OTP active
-  React.useEffect(() => {
-    if (!otpOpen) return
+  function openOtpPanel() {
     setOtpDigits(Array(6).fill(''))
     setOtpError('')
     setOtpCountdown(60)
+    setOtpOpen(true)
+  }
+
+  // Timer Effect when OTP active
+  React.useEffect(() => {
+    if (!otpOpen) return
     const timer = setInterval(() => {
       setOtpCountdown((c) => {
         if (c <= 1) { clearInterval(timer); return 0 }
@@ -99,16 +103,17 @@ function SignUpComponent() {
         },
       })
       toast.success('Check your ' + channel.toLowerCase() + ' for the OTP code')
-      setOtpOpen(true)
-    } catch (err: any) {
-      const code = err?.response?.data?.code
+      openOtpPanel()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { code?: number; message?: string } } }
+      const code = e?.response?.data?.code
       if (code === 3003) {
-        toast.info(err?.response?.data?.message ?? 'Email already registered but not verified. Please verify your account.')
-        setOtpOpen(true)
+        toast.info(e?.response?.data?.message ?? 'Email already registered but not verified. Please verify your account.')
+        openOtpPanel()
       } else if (code === 3001) {
         setErrors((prev) => ({ ...prev, email: 'Email already registered' }))
       } else {
-        toast.error(err?.response?.data?.message ?? 'Registration failed. Please try again.')
+        toast.error(e?.response?.data?.message ?? 'Registration failed. Please try again.')
       }
     }
   }
@@ -152,8 +157,9 @@ function SignUpComponent() {
     try {
       await verifyMutation.mutateAsync({ data: { contact: otpContact, verificationType: otpType, code } })
       handleOtpSuccess()
-    } catch (err: any) {
-      setOtpError(err?.response?.data?.message ?? 'Invalid OTP. Please try again.')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      setOtpError(e?.response?.data?.message ?? 'Invalid OTP. Please try again.')
     }
   }
 

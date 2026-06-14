@@ -42,6 +42,8 @@ function JobDetailPage() {
     }
   }, [job, t])
 
+  const [todayMs] = React.useState(() => Date.now())
+
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyBar(!entry.isIntersecting),
@@ -73,6 +75,10 @@ function JobDetailPage() {
     )
   }
 
+  const deadlineDaysLeft = job.deadline
+    ? Math.max(0, Math.ceil((new Date(job.deadline).getTime() - todayMs) / (1000 * 60 * 60 * 24)))
+    : null
+
   const salaryDisplay = job.salaryMin != null && job.salaryMax != null
     ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
     : job.salaryMin != null
@@ -80,10 +86,6 @@ function JobDetailPage() {
       : job.salaryMax != null
         ? `Up to $${job.salaryMax.toLocaleString()}`
         : null
-
-  const deadlineDaysLeft = job.deadline
-    ? Math.max(0, Math.ceil((new Date(job.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null
 
   return (
     <div className="relative pb-20 lg:pb-0">

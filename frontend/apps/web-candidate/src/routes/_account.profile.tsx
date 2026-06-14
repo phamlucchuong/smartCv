@@ -45,7 +45,7 @@ function ProfilePage() {
   const initials = toInitials(fullName)
 
   const [editMode, setEditMode] = React.useState(false)
-  const [draft, setDraft] = React.useState({ name: fullName, email, phone, location: address, title, bio })
+  const [draft, setDraft] = React.useState({ name: '', email: '', phone: '', location: '', title: '', bio: '' })
   const [skillInput, setSkillInput] = React.useState('')
   const [editingExperienceId, setEditingExperienceId] = React.useState<string | null>(null)
   const [editingEducationId, setEditingEducationId] = React.useState<string | null>(null)
@@ -54,18 +54,25 @@ function ProfilePage() {
 
   const fileRef = React.useRef<HTMLInputElement>(null)
 
-  React.useEffect(() => {
-    if (profile) {
-      setDraft({
-        name: profile.fullName ?? '',
-        email: profile.email ?? '',
-        phone: profile.phone ?? '',
-        location: profile.address ?? '',
-        title: profile.title ?? '',
-        bio: profile.bio ?? '',
-      })
-    }
-  }, [profile])
+  const displayValues = {
+    name: fullName,
+    email,
+    phone,
+    location: address,
+    title,
+  }
+
+  function handleEditClick() {
+    setDraft({
+      name: profile?.fullName ?? '',
+      email: profile?.email ?? '',
+      phone: profile?.phone ?? '',
+      location: profile?.address ?? '',
+      title: profile?.title ?? '',
+      bio: profile?.bio ?? '',
+    })
+    setEditMode(true)
+  }
 
   const resetExpForm = () => {
     setEditingExperienceId(null)
@@ -114,7 +121,7 @@ function ProfilePage() {
             </div>
             <hr className="border-border" />
             {!editMode ? (
-              <Button variant="outline" className="w-full" onClick={() => setEditMode(true)}>Edit Profile</Button>
+              <Button variant="outline" className="w-full" onClick={handleEditClick}>Edit Profile</Button>
             ) : (
               <div className="flex gap-2">
                 <Button className="w-full" onClick={() => {
@@ -144,7 +151,7 @@ function ProfilePage() {
                   {editMode ? (
                     <Input value={draft[key as keyof typeof draft] as string} onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))} />
                   ) : (
-                    <span className="text-foreground">{draft[key as keyof typeof draft]}</span>
+                    <span className="text-foreground">{displayValues[key as keyof typeof displayValues]}</span>
                   )}
                 </div>
               ))}

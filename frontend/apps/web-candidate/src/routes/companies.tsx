@@ -21,7 +21,8 @@ function CompaniesPage() {
   const [page, setPage] = React.useState(1)
 
   const { data, isLoading } = useGetAll2()
-  const companies = data?.data?.items ?? []
+  const rawItems = data?.data?.items
+  const companies = React.useMemo(() => rawItems ?? [], [rawItems])
 
   React.useEffect(() => {
     document.title = t('page_title_companies')

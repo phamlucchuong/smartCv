@@ -52,11 +52,15 @@ function SignInComponent() {
     sessionStorage.setItem('auth_prev_route', '/signin')
   }, [t])
 
-  React.useEffect(() => {
-    if (!otpOpen) return
+  function openOtpPanel() {
     setOtpDigits(Array(6).fill(''))
     setOtpError('')
     setOtpCountdown(60)
+    setOtpOpen(true)
+  }
+
+  React.useEffect(() => {
+    if (!otpOpen) return
     const timer = setInterval(() => {
       setOtpCountdown((c) => {
         if (c <= 1) {
@@ -89,12 +93,12 @@ function SignInComponent() {
     setError('')
     try {
       await attemptLogin(email, password)
-    } catch (err: any) {
-      const code = err?.response?.data?.code
-      if (code === 3003) {
-        setOtpOpen(true)
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { code?: number; message?: string } } }
+      if (e?.response?.data?.code === 3003) {
+        openOtpPanel()
       } else {
-        setError(err?.response?.data?.message ?? 'Invalid email or password.')
+        setError(e?.response?.data?.message ?? 'Invalid email or password.')
       }
     }
   }
@@ -144,8 +148,9 @@ function SignInComponent() {
         data: { contact: email, verificationType: 'EMAIL', code },
       })
       await handleOtpSuccess()
-    } catch (err: any) {
-      setOtpError(err?.response?.data?.message ?? 'Invalid OTP. Please try again.')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      setOtpError(e?.response?.data?.message ?? 'Invalid OTP. Please try again.')
     }
   }
 
