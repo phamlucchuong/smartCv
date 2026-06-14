@@ -1,0 +1,54 @@
+name: Java Services CI
+
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "backend/ai_engine_service/**"
+      - "backend/application_service/**"
+      - "backend/api-gateway/**"
+      - "backend/job_service/**"
+      - "backend/user-service/**"
+      - ".github/workflows/java-services-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - "backend/ai_engine_service/**"
+      - "backend/application_service/**"
+      - "backend/api-gateway/**"
+      - "backend/job_service/**"
+      - "backend/user-service/**"
+      - ".github/workflows/java-services-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  service-ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: ai_engine_service
+            service_path: backend/ai_engine_service
+            test_command: "./mvnw test -Dspring.ai.ollama.chat.enabled=false"
+          - service_name: application_service
+            service_path: backend/application_service
+            test_command: ./mvnw test
+          - service_name: api-gateway
+            service_path: backend/api-gateway
+            test_command: ./mvnw test
+          - service_name: job_service
+            service_path: backend/job_service
+            test_command: ./mvnw test
+          - service_name: user-service
+            service_path: backend/user-service
+            test_command: ./mvnw test
+    uses: ./.github/workflows/_java-service-ci.yml
+    with:
+      service_name: ${{ matrix.service_name }}
+      service_path: ${{ matrix.service_path }}
+      test_command: ${{ matrix.test_command }}
