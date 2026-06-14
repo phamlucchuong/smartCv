@@ -1,24 +1,35 @@
 # --- Global & OS ---
-.DS_Store           # Mac
-Thumbs.db           # Windows
-.idea/              # IntelliJ IDEA
-.vscode/            # VS Code
-*.log               # File log
-logs/               # Runtime log directory
-.postman/
-postman/
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.idea/
+.vscode/
+
+# --- Logs ---
+*.log
+logs/
 
 # --- Security ---
 .env
 .env.local
 *.pem
+
+# --- Build / local cache ---
 .m2/
+.cache/
 
 # --- Docker ---
 docker-compose.override.yml
+
+# --- Postman ---
+.postman/
+postman/
+
 # --- Superpowers artifacts ---
 .superpowers/
 **/.superpowers/
 docs/superpowers/
-.cache/
+
+# --- Notification service binary ---
 notification-service/server
