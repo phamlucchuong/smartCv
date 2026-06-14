@@ -79,18 +79,17 @@ class AuthServiceTest {
         AppException ex = assertThrows(AppException.class,
                 () -> authService.authenticated(AuthRequest.builder().email("a@b.com").password("admin").build()));
         assertEquals(ErrorCode.USER_NOT_VERIFIED, ex.getErrorCode());
+        verify(notificationClient).sendOTP("a@b.com", "EMAIL", "VERIFY_ACCOUNT");
     }
 
     @Test
     void register_shouldAssignCandidateRole() {
         RegisterRequest request = new RegisterRequest("User A", "a@b.com", "12345678", "0909", "EMAIL", "CANDIDATE");
-        User mappedUser = User.builder().email("a@b.com").build();
         User savedUser = User.builder().id("u1").email("a@b.com").roles(new HashSet<>()).createdAt(LocalDateTime.now()).build();
         UserResponse response = UserResponse.builder().id("u1").email("a@b.com").build();
         Role candidate = Role.builder().name("CANDIDATE").description("Job seeker").build();
 
-        when(userService.verifyEmail("a@b.com")).thenReturn(true);
-        when(userMapper.toUser(request)).thenReturn(mappedUser);
+        when(userService.findAllByEmail("a@b.com")).thenReturn(java.util.Collections.emptyList());
         when(roleService.findById("CANDIDATE")).thenReturn(Optional.of(candidate));
         when(passwordEncoder.encode("12345678")).thenReturn("encoded");
         when(userService.saveUser(any(User.class))).thenReturn(savedUser);
@@ -105,13 +104,11 @@ class AuthServiceTest {
     @Test
     void register_shouldAssignRecruiterRole() {
         RegisterRequest request = new RegisterRequest("User B", "b@b.com", "12345678", "0908", "SMS", "RECRUITER");
-        User mappedUser = User.builder().email("b@b.com").phone("0908").build();
         User savedUser = User.builder().id("u2").email("b@b.com").roles(new HashSet<>()).createdAt(LocalDateTime.now()).build();
         UserResponse response = UserResponse.builder().id("u2").email("b@b.com").build();
         Role recruiter = Role.builder().name("RECRUITER").description("Company recruiter").build();
 
-        when(userService.verifyEmail("b@b.com")).thenReturn(true);
-        when(userMapper.toUser(request)).thenReturn(mappedUser);
+        when(userService.findAllByEmail("b@b.com")).thenReturn(java.util.Collections.emptyList());
         when(roleService.findById("RECRUITER")).thenReturn(Optional.of(recruiter));
         when(passwordEncoder.encode("12345678")).thenReturn("encoded");
         when(userService.saveUser(any(User.class))).thenReturn(savedUser);
@@ -121,6 +118,26 @@ class AuthServiceTest {
 
         assertEquals("u2", actual.getId());
         verify(notificationClient).sendOTP("0908", "SMS", "VERIFY_ACCOUNT");
+    }
+
+    @Test
+    void register_shouldOverwriteWhenUserExistsButUnverified() {
+        RegisterRequest request = new RegisterRequest("User New", "a@b.com", "12345678", "0909", "EMAIL", "CANDIDATE");
+        User existingUser = User.builder().id("u1").email("a@b.com").fullName("User Old").phone("0101").verified(false).build();
+        UserResponse response = UserResponse.builder().id("u1").email("a@b.com").fullName("User New").build();
+        Role candidate = Role.builder().name("CANDIDATE").description("Job seeker").build();
+
+        when(userService.findAllByEmail("a@b.com")).thenReturn(java.util.Arrays.asList(existingUser));
+        when(roleService.findById("CANDIDATE")).thenReturn(Optional.of(candidate));
+        when(passwordEncoder.encode("12345678")).thenReturn("encoded");
+        when(userService.saveUser(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userMapper.toUserResponse(any(User.class))).thenReturn(response);
+
+        UserResponse actual = authService.register(request);
+
+        assertEquals("u1", actual.getId());
+        assertEquals("User New", actual.getFullName());
+        verify(notificationClient).sendOTP("a@b.com", "EMAIL", "VERIFY_ACCOUNT");
     }
 
     @Test
@@ -139,7 +156,7 @@ class AuthServiceTest {
     @Test
     void register_shouldThrowWhenRoleIsUnsupported() {
         RegisterRequest request = new RegisterRequest("User C", "c@b.com", "12345678", "0907", "EMAIL", "ADMIN");
-        when(userService.verifyEmail("c@b.com")).thenReturn(true);
+        when(userService.findAllByEmail("c@b.com")).thenReturn(java.util.Collections.emptyList());
 
         AppException ex = assertThrows(AppException.class, () -> authService.register(request));
 
