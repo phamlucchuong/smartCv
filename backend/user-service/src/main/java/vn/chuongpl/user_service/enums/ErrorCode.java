@@ -32,6 +32,8 @@ public enum ErrorCode {
     INVALID_FILE_TYPE(6003, "Only PDF files are accepted"),
     FILE_UPLOAD_FAILED(6004, "Failed to upload file, please try again"),
     INSUFFICIENT_QUOTA(6005, "Insufficient job post quota"),
+    INVALID_IMAGE_TYPE(6006, "Only JPEG, PNG, and WebP images are accepted"),
+    IMAGE_TOO_LARGE(6007, "Avatar image must not exceed 2MB"),
     USER_LOCKED(1011, "User account is locked");
 
     private int code;

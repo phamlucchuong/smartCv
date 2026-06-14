@@ -4,7 +4,12 @@ import { Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogH
 import { useTranslation } from '@smart-cv/i18n'
 import { Bell, Settings, Shield, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
-import { useGetSettings } from '@smart-cv/api'
+import {
+  useGetSettings, useUpdateNotifications, useUpdatePrivacy,
+  useChangeMyPassword, useUpdateUser, useDeleteMyAccount,
+  getGetSettingsQueryKey, getGetCurrentUserQueryKey,
+} from '@smart-cv/api'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createFileRoute('/_account/settings')({
@@ -16,9 +21,16 @@ type SectionKey = 'account' | 'notifications' | 'privacy' | 'danger'
 function SettingsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { isAuthenticated, signOut } = useAuthStore()
+  const { isAuthenticated, userId, signOut } = useAuthStore()
   const { data: settingsData } = useGetSettings({ query: { enabled: isAuthenticated } })
   const settingsPayload = settingsData?.data
+
+  const queryClient = useQueryClient()
+  const updateNotifMutation     = useUpdateNotifications()
+  const updatePrivacyMutation   = useUpdatePrivacy()
+  const changePasswordMutation  = useChangeMyPassword()
+  const updateUserMutation      = useUpdateUser()
+  const deleteAccountMutation   = useDeleteMyAccount()
 
   const [activeSection, setActiveSection] = React.useState<SectionKey>('account')
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false)
@@ -27,17 +39,56 @@ function SettingsPage() {
     document.title = t('page_title_settings')
   }, [t])
 
-  const notifications = {
-    jobRecommendations: settingsPayload?.notifications?.emailJobSuggestions ?? false,
-    applicationUpdates: settingsPayload?.notifications?.emailApplicationUpdates ?? false,
-    newMessages: settingsPayload?.notifications?.pushNotifications ?? false,
-    promotionalEmails: settingsPayload?.notifications?.marketingEmails ?? false,
+  const [notifications, setNotifications] = React.useState({
+    jobRecommendations: false,
+    applicationUpdates: false,
+    newMessages: false,
+    promotionalEmails: false,
+  })
+  const [privacy, setPrivacy] = React.useState({
+    publicProfile: false,
+    showSalaryExpectation: false,
+    activityStatus: false,
+  })
+
+  React.useEffect(() => {
+    if (settingsPayload) {
+      setNotifications({
+        jobRecommendations: settingsPayload.notifications?.emailJobSuggestions ?? false,
+        applicationUpdates: settingsPayload.notifications?.emailApplicationUpdates ?? false,
+        newMessages:        settingsPayload.notifications?.pushNotifications ?? false,
+        promotionalEmails:  settingsPayload.notifications?.marketingEmails ?? false,
+      })
+      setPrivacy({
+        publicProfile:        settingsPayload.privacy?.showCvToRecruiters ?? false,
+        showSalaryExpectation: settingsPayload.privacy?.showContactInfo ?? false,
+        activityStatus: false,
+      })
+    }
+  }, [settingsPayload])
+
+  const handleNotifToggle = (key: keyof typeof notifications) => {
+    const next = { ...notifications, [key]: !notifications[key] }
+    setNotifications(next)
+    updateNotifMutation.mutate(
+      { data: { emailJobSuggestions: next.jobRecommendations, emailApplicationUpdates: next.applicationUpdates, pushNotifications: next.newMessages, marketingEmails: next.promotionalEmails } },
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() }),
+        onError: () => { setNotifications(notifications); toast.error('Failed to update notifications') },
+      }
+    )
   }
 
-  const privacy = {
-    publicProfile: settingsPayload?.privacy?.showCvToRecruiters ?? false,
-    showSalaryExpectation: settingsPayload?.privacy?.showContactInfo ?? false,
-    activityStatus: false,
+  const handlePrivacyToggle = (key: keyof Omit<typeof privacy, 'activityStatus'>) => {
+    const next = { ...privacy, [key]: !privacy[key] }
+    setPrivacy(next)
+    updatePrivacyMutation.mutate(
+      { data: { showCvToRecruiters: next.publicProfile, showContactInfo: next.showSalaryExpectation } },
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() }),
+        onError: () => { setPrivacy(privacy); toast.error('Failed to update privacy settings') },
+      }
+    )
   }
 
   const [currentPassword, setCurrentPassword] = React.useState('')
@@ -53,28 +104,27 @@ function SettingsPage() {
   ]
 
   const handlePasswordUpdate = () => {
-    if (newPassword.length < 8) {
-      toast.error(t('account_password_too_short'))
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error(t('account_password_mismatch'))
-      return
-    }
-    // Password update coming soon
-    toast.info('Password update coming soon')
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
+    if (newPassword.length < 8) { toast.error(t('account_password_too_short')); return }
+    if (newPassword !== confirmPassword) { toast.error(t('account_password_mismatch')); return }
+    changePasswordMutation.mutate(
+      { data: { currentPassword, newPassword } },
+      {
+        onSuccess: () => { toast.success('Password updated'); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') },
+        onError: () => toast.error('Current password is incorrect'),
+      }
+    )
   }
 
   const handleEmailUpdate = () => {
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      toast.error(t('account_email_invalid'))
-      return
-    }
-    // Email update coming soon
-    toast.info('Email update coming soon')
+    if (!/^\S+@\S+\.\S+$/.test(email)) { toast.error(t('account_email_invalid')); return }
+    if (!userId) return
+    updateUserMutation.mutate(
+      { userId, data: { email } },
+      {
+        onSuccess: () => { toast.success('Email updated'); queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() }) },
+        onError: () => toast.error('Email already in use or update failed'),
+      }
+    )
   }
 
   return (
@@ -125,10 +175,10 @@ function SettingsPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-xl font-semibold text-foreground">Notification Preferences</h2>
-              <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={notifications.jobRecommendations} onToggle={() => toast.info('Settings update coming soon')} />
-              <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={notifications.applicationUpdates} onToggle={() => toast.info('Settings update coming soon')} />
-              <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={notifications.newMessages} onToggle={() => toast.info('Settings update coming soon')} />
-              <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={notifications.promotionalEmails} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={notifications.jobRecommendations} onToggle={() => handleNotifToggle('jobRecommendations')} />
+              <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={notifications.applicationUpdates} onToggle={() => handleNotifToggle('applicationUpdates')} />
+              <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={notifications.newMessages} onToggle={() => handleNotifToggle('newMessages')} />
+              <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={notifications.promotionalEmails} onToggle={() => handleNotifToggle('promotionalEmails')} />
             </CardContent>
           </Card>
         )}
@@ -137,9 +187,9 @@ function SettingsPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-xl font-semibold text-foreground">Privacy Settings</h2>
-              <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => toast.info('Settings update coming soon')} />
-              <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => toast.info('Settings update coming soon')} />
-              <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => toast.info('Settings update coming soon')} />
+              <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => handlePrivacyToggle('publicProfile')} />
+              <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => handlePrivacyToggle('showSalaryExpectation')} />
+              <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => setPrivacy((p) => ({ ...p, activityStatus: !p.activityStatus }))} />
             </CardContent>
           </Card>
         )}
@@ -166,11 +216,14 @@ function SettingsPage() {
           <p className="text-sm text-muted-foreground">Bạn chắc chắn muốn xóa tài khoản và đăng xuất?</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
-            <Button variant="destructive" onClick={() => {
-              signOut()
-              toast.success(t('account_deleted_toast'))
-              navigate({ to: '/signin' })
-            }}>Xác nhận</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteAccountMutation.isPending}
+              onClick={() => deleteAccountMutation.mutate(undefined, {
+                onSuccess: () => { signOut(); toast.success(t('account_deleted_toast')); navigate({ to: '/signin' }) },
+                onError: () => toast.error('Failed to delete account'),
+              })}
+            >Xác nhận</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -27,11 +27,53 @@ public class S3Service {
     @Value("${AWS_S3_BUCKET_NAME:smartcv-cvs}")
     String bucket;
 
+    @Value("${AWS_REGION:ap-southeast-1}")
+    String region;
+
+    @Value("${AWS_S3_ENDPOINT_URL:}")
+    String endpointUrl;
+
     @Value("${AWS_S3_PRESIGNED_URL_TTL_MINUTES:60}")
     int presignedUrlTtl;
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final long MAX_AVATAR_SIZE = 2 * 1024 * 1024;
     private static final String ALLOWED_CONTENT_TYPE = "application/pdf";
+    private static final java.util.Set<String> ALLOWED_IMAGE_TYPES = java.util.Set.of(
+            "image/jpeg", "image/jpg", "image/png", "image/webp"
+    );
+
+    public String uploadAvatar(MultipartFile file, String userId) {
+        validateAvatarFile(file);
+
+        String originalFilename = file.getOriginalFilename();
+        String ext = (originalFilename != null && originalFilename.contains("."))
+                ? originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase()
+                : "jpg";
+        String key = "avatars/" + userId + "/" + UUID.randomUUID() + "." + ext;
+
+        try {
+            software.amazon.awssdk.services.s3.model.PutObjectRequest.Builder requestBuilder =
+                    software.amazon.awssdk.services.s3.model.PutObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .contentType(file.getContentType());
+
+            if (endpointUrl.isBlank()) {
+                requestBuilder.acl(software.amazon.awssdk.services.s3.model.ObjectCannedACL.PUBLIC_READ);
+            }
+
+            s3Client.putObject(requestBuilder.build(), RequestBody.fromBytes(file.getBytes()));
+        } catch (Exception e) {
+            log.error("S3 avatar upload failed: {}", e.getMessage());
+            throw new AppException(vn.chuongpl.user_service.enums.ErrorCode.FILE_UPLOAD_FAILED);
+        }
+
+        if (endpointUrl.isBlank()) {
+            return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
+        }
+        return generatePresignedUrl(key);
+    }
 
     public String uploadCv(MultipartFile file, String candidateId) {
         validateFile(file);
@@ -72,6 +114,18 @@ public class S3Service {
         }
         if (!ALLOWED_CONTENT_TYPE.equals(file.getContentType())) {
             throw new AppException(ErrorCode.INVALID_FILE_TYPE);
+        }
+    }
+
+    private void validateAvatarFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_REQUIRED);
+        }
+        if (file.getSize() > MAX_AVATAR_SIZE) {
+            throw new AppException(ErrorCode.IMAGE_TOO_LARGE);
+        }
+        if (!ALLOWED_IMAGE_TYPES.contains(file.getContentType())) {
+            throw new AppException(ErrorCode.INVALID_IMAGE_TYPE);
         }
     }
 }
