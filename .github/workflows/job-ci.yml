@@ -1,0 +1,22 @@
+name: Job Service CI
+
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "backend/job_service/**"
+      - ".github/workflows/job-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - "backend/job_service/**"
+      - ".github/workflows/job-ci.yml"
+      - ".github/workflows/_java-service-ci.yml"
+
+jobs:
+  test-job:
+    uses: ./.github/workflows/_java-service-ci.yml
+    with:
+      service_name: job_service
+      service_path: backend/job_service

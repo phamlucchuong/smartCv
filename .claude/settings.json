@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(backend/.env)",
+      "Read(backend/.env.*)",
+      "Read(frontend/.env.local)",
+      "Edit(backend/.env)",
+      "Edit(backend/.env.*)",
+      "Edit(frontend/.env.local)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE_PATH=$(cat /dev/stdin | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE_PATH\" ]; then case \"$FILE_PATH\" in *.ts|*.tsx) REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null); if [ -n \"$REPO_ROOT\" ]; then cd \"$REPO_ROOT/frontend\" && npx prettier --write \"$FILE_PATH\" 2>/dev/null || true; fi ;; esac; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

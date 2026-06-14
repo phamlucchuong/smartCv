@@ -1,0 +1,52 @@
+# --- Global & OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Security ---
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+!.env.example
+*.pem
+
+# --- Node ---
+node_modules/
+dist/
+dist-ssr/
+build/
+.turbo/
+.vite/
+coverage/
+.nyc_output/
+
+# --- Java build / local Maven cache ---
+.m2/
+.cache/
+target/
+
+# --- Docker overrides ---
+docker-compose.override.yml
+
+# --- Superpowers artifacts ---
+.superpowers/
+**/.superpowers/
+**/docs/superpowers/
+
+# --- Backend ---
+backend/mongo-data/
+backend/notification-service/server
+
+# --- Frontend ---
+frontend/packages/api/openapi/live/
