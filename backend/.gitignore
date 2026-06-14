@@ -4,6 +4,7 @@ Thumbs.db           # Windows
 .idea/              # IntelliJ IDEA
 .vscode/            # VS Code
 *.log               # File log
+logs/               # Runtime log directory
 .postman/
 postman/
 
