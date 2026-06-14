@@ -59,6 +59,8 @@ spring:
       enabled: always
 
 app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3002}
   jwt:
     secret-key: ${JWT_SECRET_KEY}
     bypass-token: ${JWT_BYPASS_TOKEN:}

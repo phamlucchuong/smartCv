@@ -43,7 +43,7 @@ public class NotificationClient {
     }
 
     public boolean verifyOTP(String target, String targetType, String code, String otpType) {
-        String url = notificationServiceUrl + "/api/otp/verify";
+        String url = notificationServiceUrl + "/notification/api/otp/verify";
         Map<String, Object> request = new HashMap<>();
         request.put("target", target);
         request.put("target_type", targetType);
@@ -54,6 +54,7 @@ public class NotificationClient {
             restTemplate.postForObject(url, request, Void.class);
             return true;
         } catch (Exception e) {
+            System.err.println("Error verifying OTP: " + e.getMessage());
             return false;
         }
     }

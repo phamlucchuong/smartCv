@@ -43,6 +43,14 @@ public class UserService {
         return !userRepository.existsByEmailAndDeletedFalse(email);
     }
 
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    public List<User> findAllByEmail(String email) {
+        return userRepository.findAllByEmail(email);
+    }
+
     public Optional<User> findByEmailAndDeletedFalse(String email) {
         return userRepository.findByEmailAndDeletedFalse(email);
     }
@@ -113,6 +121,10 @@ public class UserService {
         user.setDeleted(true);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    public void hardDeleteUser(String id) {
+        userRepository.deleteById(id);
     }
 
     public UserResponse updateUserStatus(String userId, UserStatusRequest request) {
