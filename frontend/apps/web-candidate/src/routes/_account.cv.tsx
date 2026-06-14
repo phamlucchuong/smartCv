@@ -70,11 +70,20 @@ function MyCVPage() {
   const cv = cvList.find((c) => c.id === selected) ?? cvList[0]
 
   // Step 4: upload mutation via AXIOS_INSTANCE (multipart/form-data)
+  // transformRequest deletes the instance-level Content-Type: application/json so the
+  // browser can auto-set multipart/form-data with the correct boundary for FormData.
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const form = new FormData()
       form.append('file', file)
-      return AXIOS_INSTANCE.post('/api/candidates/cv/upload', form)
+      return AXIOS_INSTANCE.post('/api/candidates/cv/upload', form, {
+        transformRequest: [
+          (data, headers) => {
+            if (headers) delete (headers as Record<string, unknown>)['Content-Type']
+            return data
+          },
+        ],
+      })
     },
     onSuccess: () => {
       toast.success(t('account_upload_success'))
