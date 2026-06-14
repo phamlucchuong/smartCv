@@ -53,26 +53,25 @@ public class S3Service {
         String key = "avatars/" + userId + "/" + UUID.randomUUID() + "." + ext;
 
         try {
-            software.amazon.awssdk.services.s3.model.PutObjectRequest.Builder requestBuilder =
-                    software.amazon.awssdk.services.s3.model.PutObjectRequest.builder()
+            s3Client.putObject(
+                    PutObjectRequest.builder()
                             .bucket(bucket)
                             .key(key)
-                            .contentType(file.getContentType());
-
-            if (endpointUrl.isBlank()) {
-                requestBuilder.acl(software.amazon.awssdk.services.s3.model.ObjectCannedACL.PUBLIC_READ);
-            }
-
-            s3Client.putObject(requestBuilder.build(), RequestBody.fromBytes(file.getBytes()));
+                            .contentType(file.getContentType())
+                            .build(),
+                    RequestBody.fromBytes(file.getBytes())
+            );
         } catch (Exception e) {
             log.error("S3 avatar upload failed: {}", e.getMessage());
             throw new AppException(vn.chuongpl.user_service.enums.ErrorCode.FILE_UPLOAD_FAILED);
         }
 
-        if (endpointUrl.isBlank()) {
-            return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
+        // For local MinIO, return a presigned URL. For real AWS, return the permanent path-style URL.
+        // The bucket must have a public-read bucket policy (not object ACL) for this URL to be accessible.
+        if (!endpointUrl.isBlank()) {
+            return generatePresignedUrl(key);
         }
-        return generatePresignedUrl(key);
+        return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
     }
 
     public String uploadCv(MultipartFile file, String candidateId) {

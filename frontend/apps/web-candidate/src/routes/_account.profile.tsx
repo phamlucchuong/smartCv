@@ -2,10 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { Button, Card, CardContent, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { Briefcase, Eye, MapPin } from 'lucide-react'
+import { Briefcase, Camera, Eye, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  useGetMe2, useUpdate1, useUpdateUser,
+  useGetMe2, useUpdate1, useUpdateUser, useUploadAvatar,
   getGetMe2QueryKey, getGetCurrentUserQueryKey,
   UserModels,
 } from '@smart-cv/api'
@@ -19,6 +19,50 @@ export const Route = createFileRoute('/_account/profile')({
 
 function toInitials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('')
+}
+
+// ── Date format helpers ──────────────────────────────────────────
+// Parse "YYYY-MM-DD" and format to "Tháng M/YYYY" or "Month YYYY"
+function formatMonthYear(dateStr: string | undefined, lang: string): string {
+  if (!dateStr) return ''
+  const [year, month] = dateStr.split('-')
+  if (!year) return ''
+  if (!month || month === '00') return year
+  const MONTHS_SHORT = [
+    { vi: 'Tháng 1', en: 'Jan' }, { vi: 'Tháng 2', en: 'Feb' },
+    { vi: 'Tháng 3', en: 'Mar' }, { vi: 'Tháng 4', en: 'Apr' },
+    { vi: 'Tháng 5', en: 'May' }, { vi: 'Tháng 6', en: 'Jun' },
+    { vi: 'Tháng 7', en: 'Jul' }, { vi: 'Tháng 8', en: 'Aug' },
+    { vi: 'Tháng 9', en: 'Sep' }, { vi: 'Tháng 10', en: 'Oct' },
+    { vi: 'Tháng 11', en: 'Nov' }, { vi: 'Tháng 12', en: 'Dec' },
+  ]
+  const idx = parseInt(month, 10) - 1
+  const label = MONTHS_SHORT[idx]
+  if (!label) return year
+  return lang === 'VI' ? `${label.vi} ${year}` : `${label.en} ${year}`
+}
+
+function formatExpDateRange(
+  startDate: string | undefined,
+  endDate: string | undefined,
+  isCurrent: boolean | undefined,
+  lang: string,
+): string {
+  const start = formatMonthYear(startDate, lang)
+  const end = isCurrent
+    ? (lang === 'VI' ? 'Hiện tại' : 'Present')
+    : formatMonthYear(endDate, lang)
+  if (!start && !end) return ''
+  if (!end) return start
+  if (!start) return end
+  return `${start} – ${end}`
+}
+
+function formatEduDateRange(startYear: number | undefined, endYear: number | undefined, lang: string): string {
+  if (!startYear && !endYear) return ''
+  if (!endYear) return lang === 'VI' ? `${startYear} – Hiện tại` : `${startYear} – Present`
+  if (!startYear) return String(endYear)
+  return `${startYear} – ${endYear}`
 }
 
 type ExpForm = {
@@ -70,24 +114,39 @@ function ScrollSelect({
   disabled?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
-  const ref = React.useRef<HTMLDivElement>(null)
+  const [placement, setPlacement] = React.useState<'bottom' | 'top'>('bottom')
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const buttonRef    = React.useRef<HTMLButtonElement>(null)
+  const DROPDOWN_H   = 200 // px — approximate max height of open list
   const selected = options.find((o) => o.value === value)
 
   // Close on outside click
   React.useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
+  const handleToggle = () => {
+    if (disabled) return
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      setPlacement(spaceBelow >= DROPDOWN_H || spaceBelow >= spaceAbove ? 'bottom' : 'top')
+    }
+    setOpen((o) => !o)
+  }
+
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={containerRef} className="relative w-full">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={handleToggle}
         className={`border-input bg-background flex h-9 w-full items-center justify-between rounded-md border pl-2 pr-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 ${
           disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/30'
         }`}
@@ -101,7 +160,9 @@ function ScrollSelect({
       </button>
 
       {open && (
-        <div className="border-border bg-popover absolute left-0 top-full z-50 mt-1 w-full rounded-md border shadow-lg">
+        <div className={`border-border bg-popover absolute left-0 z-50 w-full rounded-md border shadow-lg ${
+          placement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'
+        }`}>
           <ul className="max-h-48 overflow-y-auto py-1 text-sm" role="listbox">
             <li
               role="option"
@@ -221,7 +282,7 @@ function buildCandidateRequest(p: UserModels.CandidateResponse): UserModels.Cand
 // ── Main page ────────────────────────────────────────────────────
 function ProfilePage() {
   const { t } = useTranslation()
-  const { isAuthenticated, userId } = useAuthStore()
+  const { isAuthenticated, userId, setAvatarUrl } = useAuthStore()
   const lang = usePreferencesStore((s) => s.language) // 'EN' | 'VI'
   const { data, isLoading, isError } = useGetMe2({ query: { enabled: isAuthenticated } })
   const profile = data?.data
@@ -230,6 +291,13 @@ function ProfilePage() {
   const queryClient = useQueryClient()
   const updateCandidateMutation = useUpdate1()
   const updateUserMutation = useUpdateUser()
+  const uploadAvatarMutation = useUploadAvatar({
+    request: {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  })
 
   React.useEffect(() => { document.title = t('page_title_profile') }, [t])
 
@@ -250,6 +318,10 @@ function ProfilePage() {
   const [editingExpId,  setEditingExpId]  = React.useState<string | null>(null)
   const [editingEduId,  setEditingEduId]  = React.useState<string | null>(null)
   const [editingCertId, setEditingCertId] = React.useState<string | null>(null)
+
+  const [showAddExp, setShowAddExp] = React.useState(false)
+  const [showAddEdu, setShowAddEdu] = React.useState(false)
+  const [showAddCert, setShowAddCert] = React.useState(false)
 
   const [expForm, setExpForm] = React.useState<ExpForm>({
     title: '', company: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false, achievements: [],
@@ -379,9 +451,44 @@ function ProfilePage() {
     )
   }
 
-  const resetExpForm  = () => { setEditingExpId(null);  setExpForm({ title: '', company: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false, achievements: [] }) }
-  const resetEduForm  = () => { setEditingEduId(null);  setEduForm({ school: '', degree: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false }) }
-  const resetCertForm = () => { setEditingCertId(null); setCertForm({ name: '', issuer: '', issueMonth: '', issueYear: '', credentialUrl: '' }) }
+  const avatarInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleAvatarChange = (file: File | null) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { toast.error(lang === 'VI' ? 'Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP)' : 'Only image files are supported'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error(lang === 'VI' ? 'Ảnh phải nhỏ hơn 5MB' : 'Image must be smaller than 5MB'); return }
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const toastId = toast.loading(lang === 'VI' ? 'Đang tải ảnh lên...' : 'Uploading avatar...')
+
+    uploadAvatarMutation.mutate(
+      { data: formData as unknown as UserModels.UploadAvatarBody },
+      {
+        onSuccess: (res) => {
+          const newUrl = res.data
+          if (newUrl) {
+            setAvatarUrl(newUrl)
+            queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
+            toast.success(lang === 'VI' ? 'Cập nhật ảnh đại diện thành công!' : 'Avatar updated successfully!', { id: toastId })
+          } else {
+            toast.error(lang === 'VI' ? 'Không nhận được URL ảnh mới.' : 'Failed to receive new avatar URL.', { id: toastId })
+          }
+        },
+        onError: (err) => {
+          console.error(err)
+          toast.error(lang === 'VI' ? 'Tải ảnh lên thất bại.' : 'Failed to upload avatar.', { id: toastId })
+        },
+      }
+    )
+  }
+
+  const displayAvatarUrl = profile?.avatarUrl ?? null
+
+  const resetExpForm  = () => { setEditingExpId(null);  setShowAddExp(false);  setExpForm({ title: '', company: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false, achievements: [] }) }
+  const resetEduForm  = () => { setEditingEduId(null);  setShowAddEdu(false);  setEduForm({ school: '', degree: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false }) }
+  const resetCertForm = () => { setEditingCertId(null); setShowAddCert(false); setCertForm({ name: '', issuer: '', issueMonth: '', issueYear: '', credentialUrl: '' }) }
 
   const basicInfoFields: [string, keyof typeof displayValues][] = [
     [t('profile_full_name'), 'name'],
@@ -401,7 +508,33 @@ function ProfilePage() {
         {/* ─── Sidebar ─── */}
         <Card className="h-fit lg:sticky lg:top-20">
           <CardContent className="space-y-4 p-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 text-2xl font-bold text-primary">{initials}</div>
+            {/* Avatar upload */}
+            <div className="relative w-fit">
+              {displayAvatarUrl ? (
+                <img
+                  src={displayAvatarUrl}
+                  alt={fullName}
+                  className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 text-2xl font-bold text-primary">{initials}</div>
+              )}
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition hover:bg-primary/80"
+                title={lang === 'VI' ? 'Thay ảnh đại diện' : 'Change avatar'}
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)}
+              />
+            </div>
             <div>
               <h1 className="text-xl font-semibold text-foreground">{fullName}</h1>
               <p className="text-sm text-muted-foreground">{title}</p>
@@ -435,7 +568,14 @@ function ProfilePage() {
                 <div key={key} className="flex items-start gap-3 border-b border-border py-2 text-sm last:border-0">
                   <span className="w-32 shrink-0 font-medium text-muted-foreground">{label}</span>
                   {editMode
-                    ? <Input value={draft[key as keyof typeof draft] as string} onChange={(e) => setDraft((p) => ({ ...p, [key]: e.target.value }))} />
+                    ? (
+                      <Input
+                        value={draft[key as keyof typeof draft] as string}
+                        onChange={(e) => setDraft((p) => ({ ...p, [key]: e.target.value }))}
+                        readOnly={key === 'email' || key === 'phone'}
+                        className={key === 'email' || key === 'phone' ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-80' : ''}
+                      />
+                    )
                     : <span className="text-foreground">{displayValues[key]}</span>
                   }
                 </div>
@@ -456,43 +596,63 @@ function ProfilePage() {
               <h2 className="border-l-4 border-primary pl-3 text-lg font-semibold text-foreground">{t('profile_work_exp')}</h2>
               {experiences.map((item, idx) => (
                 <div key={idx} className="rounded-xl border border-border p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <h3 className="font-semibold text-foreground">{item.title}</h3>
                       <p className="text-sm text-muted-foreground">{item.company}</p>
+                      {(item.startDate || item.endDate || item.current) && (
+                        <p className="mt-0.5 text-xs text-muted-foreground/70">
+                          {formatExpDateRange(item.startDate, item.endDate, item.current, lang)}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <Button variant="outline" size="sm" onClick={() => {
                         setEditingExpId(String(idx))
-                        setExpForm({ title: item.title ?? '', company: item.company ?? '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false, achievements: [] })
+                        const startParts = item.startDate?.split('-') ?? []
+                        const endParts   = item.endDate?.split('-')   ?? []
+                        setExpForm({
+                          title: item.title ?? '', company: item.company ?? '',
+                          startMonth: startParts[1] ?? '', startYear: startParts[0] ?? '',
+                          endMonth:   endParts[1]   ?? '', endYear:   endParts[0]   ?? '',
+                          isCurrent: item.current ?? false, achievements: [],
+                        })
                       }}>{t('profile_edit_btn')}</Button>
                       <Button variant="outline" size="sm" onClick={() => handleDeleteExp(idx)}>{t('profile_delete_btn')}</Button>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input value={expForm.title}   onChange={(e) => setExpForm((p) => ({ ...p, title:   e.target.value }))} placeholder={t('profile_job_position')} />
-                <Input value={expForm.company} onChange={(e) => setExpForm((p) => ({ ...p, company: e.target.value }))} placeholder={t('profile_company')} />
-              </div>
-              <DateRangeRow
-                startMonth={expForm.startMonth} startYear={expForm.startYear}
-                endMonth={expForm.endMonth}     endYear={expForm.endYear}
-                isCurrent={expForm.isCurrent}
-                onStartMonth={(v) => setExpForm((p) => ({ ...p, startMonth: v }))}
-                onStartYear={(v)  => setExpForm((p) => ({ ...p, startYear:  v }))}
-                onEndMonth={(v)   => setExpForm((p) => ({ ...p, endMonth:   v }))}
-                onEndYear={(v)    => setExpForm((p) => ({ ...p, endYear:    v }))}
-                onCurrentChange={(v) => setExpForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }))}
-                lang={lang}
-                startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
-              />
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveExp}>
-                  {editingExpId ? t('profile_save_exp') : t('profile_add_exp')}
+              {editingExpId !== null || showAddExp ? (
+                <>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input value={expForm.title}   onChange={(e) => setExpForm((p) => ({ ...p, title:   e.target.value }))} placeholder={t('profile_job_position')} />
+                    <Input value={expForm.company} onChange={(e) => setExpForm((p) => ({ ...p, company: e.target.value }))} placeholder={t('profile_company')} />
+                  </div>
+                  <DateRangeRow
+                    startMonth={expForm.startMonth} startYear={expForm.startYear}
+                    endMonth={expForm.endMonth}     endYear={expForm.endYear}
+                    isCurrent={expForm.isCurrent}
+                    onStartMonth={(v) => setExpForm((p) => ({ ...p, startMonth: v }))}
+                    onStartYear={(v)  => setExpForm((p) => ({ ...p, startYear:  v }))}
+                    onEndMonth={(v)   => setExpForm((p) => ({ ...p, endMonth:   v }))}
+                    onEndYear={(v)    => setExpForm((p) => ({ ...p, endYear:    v }))}
+                    onCurrentChange={(v) => setExpForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }))}
+                    lang={lang}
+                    startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
+                  />
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveExp}>
+                      {editingExpId ? t('profile_save_exp') : t('profile_add_exp')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={resetExpForm}>{t('profile_cancel')}</Button>
+                  </div>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddExp(true)}>
+                  + {t('profile_add_exp')}
                 </Button>
-                {editingExpId && <Button variant="ghost" size="sm" onClick={resetExpForm}>{t('profile_cancel')}</Button>}
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -501,42 +661,60 @@ function ProfilePage() {
             <CardContent className="space-y-4 p-6">
               <h2 className="border-l-4 border-primary pl-3 text-lg font-semibold text-foreground">{t('profile_education')}</h2>
               {educations.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">
-                  <div>
+                <div key={idx} className="flex items-start justify-between gap-3 rounded-xl border border-border p-4">
+                  <div className="min-w-0">
                     <p className="font-semibold text-foreground">{item.institution}</p>
                     <p className="text-sm text-muted-foreground">{item.degree}</p>
+                    {(item.startYear || item.endYear) && (
+                      <p className="mt-0.5 text-xs text-muted-foreground/70">
+                        {formatEduDateRange(item.startYear, item.endYear, lang)}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     <Button variant="outline" size="sm" onClick={() => {
                       setEditingEduId(String(idx))
-                      setEduForm({ school: item.institution ?? '', degree: item.degree ?? '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false })
+                      setEduForm({
+                        school: item.institution ?? '', degree: item.degree ?? '',
+                        startMonth: '', startYear: item.startYear ? String(item.startYear) : '',
+                        endMonth:   '', endYear:   item.endYear   ? String(item.endYear)   : '',
+                        isCurrent: !item.endYear,
+                      })
                     }}>{t('profile_edit_btn')}</Button>
                     <Button variant="outline" size="sm" onClick={() => handleDeleteEdu(idx)}>{t('profile_delete_btn')}</Button>
                   </div>
                 </div>
               ))}
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input value={eduForm.school} onChange={(e) => setEduForm((p) => ({ ...p, school: e.target.value }))} placeholder={t('profile_school')} />
-                <Input value={eduForm.degree} onChange={(e) => setEduForm((p) => ({ ...p, degree: e.target.value }))} placeholder={t('profile_degree')} />
-              </div>
-              <DateRangeRow
-                startMonth={eduForm.startMonth} startYear={eduForm.startYear}
-                endMonth={eduForm.endMonth}     endYear={eduForm.endYear}
-                isCurrent={eduForm.isCurrent}
-                onStartMonth={(v) => setEduForm((p) => ({ ...p, startMonth: v }))}
-                onStartYear={(v)  => setEduForm((p) => ({ ...p, startYear:  v }))}
-                onEndMonth={(v)   => setEduForm((p) => ({ ...p, endMonth:   v }))}
-                onEndYear={(v)    => setEduForm((p) => ({ ...p, endYear:    v }))}
-                onCurrentChange={(v) => setEduForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }))}
-                lang={lang}
-                startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
-              />
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveEdu}>
-                  {editingEduId ? t('profile_save_edu') : t('profile_add_edu')}
+              {editingEduId !== null || showAddEdu ? (
+                <>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input value={eduForm.school} onChange={(e) => setEduForm((p) => ({ ...p, school: e.target.value }))} placeholder={t('profile_school')} />
+                    <Input value={eduForm.degree} onChange={(e) => setEduForm((p) => ({ ...p, degree: e.target.value }))} placeholder={t('profile_degree')} />
+                  </div>
+                  <DateRangeRow
+                    startMonth={eduForm.startMonth} startYear={eduForm.startYear}
+                    endMonth={eduForm.endMonth}     endYear={eduForm.endYear}
+                    isCurrent={eduForm.isCurrent}
+                    onStartMonth={(v) => setEduForm((p) => ({ ...p, startMonth: v }))}
+                    onStartYear={(v)  => setEduForm((p) => ({ ...p, startYear:  v }))}
+                    onEndMonth={(v)   => setEduForm((p) => ({ ...p, endMonth:   v }))}
+                    onEndYear={(v)    => setEduForm((p) => ({ ...p, endYear:    v }))}
+                    onCurrentChange={(v) => setEduForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }))}
+                    lang={lang}
+                    startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
+                  />
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveEdu}>
+                      {editingEduId ? t('profile_save_edu') : t('profile_add_edu')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={resetEduForm}>{t('profile_cancel')}</Button>
+                  </div>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddEdu(true)}>
+                  + {t('profile_add_edu')}
                 </Button>
-                {editingEduId && <Button variant="ghost" size="sm" onClick={resetEduForm}>{t('profile_cancel')}</Button>}
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -545,38 +723,61 @@ function ProfilePage() {
             <CardContent className="space-y-4 p-6">
               <h2 className="border-l-4 border-primary pl-3 text-lg font-semibold text-foreground">{t('profile_certifications')}</h2>
               {certifications.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">
-                  <div>
+                <div key={idx} className="flex items-start justify-between gap-3 rounded-xl border border-border p-4">
+                  <div className="min-w-0">
                     <p className="font-semibold text-foreground">{item.name}</p>
                     <p className="text-sm text-muted-foreground">{item.issuer}</p>
+                    {item.issuedDate && (
+                      <p className="mt-0.5 text-xs text-muted-foreground/70">
+                        {formatMonthYear(item.issuedDate, lang)}
+                      </p>
+                    )}
+                    {item.credentialUrl && (
+                      <a href={item.credentialUrl} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-xs text-primary hover:underline">
+                        {item.credentialUrl}
+                      </a>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     <Button variant="outline" size="sm" onClick={() => {
                       setEditingCertId(String(idx))
-                      setCertForm({ name: item.name ?? '', issuer: item.issuer ?? '', issueMonth: '', issueYear: '', credentialUrl: item.credentialUrl ?? '' })
+                      const parts = item.issuedDate?.split('-') ?? []
+                      setCertForm({
+                        name: item.name ?? '', issuer: item.issuer ?? '',
+                        issueMonth: parts[1] ?? '', issueYear: parts[0] ?? '',
+                        credentialUrl: item.credentialUrl ?? '',
+                      })
                     }}>{t('profile_edit_btn')}</Button>
                     <Button variant="outline" size="sm" onClick={() => handleDeleteCert(idx)}>{t('profile_delete_btn')}</Button>
                   </div>
                 </div>
               ))}
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input value={certForm.name}          onChange={(e) => setCertForm((p) => ({ ...p, name:          e.target.value }))} placeholder={t('profile_cert_name')} />
-                <Input value={certForm.issuer}         onChange={(e) => setCertForm((p) => ({ ...p, issuer:        e.target.value }))} placeholder={t('profile_cert_issuer')} />
-                <Input value={certForm.credentialUrl} onChange={(e) => setCertForm((p) => ({ ...p, credentialUrl: e.target.value }))} placeholder={t('profile_cert_url')} className="md:col-span-2" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">{t('profile_cert_issue_date')}</p>
-                <div className="grid grid-cols-2 gap-2 md:w-1/2">
-                  <MonthSelect value={certForm.issueMonth} onChange={(v) => setCertForm((p) => ({ ...p, issueMonth: v }))} lang={lang} />
-                  <YearSelect  value={certForm.issueYear}  onChange={(v) => setCertForm((p) => ({ ...p, issueYear:  v }))} lang={lang} />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveCert}>
-                  {editingCertId ? t('profile_save_cert') : t('profile_add_cert')}
+              {editingCertId !== null || showAddCert ? (
+                <>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input value={certForm.name}          onChange={(e) => setCertForm((p) => ({ ...p, name:          e.target.value }))} placeholder={t('profile_cert_name')} />
+                    <Input value={certForm.issuer}         onChange={(e) => setCertForm((p) => ({ ...p, issuer:        e.target.value }))} placeholder={t('profile_cert_issuer')} />
+                    <Input value={certForm.credentialUrl} onChange={(e) => setCertForm((p) => ({ ...p, credentialUrl: e.target.value }))} placeholder={t('profile_cert_url')} className="md:col-span-2" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">{t('profile_cert_issue_date')}</p>
+                    <div className="grid grid-cols-2 gap-2 md:w-1/2">
+                      <MonthSelect value={certForm.issueMonth} onChange={(v) => setCertForm((p) => ({ ...p, issueMonth: v }))} lang={lang} />
+                      <YearSelect  value={certForm.issueYear}  onChange={(v) => setCertForm((p) => ({ ...p, issueYear:  v }))} lang={lang} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveCert}>
+                      {editingCertId ? t('profile_save_cert') : t('profile_add_cert')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={resetCertForm}>{t('profile_cancel')}</Button>
+                  </div>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddCert(true)}>
+                  + {t('profile_add_cert')}
                 </Button>
-                {editingCertId && <Button variant="ghost" size="sm" onClick={resetCertForm}>{t('profile_cancel')}</Button>}
-              </div>
+              )}
             </CardContent>
           </Card>
 

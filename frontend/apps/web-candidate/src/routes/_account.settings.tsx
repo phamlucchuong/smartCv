@@ -8,9 +8,11 @@ import {
   useGetSettings, useUpdateNotifications, useUpdatePrivacy,
   useChangeMyPassword, useUpdateUser, useDeleteMyAccount,
   getGetSettingsQueryKey, getGetCurrentUserQueryKey,
+  useGetMe2, getGetMe2QueryKey,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/useAuthStore'
+import { usePreferencesStore } from '../store/usePreferencesStore'
 
 export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,
@@ -20,10 +22,14 @@ type SectionKey = 'account' | 'notifications' | 'privacy' | 'danger'
 
 function SettingsPage() {
   const { t } = useTranslation()
+  const lang = usePreferencesStore((s) => s.language)
   const navigate = useNavigate()
   const { isAuthenticated, userId, signOut } = useAuthStore()
   const { data: settingsData } = useGetSettings({ query: { enabled: isAuthenticated } })
   const settingsPayload = settingsData?.data
+
+  const { data: meData } = useGetMe2({ query: { enabled: isAuthenticated } })
+  const me = meData?.data
 
   const queryClient = useQueryClient()
   const updateNotifMutation     = useUpdateNotifications()
@@ -53,16 +59,18 @@ function SettingsPage() {
 
   React.useEffect(() => {
     if (settingsPayload) {
-      setNotifications({
-        jobRecommendations: settingsPayload.notifications?.emailJobSuggestions ?? false,
-        applicationUpdates: settingsPayload.notifications?.emailApplicationUpdates ?? false,
-        newMessages:        settingsPayload.notifications?.pushNotifications ?? false,
-        promotionalEmails:  settingsPayload.notifications?.marketingEmails ?? false,
-      })
-      setPrivacy({
-        publicProfile:        settingsPayload.privacy?.showCvToRecruiters ?? false,
-        showSalaryExpectation: settingsPayload.privacy?.showContactInfo ?? false,
-        activityStatus: false,
+      Promise.resolve().then(() => {
+        setNotifications({
+          jobRecommendations: settingsPayload.notifications?.emailJobSuggestions ?? false,
+          applicationUpdates: settingsPayload.notifications?.emailApplicationUpdates ?? false,
+          newMessages:        settingsPayload.notifications?.pushNotifications ?? false,
+          promotionalEmails:  settingsPayload.notifications?.marketingEmails ?? false,
+        })
+        setPrivacy({
+          publicProfile:        settingsPayload.privacy?.showCvToRecruiters ?? false,
+          showSalaryExpectation: settingsPayload.privacy?.showContactInfo ?? false,
+          activityStatus: false,
+        })
       })
     }
   }, [settingsPayload])
@@ -95,6 +103,16 @@ function SettingsPage() {
   const [newPassword, setNewPassword] = React.useState('')
   const [confirmPassword, setConfirmPassword] = React.useState('')
   const [email, setEmail] = React.useState('')
+  const [phone, setPhone] = React.useState('')
+
+  React.useEffect(() => {
+    if (me) {
+      Promise.resolve().then(() => {
+        setEmail(me.email ?? '')
+        setPhone(me.phone ?? '')
+      })
+    }
+  }, [me])
 
   const menuItems: Array<{ key: SectionKey; label: string; icon: React.ReactNode }> = [
     { key: 'account', label: 'Account', icon: <Settings className="h-4 w-4" /> },
@@ -121,8 +139,30 @@ function SettingsPage() {
     updateUserMutation.mutate(
       { userId, data: { email } },
       {
-        onSuccess: () => { toast.success('Email updated'); queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() }) },
-        onError: () => toast.error('Email already in use or update failed'),
+        onSuccess: () => {
+          toast.success(lang === 'VI' ? 'Đã cập nhật email' : 'Email updated')
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() })
+          queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
+        },
+        onError: () => toast.error(lang === 'VI' ? 'Email đã tồn tại hoặc cập nhật thất bại' : 'Email already in use or update failed'),
+      }
+    )
+  }
+
+  const handlePhoneUpdate = () => {
+    if (!/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(phone)) {
+      toast.error(lang === 'VI' ? 'Số điện thoại không hợp lệ (ví dụ: 0912345678)' : 'Invalid phone number (e.g. 0912345678)')
+      return
+    }
+    if (!userId) return
+    updateUserMutation.mutate(
+      { userId, data: { phone } },
+      {
+        onSuccess: () => {
+          toast.success(lang === 'VI' ? 'Đã cập nhật số điện thoại' : 'Phone number updated')
+          queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
+        },
+        onError: () => toast.error(lang === 'VI' ? 'Số điện thoại đã tồn tại hoặc cập nhật thất bại' : 'Phone number already in use or update failed'),
       }
     )
   }
@@ -166,6 +206,13 @@ function SettingsPage() {
                 <h3 className="font-semibold text-foreground">Email Address</h3>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 <Button variant="outline" onClick={handleEmailUpdate}>Update Email</Button>
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground">{t('profile_phone')}</h3>
+                <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Button variant="outline" onClick={handlePhoneUpdate}>
+                  {lang === 'VI' ? 'Cập nhật số điện thoại' : 'Update Phone'}
+                </Button>
               </div>
             </CardContent>
           </Card>
