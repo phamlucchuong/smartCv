@@ -17,6 +17,7 @@ import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferen
 import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
+import vn.chuongpl.user_service.features.candidate.dto.CvInfoResponse;
 import vn.chuongpl.user_service.integration.job.JobClient;
 import vn.chuongpl.user_service.integration.job.JobSummary;
 
@@ -341,5 +342,30 @@ public class CandidateService {
         return candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND))
                 .getFollowedCompanyIds();
+    }
+
+    // ── Internal CV Analysis ──────────────────────────────────────────────────
+
+    public CvInfoResponse getCvInfo(String cvId) {
+        Candidate candidate = candidateRepository.findByCvId(cvId)
+                .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
+        CvItem cv = candidate.getCvs().stream()
+                .filter(c -> cvId.equals(c.getId()))
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
+        return new CvInfoResponse(cv.getId(), cv.getUrl(), cv.getFilename(), candidate.getUserId());
+    }
+
+    public void updateCvAnalysis(String cvId, String analysisResult, CvAnalysisStatus status) {
+        Candidate candidate = candidateRepository.findByCvId(cvId)
+                .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
+        candidate.getCvs().stream()
+                .filter(c -> cvId.equals(c.getId()))
+                .findFirst()
+                .ifPresent(cv -> {
+                    cv.setAnalysisResult(analysisResult);
+                    cv.setAnalysisStatus(status);
+                });
+        candidateRepository.save(candidate);
     }
 }
