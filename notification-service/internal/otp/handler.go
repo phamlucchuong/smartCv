@@ -38,7 +38,7 @@ func (h *Handler) SendOTP(c *echo.Context) error {
 
 	ttl := req.TTLMinutes
 	if ttl == 0 {
-		ttl = 5 // default 5 minutes
+		ttl = 1 // default 1 minute
 	}
 
 	err := h.notiSvc.SendOTP(c.Request().Context(), req.Target, req.TargetType, ttl)
