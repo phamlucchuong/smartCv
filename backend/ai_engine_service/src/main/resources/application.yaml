@@ -8,14 +8,10 @@ spring:
     import: optional:file:../.env[.properties]
   application:
     name: ai_engine_service
-  ai:
-    anthropic:
-      chat:
-        enabled: false
-    azure:
-      openai:
-        chat:
-          enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
+      - org.springframework.ai.model.azure.openai.autoconfigure.AzureOpenAiChatAutoConfiguration
   data:
     mongodb:
       host: ${MONGO_DB_HOST:localhost}
