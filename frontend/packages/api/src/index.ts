@@ -1,12 +1,31 @@
 export * from './axios-instance';
 
-// Generated from static web-candidate.openapi.yaml (baseline snapshot).
-// Run `pnpm generate:api` with backend running to regenerate with live specs
-// and update these paths to: generated/user, generated/job, generated/application, generated/ai
-
+// Auth (web-candidate static spec — well-named hooks)
 export * from './generated/auth/auth';
 export * from './generated/users/users';
-export * from './generated/candidates/candidates';
-export * from './generated/jobs/jobs';
-export * from './generated/applications/applications';
+
+// User service — candidate, wishlist, company controllers
+export * from './generated/user/candidate-controller/candidate-controller';
+export * from './generated/user/wishlist-controller/wishlist-controller';
+export * from './generated/user/company-controller/company-controller';
+
+// Job service
+export * from './generated/job/job-controller/job-controller';
+export * from './generated/job/home-controller/home-controller';
+
+// Application service
+export * from './generated/application/application-controller/application-controller';
+export * from './generated/application/assessment-controller/assessment-controller';
+
+// AI service
+export * from './generated/ai/analysis/analysis';
+export * from './generated/ai/ai-admin/ai-admin';
+
+// Models (root static spec)
 export * from './generated/model';
+
+// Per-service model types (namespaced to avoid collisions with root model)
+export * as UserModels from './generated/user/model';
+export * as JobModels from './generated/job/model';
+export * as ApplicationModels from './generated/application/model';
+export * as AiModels from './generated/ai/model';

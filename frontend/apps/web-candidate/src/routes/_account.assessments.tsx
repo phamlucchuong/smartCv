@@ -3,43 +3,49 @@ import * as React from 'react'
 import { Button, Input } from '@smart-cv/ui'
 import { Clock, ClipboardCheck, ChevronDown, ChevronLeft } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
+import { useGetMyAssessments } from '@smart-cv/api'
+import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createFileRoute('/_account/assessments')({
   component: AssessmentsPage,
 })
 
-type AssessmentStatus = 'Not started' | 'In progress' | 'Submitted' | 'Expired'
+type AssessmentStatusFilter = 'all' | 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
 
-interface Assessment {
-  id: string
-  title: string
-  job: string
-  duration: number
-  type: string
-  status: AssessmentStatus
-  score: number | null
+const statusStyle: Record<string, string> = {
+  NOT_STARTED: 'bg-muted text-muted-foreground border border-border',
+  IN_PROGRESS: 'bg-[var(--ai-soft)] text-[var(--ai)] border border-[var(--ai)]/20',
+  SUBMITTED: 'bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/20',
+  EXPIRED: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
 }
 
-const ASSESSMENTS: Assessment[] = [
-  { id: 'a1', title: 'Backend Technical Test', job: 'Senior Backend Developer — NexusTech', duration: 30, type: 'Kỹ thuật', status: 'Submitted', score: 85 },
-  { id: 'a2', title: 'Frontend Coding Challenge', job: 'Frontend Engineer — Nova Studio', duration: 45, type: 'Lập trình', status: 'Not started', score: null },
-  { id: 'a3', title: 'System Design Interview', job: 'Lead Engineer — CloudBridge', duration: 60, type: 'Kiến trúc', status: 'In progress', score: null },
-  { id: 'a4', title: 'Logical Reasoning', job: 'DevOps Engineer — Skyline Labs', duration: 20, type: 'Logic', status: 'Expired', score: null },
-  { id: 'a5', title: 'Data Structures & Algorithms', job: 'Software Engineer — BluePixel', duration: 40, type: 'DSA', status: 'Not started', score: null },
+const QUESTIONS = [
+  {
+    q: 'Trong Java, đặc điểm nào sau đây KHÔNG đúng về interface?',
+    options: ['Có thể chứa abstract methods', 'Có thể chứa default methods', 'Cho phép đa kế thừa', 'Không thể chứa biến hằng số (final)'],
+    answer: 3,
+  },
+  {
+    q: 'REST API sử dụng phương thức HTTP nào để cập nhật một phần tài nguyên?',
+    options: ['PUT', 'POST', 'PATCH', 'DELETE'],
+    answer: 2,
+  },
+  {
+    q: 'Độ phức tạp thời gian của thuật toán tìm kiếm nhị phân là:',
+    options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1)'],
+    answer: 1,
+  },
 ]
-
-const statusStyle: Record<AssessmentStatus, string> = {
-  'Not started': 'bg-muted text-muted-foreground border border-border',
-  'In progress': 'bg-[var(--ai-soft)] text-[var(--ai)] border border-[var(--ai)]/20',
-  'Submitted': 'bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/20',
-  'Expired': 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
-}
 
 function AssessmentsPage() {
   const { t } = useTranslation()
+  const { isAuthenticated } = useAuthStore()
+  const { data, isLoading, isError } = useGetMyAssessments({ query: { enabled: isAuthenticated } })
+  const assessments = data?.data ?? []
+
   const [taking, setTaking] = React.useState<string | null>(null)
   const [query, setQuery] = React.useState('')
-  const [status, setStatus] = React.useState<'all' | AssessmentStatus>('all')
+  const [status, setStatus] = React.useState<AssessmentStatusFilter>('all')
   const [statusMenuOpen, setStatusMenuOpen] = React.useState(false)
   const statusMenuRef = React.useRef<HTMLDivElement>(null)
 
@@ -63,37 +69,42 @@ function AssessmentsPage() {
     return <TakeAssessment onClose={() => setTaking(null)} />
   }
 
-  const getFilterLabel = (key: 'all' | AssessmentStatus) => {
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading assessments...</div>
+  if (isError) return <div className="p-8 text-center text-destructive">Failed to load assessments.</div>
+
+  const getFilterLabel = (key: AssessmentStatusFilter) => {
     switch (key) {
       case 'all': return t('assessments_filter_all')
-      case 'Not started': return t('assessments_filter_not_started')
-      case 'In progress': return t('assessments_filter_in_progress')
-      case 'Submitted': return t('assessments_filter_submitted')
-      case 'Expired': return t('assessments_filter_expired')
+      case 'NOT_STARTED': return t('assessments_filter_not_started')
+      case 'IN_PROGRESS': return t('assessments_filter_in_progress')
+      case 'SUBMITTED': return t('assessments_filter_submitted')
+      case 'EXPIRED': return t('assessments_filter_expired')
     }
   }
 
-  const getStatusLabel = (key: AssessmentStatus) => {
+  const getStatusLabel = (key: string) => {
     switch (key) {
-      case 'Not started': return t('assessments_status_not_started')
-      case 'In progress': return t('assessments_status_in_progress')
-      case 'Submitted': return t('assessments_status_submitted')
-      case 'Expired': return t('assessments_status_expired')
+      case 'NOT_STARTED': return t('assessments_status_not_started')
+      case 'IN_PROGRESS': return t('assessments_status_in_progress')
+      case 'SUBMITTED': return t('assessments_status_submitted')
+      case 'EXPIRED': return t('assessments_status_expired')
+      default: return key
     }
   }
 
-  const filterOptions: Array<{ key: 'all' | AssessmentStatus }> = [
+  const filterOptions: Array<{ key: AssessmentStatusFilter }> = [
     { key: 'all' },
-    { key: 'Not started' },
-    { key: 'In progress' },
-    { key: 'Submitted' },
-    { key: 'Expired' },
+    { key: 'NOT_STARTED' },
+    { key: 'IN_PROGRESS' },
+    { key: 'SUBMITTED' },
+    { key: 'EXPIRED' },
   ]
 
-  const filtered = ASSESSMENTS.filter((item) => {
-    const byStatus = status === 'all' ? true : item.status === status
+  const filtered = assessments.filter((item) => {
+    const itemStatus = String(item.status ?? 'NOT_STARTED')
+    const byStatus = status === 'all' ? true : itemStatus === status
     const q = query.trim().toLowerCase()
-    const byQuery = q === '' ? true : item.title.toLowerCase().includes(q)
+    const byQuery = q === '' ? true : (item.assessmentId ?? '').toLowerCase().includes(q)
     return byStatus && byQuery
   })
 
@@ -137,73 +148,61 @@ function AssessmentsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((a) => (
-          <div key={a.id} className="card-surface p-5 flex flex-col gap-4">
-            <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--ai-soft)] text-[var(--ai)]">
-                <ClipboardCheck className="h-5 w-5" />
-              </div>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[a.status]}`}>
-                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                {getStatusLabel(a.status)}
-              </span>
-            </div>
+      {filtered.length === 0 ? (
+        <div className="card-surface p-8 text-center text-sm text-muted-foreground">{t('account_no_results')}</div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((a) => {
+            const itemStatus = String(a.status ?? 'NOT_STARTED')
+            return (
+              <div key={a.attemptId} className="card-surface p-5 flex flex-col gap-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--ai-soft)] text-[var(--ai)]">
+                    <ClipboardCheck className="h-5 w-5" />
+                  </div>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                    {getStatusLabel(itemStatus)}
+                  </span>
+                </div>
 
-            <div>
-              <p className="font-semibold text-foreground">{a.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{a.job}</p>
-            </div>
+                <div>
+                  <p className="font-semibold text-foreground">{a.assessmentId}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{a.startedAt ? new Date(a.startedAt).toLocaleDateString() : ''}</p>
+                </div>
 
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {t('assessments_minutes', { count: a.duration })}
-              </span>
-              <span className="rounded-md bg-muted px-2 py-0.5">{a.type}</span>
-            </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {a.startedAt ? new Date(a.startedAt).toLocaleTimeString() : '—'}
+                  </span>
+                </div>
 
-            {a.score !== null ? (
-              <div className="rounded-lg border border-[var(--success)]/20 bg-[var(--success-soft)] px-3 py-2 text-center text-sm font-semibold text-[var(--success)]">
-                {t('assessments_score', { score: a.score })}
+                {itemStatus === 'SUBMITTED' ? (
+                  <div className="rounded-lg border border-[var(--success)]/20 bg-[var(--success-soft)] px-3 py-2 text-center text-sm font-semibold text-[var(--success)]">
+                    {t('assessments_filter_submitted')}
+                  </div>
+                ) : itemStatus === 'EXPIRED' ? (
+                  <div className="rounded-lg border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-3 py-2 text-center text-sm text-[var(--danger)]">
+                    {t('assessments_expired_label')}
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    disabled={itemStatus !== 'NOT_STARTED' && itemStatus !== 'IN_PROGRESS'}
+                    onClick={() => setTaking(a.attemptId ?? '')}
+                  >
+                    {itemStatus === 'IN_PROGRESS' ? t('assessments_continue') : t('assessments_start')}
+                  </Button>
+                )}
               </div>
-            ) : a.status === 'Expired' ? (
-              <div className="rounded-lg border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-3 py-2 text-center text-sm text-[var(--danger)]">
-                {t('assessments_expired_label')}
-              </div>
-            ) : (
-              <Button
-                className="w-full"
-                disabled={a.status === 'In progress' ? false : a.status !== 'Not started'}
-                onClick={() => setTaking(a.id)}
-              >
-                {a.status === 'In progress' ? t('assessments_continue') : t('assessments_start')}
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
-
-const QUESTIONS = [
-  {
-    q: 'Trong Java, đặc điểm nào sau đây KHÔNG đúng về interface?',
-    options: ['Có thể chứa abstract methods', 'Có thể chứa default methods', 'Cho phép đa kế thừa', 'Không thể chứa biến hằng số (final)'],
-    answer: 3,
-  },
-  {
-    q: 'REST API sử dụng phương thức HTTP nào để cập nhật một phần tài nguyên?',
-    options: ['PUT', 'POST', 'PATCH', 'DELETE'],
-    answer: 2,
-  },
-  {
-    q: 'Độ phức tạp thời gian của thuật toán tìm kiếm nhị phân là:',
-    options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1)'],
-    answer: 1,
-  },
-]
 
 function TakeAssessment({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
