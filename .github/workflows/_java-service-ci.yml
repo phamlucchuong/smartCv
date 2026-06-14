@@ -16,7 +16,7 @@ on:
       lint_command:
         required: false
         type: string
-        default: ./mvnw -B -ntp checkstyle:check -Dcheckstyle.config.location=../../tools/checkstyle/checkstyle.xml -Dcheckstyle.includeTestSourceDirectory=true -Dcheckstyle.consoleOutput=true
+        default: ./mvnw -B -ntp checkstyle:check -Dcheckstyle.config.location=../tools/checkstyle/checkstyle.xml -Dcheckstyle.includeTestSourceDirectory=true -Dcheckstyle.consoleOutput=true
       build_command:
         required: false
         type: string
