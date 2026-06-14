@@ -12,11 +12,9 @@ import {
   ChevronRight,
   Clock,
   DollarSign,
-  Globe,
   Heart,
   Home,
   MapPin,
-  Users,
 } from 'lucide-react'
 import { useGetJobById, useGetRelatedJobs } from '@smart-cv/api'
 

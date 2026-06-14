@@ -7,16 +7,9 @@ import { toast } from 'sonner'
 import { useGetMe2, UserModels } from '@smart-cv/api'
 import { useAuthStore } from '../store/useAuthStore'
 
-type CVItem = { id: string; name: string; type: 'PDF' | 'DOC'; uploaded: string; status: 'Parsed' | 'Processing' | 'Active'; isDefault: boolean }
-
 export const Route = createFileRoute('/_account/profile')({
   component: ProfilePage,
 })
-
-function formatToday() {
-  const now = new Date()
-  return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
-}
 
 function toInitials(name: string) {
   return name

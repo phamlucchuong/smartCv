@@ -251,8 +251,8 @@ function RootComponent() {
                 onMouseLeave={handleAccountMouseLeave}
               >
                 <div className="rounded-full bg-primary/20 border border-primary/30 flex items-center gap-2 px-3 py-1.5 cursor-pointer">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
-                    {email?.charAt(0).toUpperCase() ?? '?'}
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
+                    <UserRound className="h-4 w-4" />
                   </div>
                   <span className="text-sm font-medium text-foreground">{email?.split('@')[0] ?? 'Account'}</span>
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -262,7 +262,9 @@ function RootComponent() {
                   className={`absolute right-0 top-full mt-2 min-w-[220px] rounded-xl border border-border bg-card shadow-xl z-50 transition-opacity duration-150 ${accountMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                 >
                   <div className="flex items-center gap-3 px-3 py-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">{email?.charAt(0).toUpperCase() ?? '?'}</div>
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      <UserRound className="h-5 w-5" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">{email?.split('@')[0] ?? 'Account'}</p>
                       <p className="text-xs text-muted-foreground truncate">{email ?? ''}</p>

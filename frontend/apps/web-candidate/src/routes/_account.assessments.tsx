@@ -11,7 +11,6 @@ export const Route = createFileRoute('/_account/assessments')({
 })
 
 type AssessmentStatusFilter = 'all' | 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
-type AttemptStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
 
 const statusStyle: Record<string, string> = {
   NOT_STARTED: 'bg-muted text-muted-foreground border border-border',

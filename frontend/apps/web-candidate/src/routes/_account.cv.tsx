@@ -11,8 +11,6 @@ export const Route = createFileRoute('/_account/cv')({
   component: MyCVPage,
 })
 
-type AnalysisStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-
 const cvStatusStyle: Record<string, string> = {
   COMPLETED: 'bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/20',
   PROCESSING: 'bg-[var(--warning-soft)] text-[var(--warning)] border border-[var(--warning)]/20',
@@ -81,8 +79,7 @@ function MyCVPage() {
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading CVs...</div>
   if (isError) return <div className="p-8 text-center text-destructive">Failed to load CVs.</div>
-
-  const statusKey = cv?.analysisStatus ?? 'PENDING'
+// No statusKey needed
 
   return (
     <div className="space-y-6">
