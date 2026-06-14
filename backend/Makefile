@@ -49,6 +49,7 @@ run:
 stop:
 	@-pkill -f "spring-boot:run" 2>/dev/null; true
 	@-pkill -f "go run cmd/server/main.go" 2>/dev/null; true
+	@-kill -9 $$(lsof -t -i:8080-8085) 2>/dev/null; true
 	@echo "Services stopped."
 
 logs:
