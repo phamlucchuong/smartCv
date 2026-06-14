@@ -25,9 +25,20 @@ import vn.chuongpl.ai_engine_service.integration.job.JobSummary;
 import vn.chuongpl.ai_engine_service.integration.user.JobSuggestionsMessage;
 import vn.chuongpl.ai_engine_service.integration.user.JobSuggestionsPublisher;
 
+import vn.chuongpl.ai_engine_service.dtos.request.CvFullAnalysisRequest;
+import vn.chuongpl.ai_engine_service.dtos.response.CvFullAnalysisResponse;
+import vn.chuongpl.ai_engine_service.dtos.response.CvImproveStructuredResponse;
+import vn.chuongpl.ai_engine_service.dtos.response.ExtractJobTargetResponse;
+import vn.chuongpl.ai_engine_service.dtos.response.StrengthItem;
+import vn.chuongpl.ai_engine_service.dtos.response.WeaknessItem;
+import vn.chuongpl.ai_engine_service.integration.user.CvInfoResponse;
+import vn.chuongpl.ai_engine_service.integration.user.UserClient;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +50,7 @@ public class AnalysisService {
     private final CvTextExtractor cvTextExtractor;
     private final JobClient jobClient;
     private final JobSuggestionsPublisher jobSuggestionsPublisher;
+    private final UserClient userClient;
 
     @Value("${app.ai.recommend-batch-size:20}")
     private int recommendBatchSize;
@@ -210,7 +222,111 @@ public class AnalysisService {
         return value == null ? "" : value;
     }
 
-    private List<String> safeList(List<String> values) {
+    private <T> List<T> safeList(List<T> values) {
         return values == null ? Collections.emptyList() : values;
+    }
+
+    public CvFullAnalysisResponse analyzeCv(CvFullAnalysisRequest request, String userId) {
+        CvInfoResponse cvInfo = userClient.getCvInfo(request.cvId());
+        if (!cvInfo.ownerId().equals(userId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String cvText = cvTextExtractor.resolveCvText(null, cvInfo.cvUrl());
+
+        ExtractJobTargetResponse target = extractJobTarget(cvText);
+        String targetPosition = target.targetPosition();
+
+        CvAnalysisResponse matchAnalysis;
+        int overallScore;
+        CvImproveStructuredResponse improvement;
+
+        if (request.jobId() != null) {
+            JobSummary job = jobClient.getJobById(request.jobId());
+            String jd = nvl(job.description());
+            String jTitle = nvl(job.title());
+            String jSkills = String.join(", ", safeList(job.skills()));
+            String jReqs = String.join("\n- ", safeList(job.requirements()));
+
+            CompletableFuture<CvAnalysisResponse> jobFuture = CompletableFuture.supplyAsync(
+                    () -> analyzeWithText(cvText, jd, jTitle, jSkills, jReqs));
+            CompletableFuture<CvAnalysisResponse> standaloneFuture = CompletableFuture.supplyAsync(
+                    () -> analyzeWithText(cvText, targetPosition, targetPosition, "", ""));
+
+            CompletableFuture.allOf(jobFuture, standaloneFuture).join();
+            matchAnalysis = jobFuture.join();
+            overallScore = standaloneFuture.join().matchScore();
+            improvement = improveWithText(cvText, jd, jTitle, jSkills, jReqs);
+        } else {
+            matchAnalysis = analyzeWithText(cvText, targetPosition, targetPosition, "", "");
+            overallScore = matchAnalysis.matchScore();
+            improvement = improveWithText(cvText, targetPosition, targetPosition, "", "");
+        }
+
+        String scoreLabel = computeScoreLabel(overallScore);
+        List<String> extractedSkills = Stream.concat(
+                safeList(matchAnalysis.matchedSkills()).stream(),
+                safeList(matchAnalysis.extraSkills()).stream()
+        ).distinct().toList();
+
+        CvFullAnalysisResponse response = new CvFullAnalysisResponse(
+                overallScore,
+                scoreLabel,
+                targetPosition,
+                matchAnalysis.matchScore(),
+                safeList(matchAnalysis.matchedSkills()),
+                safeList(matchAnalysis.missingSkills()),
+                safeList(matchAnalysis.extraSkills()),
+                matchAnalysis.summary(),
+                safeList(improvement.strengths()),
+                safeList(improvement.weaknesses()),
+                safeList(improvement.tips()),
+                extractedSkills
+        );
+
+        try {
+            userClient.updateCvAnalysis(request.cvId(), mapper.writeValueAsString(response), "DONE");
+        } catch (Exception e) {
+            log.warn("Failed to persist CV analysis for cvId={}: {}", request.cvId(), e.getMessage());
+        }
+
+        return response;
+    }
+
+    public String computeScoreLabel(int score) {
+        if (score >= 85) return "Excellent";
+        if (score >= 70) return "Good";
+        if (score >= 50) return "Fair";
+        return "Poor";
+    }
+
+    private ExtractJobTargetResponse extractJobTarget(String cvText) {
+        String prompt = promptBuilder.buildExtractJobTargetPrompt(Map.of("CV_TEXT", nvl(cvText)));
+        return parse(callAi(prompt), ExtractJobTargetResponse.class);
+    }
+
+    private CvAnalysisResponse analyzeWithText(String cvText, String jobDescription,
+            String jobTitle, String jobSkills, String jobRequirements) {
+        String prompt = promptBuilder.buildAnalyzePrompt(Map.of(
+                "CV_TEXT", nvl(cvText),
+                "JOB_TITLE", nvl(jobTitle),
+                "JOB_DESCRIPTION", nvl(jobDescription),
+                "JOB_SKILLS", nvl(jobSkills),
+                "JOB_REQUIREMENTS", nvl(jobRequirements),
+                "EXPERIENCE_LEVEL", ""
+        ));
+        return parse(callAi(prompt), CvAnalysisResponse.class);
+    }
+
+    private CvImproveStructuredResponse improveWithText(String cvText, String jobDescription,
+            String jobTitle, String jobSkills, String jobRequirements) {
+        String prompt = promptBuilder.buildImproveStructuredPrompt(Map.of(
+                "CV_TEXT", nvl(cvText),
+                "JOB_TITLE", nvl(jobTitle),
+                "JOB_DESCRIPTION", nvl(jobDescription),
+                "JOB_SKILLS", nvl(jobSkills),
+                "JOB_REQUIREMENTS", nvl(jobRequirements)
+        ));
+        return parse(callAi(prompt), CvImproveStructuredResponse.class);
     }
 }
