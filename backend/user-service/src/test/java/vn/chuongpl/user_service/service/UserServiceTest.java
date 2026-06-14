@@ -15,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.ChangePasswordRequest;
 import vn.chuongpl.user_service.dtos.request.UpdateRolesRequest;
+import vn.chuongpl.user_service.dtos.request.UserUpdateRequest;
 import vn.chuongpl.user_service.dtos.response.UserResponse;
 import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
@@ -89,6 +90,76 @@ class UserServiceTest {
         assertEquals(Set.of("ADMIN"), actual.getRoles());
         assertEquals(1, user.getRoles().size());
         verify(roleService).findById("ADMIN");
+    }
+
+    // ── updateUserById uniqueness guards ────────────────────────────────────────
+
+    @Test
+    void updateUserById_shouldThrowEmailExistedWhenEmailTakenByAnotherUser() {
+        User user = User.builder().id("u1").email("old@test.com").build();
+        when(userRepository.findByIdAndDeletedFalse("u1")).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmailAndDeletedFalse("new@test.com")).thenReturn(true);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> userService.updateUserById("u1", new UserUpdateRequest(null, "new@test.com", null, null)));
+
+        assertEquals(ErrorCode.EMAIL_EXISTED, ex.getErrorCode());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void updateUserById_shouldNotThrowWhenEmailIsUnchanged() {
+        User user = User.builder().id("u1").email("same@test.com").build();
+        when(userRepository.findByIdAndDeletedFalse("u1")).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toUserResponse(user)).thenReturn(UserResponse.builder().id("u1").build());
+
+        // same email as current → uniqueness check must be skipped
+        userService.updateUserById("u1", new UserUpdateRequest(null, "same@test.com", null, null));
+
+        verify(userRepository, never()).existsByEmailAndDeletedFalse(any());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserById_shouldThrowPhoneExistedWhenPhoneTakenByAnotherUser() {
+        User user = User.builder().id("u1").phone("0901111111").build();
+        when(userRepository.findByIdAndDeletedFalse("u1")).thenReturn(Optional.of(user));
+        when(userRepository.existsByPhoneAndDeletedFalse("0909999999")).thenReturn(true);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> userService.updateUserById("u1", new UserUpdateRequest(null, null, null, "0909999999")));
+
+        assertEquals(ErrorCode.PHONE_EXISTED, ex.getErrorCode());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void updateUserById_shouldNotThrowWhenPhoneIsUnchanged() {
+        User user = User.builder().id("u1").phone("0901111111").build();
+        when(userRepository.findByIdAndDeletedFalse("u1")).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toUserResponse(user)).thenReturn(UserResponse.builder().id("u1").build());
+
+        userService.updateUserById("u1", new UserUpdateRequest(null, null, null, "0901111111"));
+
+        verify(userRepository, never()).existsByPhoneAndDeletedFalse(any());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserById_shouldSkipUniquenessChecksWhenEmailAndPhoneAreNull() {
+        User user = User.builder().id("u1").email("e@test.com").phone("0901111111").build();
+        when(userRepository.findByIdAndDeletedFalse("u1")).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toUserResponse(user)).thenReturn(UserResponse.builder().id("u1").build());
+
+        // null fields = partial update; no uniqueness check should run
+        userService.updateUserById("u1", new UserUpdateRequest("New Name", null, null, null));
+
+        verify(userRepository, never()).existsByEmailAndDeletedFalse(any());
+        verify(userRepository, never()).existsByPhoneAndDeletedFalse(any());
+        verify(userRepository).save(user);
     }
 
     @Test

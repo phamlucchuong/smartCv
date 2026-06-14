@@ -66,6 +66,16 @@ public class UserService {
     public UserResponse updateUserById(String id, UserUpdateRequest request) {
         User user = userRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmailAndDeletedFalse(request.getEmail())) {
+                throw new AppException(ErrorCode.EMAIL_EXISTED);
+            }
+        }
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            if (userRepository.existsByPhoneAndDeletedFalse(request.getPhone())) {
+                throw new AppException(ErrorCode.PHONE_EXISTED);
+            }
+        }
         userMapper.toUpdate(user, request);
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));

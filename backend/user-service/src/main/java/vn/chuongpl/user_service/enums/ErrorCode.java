@@ -16,6 +16,7 @@ public enum ErrorCode {
     ROLE_NOT_FOUND(1009, "Role not found"),
     INVALID_ROLE(1010, "Invalid role, must be CANDIDATE or RECRUITER"),
     EMAIL_EXISTED(3001, "Email already exists"),
+    PHONE_EXISTED(3006, "Phone number already exists"),
     INVALID_OTP(3002, "Invalid or expired OTP"),
     USER_NOT_VERIFIED(3003, "User not verified, please verify with OTP"),
     USER_ALREADY_VERIFIED(3004, "User is already verified"),

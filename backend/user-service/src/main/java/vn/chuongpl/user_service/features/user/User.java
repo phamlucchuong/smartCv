@@ -2,6 +2,7 @@ package vn.chuongpl.user_service.features.user;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.*;
 import vn.chuongpl.user_service.features.role.Role;
 
@@ -22,6 +23,7 @@ public class User {
     String fullName;
     String email;
     String password;
+    @Indexed(sparse = true)
     String phone;
     @Field(name = "avt_image_id")
     String avtImageId;
