@@ -6,6 +6,7 @@ import vn.chuongpl.job_service.enums.ExperienceLevel;
 import vn.chuongpl.job_service.enums.JobStatus;
 import vn.chuongpl.job_service.enums.JobType;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class JobResponse {
+public class JobResponse implements Serializable {
     String id;
     String recruiterId;
     String title;

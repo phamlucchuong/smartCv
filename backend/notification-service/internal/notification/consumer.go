@@ -104,7 +104,7 @@ func (c *Consumer) Listen() error {
 
 			c.logger.Info("received otp message from rabbitmq", "target", msg.Target, "type", msg.TargetType)
 
-			err := c.notiSvc.SendOTP(context.Background(), msg.Target, msg.TargetType, 5)
+			err := c.notiSvc.SendOTP(context.Background(), msg.Target, msg.TargetType, 1)
 			if err != nil {
 				c.logger.Error("failed to send otp from consumer", "error", err)
 			}
