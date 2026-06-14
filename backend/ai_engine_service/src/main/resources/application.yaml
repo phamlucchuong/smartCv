@@ -8,6 +8,14 @@ spring:
     import: optional:file:../.env[.properties]
   application:
     name: ai_engine_service
+  ai:
+    anthropic:
+      chat:
+        enabled: false
+    azure:
+      openai:
+        chat:
+          enabled: false
   data:
     mongodb:
       host: ${MONGO_DB_HOST:localhost}
