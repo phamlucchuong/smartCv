@@ -1,4 +1,5 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 
 const ACCESS_COOKIE = 'smart_cv_token';
 const REFRESH_COOKIE = 'smart_cv_refresh';
@@ -29,9 +30,49 @@ export const AXIOS_INSTANCE = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+function getPrefixedUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  if (
+    url.startsWith('/user/') ||
+    url.startsWith('/job/') ||
+    url.startsWith('/application/') ||
+    url.startsWith('/notification/') ||
+    url.startsWith('/ai/')
+  ) {
+    return url;
+  }
+
+  if (url.startsWith('/api/jobs') || url.startsWith('/api/home')) {
+    return `/job${url}`;
+  }
+  if (
+    url.startsWith('/api/users') ||
+    url.startsWith('/api/auth') ||
+    url.startsWith('/api/candidates') ||
+    url.startsWith('/api/companies') ||
+    url.startsWith('/api/wishlists')
+  ) {
+    return `/user${url}`;
+  }
+  if (url.startsWith('/api/applications') || url.startsWith('/api/assessments')) {
+    return `/application${url}`;
+  }
+  if (url.startsWith('/api/ai') || url.startsWith('/api/recommend')) {
+    return `/ai${url}`;
+  }
+  if (url.startsWith('/api/otp')) {
+    return `/notification${url}`;
+  }
+
+  return url;
+}
+
 AXIOS_INSTANCE.interceptors.request.use((config) => {
   const token = getCookie(ACCESS_COOKIE);
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (config.url) {
+    config.url = getPrefixedUrl(config.url);
+  }
   return config;
 });
 
