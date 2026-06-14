@@ -18,8 +18,8 @@ export * from './generated/application/application-controller/application-contro
 export * from './generated/application/assessment-controller/assessment-controller';
 
 // AI service
-export * from './generated/ai/analysis/analysis';
-export * from './generated/ai/ai-admin/ai-admin';
+export * from './generated/ai/analysis-controller/analysis-controller';
+export * from './generated/ai/ai-admin-controller/ai-admin-controller';
 
 // Models (root static spec)
 export * from './generated/model';

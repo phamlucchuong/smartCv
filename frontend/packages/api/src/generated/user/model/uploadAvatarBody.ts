@@ -5,8 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export interface CvImproveRequest {
-  cvText?: string;
-  cvUrl?: string;
-  jobId: string;
-}
+export type UploadAvatarBody = {
+  file: Blob;
+};

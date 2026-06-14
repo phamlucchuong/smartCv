@@ -39,6 +39,7 @@ public class CandidateService {
     UserRepository userRepository;
     CandidateMapper candidateMapper;
     JobClient jobClient;
+    S3Service s3Service;
 
     public CandidateResponse create(CandidateRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -104,6 +105,16 @@ public class CandidateService {
 
     public CandidateResponse getMe(String userId) {
         return getByUserId(userId);
+    }
+
+    public String uploadAvatar(String userId, org.springframework.web.multipart.MultipartFile file) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        String avatarUrl = s3Service.uploadAvatar(file, userId);
+        candidate.setAvatarUrl(avatarUrl);
+        candidate.setUpdatedAt(LocalDateTime.now());
+        candidateRepository.save(candidate);
+        return avatarUrl;
     }
 
     public CandidateResponse saveCvUrl(String userId, String cvUrl) {

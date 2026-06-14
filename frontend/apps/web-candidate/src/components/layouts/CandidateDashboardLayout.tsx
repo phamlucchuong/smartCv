@@ -17,6 +17,7 @@ import {
 import * as React from 'react'
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, cn } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
+import { useGetMe2 } from '@smart-cv/api'
 import { usePreferencesStore } from '../../store/usePreferencesStore'
 import { useAuthStore } from '../../store/useAuthStore'
 
@@ -45,11 +46,23 @@ export function CandidateDashboardLayout() {
     other: true,
   })
 
-  const { email, signOut } = useAuthStore()
+  const { email, isAuthenticated, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
   const theme = usePreferencesStore((s) => s.theme)
   const language = usePreferencesStore((s) => s.language)
   const toggleTheme = usePreferencesStore((s) => s.toggleTheme)
   const toggleLanguage = usePreferencesStore((s) => s.toggleLanguage)
+
+  // Fetch profile once to get the real fullName and avatarUrl; cache them in the global auth store
+  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && (!fullName || !avatarUrl) } })
+  React.useEffect(() => {
+    const name = profileData?.data?.fullName
+    if (name) setFullName(name)
+    const avatar = profileData?.data?.avatarUrl
+    if (avatar) setAvatarUrl(avatar)
+  }, [profileData, setFullName, setAvatarUrl])
+
+  // Derived display values
+  const displayName = fullName ?? email?.split('@')[0] ?? 'Account'
 
   const navGroups: NavGroup[] = [
     {
@@ -181,16 +194,34 @@ export function CandidateDashboardLayout() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="hover:bg-accent flex items-center gap-2 rounded-lg px-1.5 py-1">
-                  <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold">
-                    {email?.charAt(0).toUpperCase() ?? '?'}
+                <button className="rounded-full bg-primary/20 border border-primary/30 flex items-center gap-2 px-3 py-1.5 cursor-pointer">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound className="h-4 w-4" />
+                    )}
                   </div>
-                  <div className="hidden text-left leading-tight md:block">
-                    <div className="text-sm font-medium">{email?.split('@')[0] ?? 'Account'}</div>
-                  </div>
+                  <span className="text-sm font-medium text-foreground">{displayName}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-52">
+                <div className="flex items-center gap-3 px-3 py-2">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{displayName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{email}</p>
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>{t('account_my_profile')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
-import { registerSignOutHandler } from '@smart-cv/api'
+import { registerSignOutHandler, useGetMe2 } from '@smart-cv/api'
 import { Toaster } from 'sonner'
 import { usePreferencesStore } from '../store/usePreferencesStore'
 import { useAuthStore } from '../store/useAuthStore'
@@ -47,7 +47,7 @@ function RootComponent() {
   const [jobHighlightIndex, setJobHighlightIndex] = React.useState(0)
   const [resourceHighlightIndex, setResourceHighlightIndex] = React.useState(0)
 
-  const { isAuthenticated, email, signOut } = useAuthStore()
+  const { isAuthenticated, email, fullName, setFullName, signOut } = useAuthStore()
   const theme = usePreferencesStore((state) => state.theme)
   const language = usePreferencesStore((state) => state.language)
   const toggleTheme = usePreferencesStore((state) => state.toggleTheme)
@@ -133,6 +133,16 @@ function RootComponent() {
   React.useEffect(() => {
     registerSignOutHandler(() => useAuthStore.getState().signOut())
   }, [])
+
+  // Fetch profile once to cache fullName globally
+  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && !fullName } })
+  React.useEffect(() => {
+    const name = profileData?.data?.fullName
+    if (name) setFullName(name)
+  }, [profileData, setFullName])
+
+  // Derived display values for header
+  const displayName = fullName ?? email?.split('@')[0] ?? 'Account'
 
   // auth state is derived from cookies in useAuthStore directly
 
@@ -254,7 +264,7 @@ function RootComponent() {
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
                     <UserRound className="h-4 w-4" />
                   </div>
-                  <span className="text-sm font-medium text-foreground">{email?.split('@')[0] ?? 'Account'}</span>
+                  <span className="text-sm font-medium text-foreground">{displayName}</span>
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
                 </div>
 
@@ -266,7 +276,7 @@ function RootComponent() {
                       <UserRound className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{email?.split('@')[0] ?? 'Account'}</p>
+                      <p className="text-sm font-semibold text-foreground">{displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{email ?? ''}</p>
                     </div>
                   </div>

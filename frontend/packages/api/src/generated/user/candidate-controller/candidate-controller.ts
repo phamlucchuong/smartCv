@@ -31,11 +31,13 @@ import type {
   ApiResponseListCvItem,
   ApiResponseListEnrichedJobSuggestion,
   ApiResponsePageResponseCandidateResponse,
+  ApiResponseString,
   ApiResponseVoid,
   CandidateRequest,
   GetAll1Params,
   NotificationPreferences,
   PrivacySettings,
+  UploadAvatarBody,
   UploadCvBody
 } from '.././model';
 
@@ -501,6 +503,64 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getCreate1MutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const uploadAvatar = (
+    uploadAvatarBody: UploadAvatarBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseString>(
+      {url: `/api/candidates/me/avatar`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: uploadAvatarBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getUploadAvatarMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,{data: UploadAvatarBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,{data: UploadAvatarBody}, TContext> => {
+
+const mutationKey = ['uploadAvatar'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadAvatar>>, {data: UploadAvatarBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadAvatar(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof uploadAvatar>>>
+    export type UploadAvatarMutationBody = UploadAvatarBody
+    export type UploadAvatarMutationError = unknown
+
+    export const useUploadAvatar = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,{data: UploadAvatarBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof uploadAvatar>>,
+        TError,
+        {data: UploadAvatarBody},
+        TContext
+      > => {
+
+      const mutationOptions = getUploadAvatarMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

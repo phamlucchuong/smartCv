@@ -4,11 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { InterviewQuestionsResponse } from './interviewQuestionsResponse';
 
-export interface ApiResponseInterviewQuestionsResponse {
+export interface ApiResponseString {
   ok?: boolean;
   code?: number;
   message?: string;
-  data?: InterviewQuestionsResponse;
+  data?: string;
 }

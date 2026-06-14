@@ -67,6 +67,17 @@ public class CandidateController {
         return ApiResponse.<CandidateResponse>builder().data(candidateService.getMe(userId)).build();
     }
 
+    @PostMapping("/me/avatar")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<String> uploadAvatar(@RequestParam("file") MultipartFile file,
+                                             @AuthenticationPrincipal String userId) {
+        String avatarUrl = candidateService.uploadAvatar(userId, file);
+        return ApiResponse.<String>builder()
+                .data(avatarUrl)
+                .message("Avatar uploaded successfully")
+                .build();
+    }
+
     @PostMapping("/cv/upload")
     @PreAuthorize("hasRole('CANDIDATE')")
     public ApiResponse<CvUploadResponse> uploadCv(@RequestParam("file") MultipartFile file,
