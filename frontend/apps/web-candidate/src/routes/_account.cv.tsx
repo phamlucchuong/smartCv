@@ -57,7 +57,13 @@ function MyCVPage() {
   const { t } = useTranslation()
   const lang = usePreferencesStore((s) => s.language)
   const { isAuthenticated } = useAuthStore()
-  const { data, isLoading, isError } = useListCvs({ query: { enabled: isAuthenticated } })
+  const { data, isLoading, isError } = useListCvs({
+    query: {
+      enabled: isAuthenticated,
+      staleTime: 30 * 60 * 1000,     // refetch before the 60-min S3 pre-signed URL TTL expires
+      refetchOnWindowFocus: true,
+    },
+  })
   const queryClient = useQueryClient()
 
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
