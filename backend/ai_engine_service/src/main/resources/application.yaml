@@ -48,7 +48,6 @@ app:
     base-url: ${APPLICATION_SERVICE_URL:http://localhost:8083/application}
   ai:
     recommend-batch-size: ${AI_RECOMMEND_BATCH:20}
-    active-provider: ${AI_ACTIVE_PROVIDER:groq}
     providers:
       groq:
         api-key: ${GROQ_API_KEY:}

@@ -5,13 +5,14 @@ import { useTranslation } from '@smart-cv/i18n'
 import { Upload, FileText, Star, Trash2, RefreshCw, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  useListCvs, useSetDefaultCv, useDeleteCv, useReanalyzeCv,
+  useListCvs, useSetDefaultCv, useDeleteCv, useReanalyzeCv, useAnalyzeCv,
   getListCvsQueryKey, AXIOS_INSTANCE,
 } from '@smart-cv/api'
 import type { UserModels } from '@smart-cv/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/useAuthStore'
 import { usePreferencesStore } from '../store/usePreferencesStore'
+import { CvAnalysisPanel } from '../components/cv/CvAnalysisPanel'
 
 export const Route = createFileRoute('/_account/cv')({
   component: MyCVPage,
@@ -140,6 +141,33 @@ function MyCVPage() {
         queryClient.invalidateQueries({ queryKey: getListCvsQueryKey() })
       },
       onError: () => toast.error(lang === 'VI' ? 'Xóa thất bại' : 'Failed to delete CV'),
+    },
+  })
+
+  const [analyzingCvIds, setAnalyzingCvIds] = React.useState<Set<string>>(new Set())
+
+  const analyzeCvMutation = useAnalyzeCv({
+    mutation: {
+      onMutate: (variables) => {
+        setAnalyzingCvIds((prev) => new Set(prev).add(variables.data.cvId))
+      },
+      onSuccess: (_data, variables) => {
+        toast.success(lang === 'VI' ? 'Phân tích CV hoàn thành!' : 'CV analysis complete!')
+        setAnalyzingCvIds((prev) => {
+          const next = new Set(prev)
+          next.delete(variables.data.cvId)
+          return next
+        })
+        queryClient.invalidateQueries({ queryKey: getListCvsQueryKey() })
+      },
+      onError: (_err, variables) => {
+        toast.error(lang === 'VI' ? 'Phân tích CV thất bại. Vui lòng thử lại.' : 'CV analysis failed. Please try again.')
+        setAnalyzingCvIds((prev) => {
+          const next = new Set(prev)
+          next.delete(variables.data.cvId)
+          return next
+        })
+      },
     },
   })
 
@@ -348,6 +376,18 @@ function MyCVPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={!cv.id || (cv.id != null && analyzingCvIds.has(cv.id))}
+                          onClick={() => cv.id && analyzeCvMutation.mutate({ data: { cvId: cv.id } })}
+                          className="flex items-center gap-1.5 text-xs h-9 text-[var(--ai)] border-[var(--ai)]/30 hover:bg-[var(--ai)]/5"
+                        >
+                          <Sparkles className={`h-3.5 w-3.5 ${cv.id != null && analyzingCvIds.has(cv.id) ? 'animate-pulse' : ''}`} />
+                          {cv.id != null && analyzingCvIds.has(cv.id)
+                            ? (lang === 'VI' ? 'Đang phân tích...' : 'Analyzing...')
+                            : (lang === 'VI' ? 'Phân tích AI' : 'AI Analyze')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           disabled={reanalyzeDisabled}
                           onClick={() => cv.id && reanalyzeMutation.mutate({ cvId: cv.id })}
                           className="flex items-center gap-1.5 text-xs h-9"
@@ -435,16 +475,11 @@ function MyCVPage() {
                         </span>
                       </div>
 
-                      {cv.analysisResult && (
-                        <div className="flex flex-col gap-1 p-3 rounded-lg bg-background/50 border border-border/40 text-sm">
-                          <span className="text-muted-foreground font-semibold mb-1">
-                            {lang === 'VI' ? 'Kết quả phân tích' : 'Analysis Result'}
-                          </span>
-                          <p className="text-xs text-foreground/90 whitespace-pre-line leading-relaxed">
-                            {cv.analysisResult}
-                          </p>
-                        </div>
-                      )}
+                      <CvAnalysisPanel
+                        analysisResultJson={cv.analysisResult}
+                        analysisStatus={cv.analysisStatus}
+                        onRetry={() => cv.id && analyzeCvMutation.mutate({ data: { cvId: cv.id } })}
+                      />
                     </div>
                   </div>
                 </div>

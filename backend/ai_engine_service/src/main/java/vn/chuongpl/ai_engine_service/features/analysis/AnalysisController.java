@@ -8,10 +8,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.ai_engine_service.dtos.ApiResponse;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
+import vn.chuongpl.ai_engine_service.dtos.request.CvFullAnalysisRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvImproveRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.InterviewQuestionsRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.JobRecommendRequest;
 import vn.chuongpl.ai_engine_service.dtos.response.CvAnalysisResponse;
+import vn.chuongpl.ai_engine_service.dtos.response.CvFullAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvImprovementResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.InterviewQuestionsResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.JobRecommendationResponse;
@@ -68,6 +70,17 @@ public class AnalysisController {
         return ApiResponse.<InterviewQuestionsResponse>builder()
                 .data(analysisService.generateInterviewQuestions(request))
                 .message("Interview questions generated successfully")
+                .build();
+    }
+
+    @PostMapping("/analyze-cv")
+    @PreAuthorize("hasAuthority('ROLE_CANDIDATE')")
+    public ApiResponse<CvFullAnalysisResponse> analyzeCv(
+            @RequestBody @Valid CvFullAnalysisRequest request,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<CvFullAnalysisResponse>builder()
+                .data(analysisService.analyzeCv(request, userId))
+                .message("CV analyzed successfully")
                 .build();
     }
 }

@@ -18,10 +18,12 @@ import type {
   AnalyzeUploadTestBody,
   AnalyzeUploadTestParams,
   ApiResponseCvAnalysisResponse,
+  ApiResponseCvFullAnalysisResponse,
   ApiResponseCvImprovementResponse,
   ApiResponseInterviewQuestionsResponse,
   ApiResponseJobRecommendationResponse,
   CvAnalyzeRequest,
+  CvFullAnalysisRequest,
   CvImproveRequest,
   InterviewQuestionsRequest,
   JobRecommendRequest
@@ -325,6 +327,64 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getAnalyzeUploadTestMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const analyzeCv = (
+    cvFullAnalysisRequest: CvFullAnalysisRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseCvFullAnalysisResponse>(
+      {url: `/api/ai/analyze-cv`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: cvFullAnalysisRequest, signal
+    },
+      options);
+    }
+  
+
+
+export const getAnalyzeCvMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeCv>>, TError,{data: CvFullAnalysisRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzeCv>>, TError,{data: CvFullAnalysisRequest}, TContext> => {
+
+const mutationKey = ['analyzeCv'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeCv>>, {data: CvFullAnalysisRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  analyzeCv(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzeCvMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeCv>>>
+    export type AnalyzeCvMutationBody = CvFullAnalysisRequest
+    export type AnalyzeCvMutationError = unknown
+
+    export const useAnalyzeCv = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeCv>>, TError,{data: CvFullAnalysisRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof analyzeCv>>,
+        TError,
+        {data: CvFullAnalysisRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAnalyzeCvMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

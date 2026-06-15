@@ -34,6 +34,14 @@ public class PromptBuilder {
         return apply(load("prompts/extract_skills.md"), vars);
     }
 
+    public String buildExtractJobTargetPrompt(Map<String, Object> vars) {
+        return apply(load("prompts/extract_job_target.md"), vars);
+    }
+
+    public String buildImproveStructuredPrompt(Map<String, Object> vars) {
+        return apply(load("prompts/improve_cv_structured.md"), vars);
+    }
+
     public String systemPrompt() {
         return load("prompts/skill.md");
     }
