@@ -55,8 +55,8 @@ def test_detect_chapters_finds_all():
 def test_detect_chapters_body_indices():
     doc = _make_doc_with_styles()
     chapters = detect_chapters(doc)
-    # chapter 1 heading is index 0; body should be 1, 2
-    assert len(chapters[0].body_indices) == 2
+    assert chapters[0].body_indices == [1, 2]
+    assert chapters[1].body_indices == [4]
 
 
 def test_get_paragraph_text_concatenates_runs():
@@ -90,6 +90,7 @@ def test_replace_paragraph_text_no_runs_is_noop():
     for run in p.runs:
         run.text = ""
     replace_paragraph_text(p, "new text")  # should not raise
+    assert get_paragraph_text(p) == ""
 
 
 def test_clear_paragraph_empties_all_text():
