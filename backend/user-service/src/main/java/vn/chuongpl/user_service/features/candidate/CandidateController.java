@@ -140,7 +140,9 @@ public class CandidateController {
     public ApiResponse<Void> reanalyzeCv(@PathVariable String cvId, @AuthenticationPrincipal String userId) {
         CvItem cv = candidateService.getCvAnalysis(userId, cvId);
         candidateService.markCvReanalyzing(userId, cvId);
-        skillExtractPublisher.publish(userId, cv.getUrl());
+        String urlForAnalysis = cv.getS3Key() != null
+                ? s3Service.generateFreshUrl(cv.getS3Key()) : cv.getUrl();
+        skillExtractPublisher.publish(userId, urlForAnalysis);
         return ApiResponse.<Void>builder().message("CV re-analysis triggered").build();
     }
 

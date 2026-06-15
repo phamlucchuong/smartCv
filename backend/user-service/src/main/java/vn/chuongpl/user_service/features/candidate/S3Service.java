@@ -100,10 +100,7 @@ public class S3Service {
     }
 
     public String generateFreshUrl(String key) {
-        if (!endpointUrl.isBlank()) {
-            return generatePresignedUrl(key);   // MinIO: pre-signed
-        }
-        return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;  // AWS: permanent
+        return generatePresignedUrl(key);
     }
 
     public String generatePresignedUrl(String key) {
