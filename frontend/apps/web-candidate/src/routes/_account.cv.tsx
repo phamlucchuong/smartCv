@@ -376,12 +376,12 @@ function MyCVPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={analyzingCvIds.has(cv.id ?? '') || analyzeCvMutation.isPending}
+                          disabled={!cv.id || (cv.id != null && analyzingCvIds.has(cv.id))}
                           onClick={() => cv.id && analyzeCvMutation.mutate({ data: { cvId: cv.id } })}
                           className="flex items-center gap-1.5 text-xs h-9 text-[var(--ai)] border-[var(--ai)]/30 hover:bg-[var(--ai)]/5"
                         >
-                          <Sparkles className={`h-3.5 w-3.5 ${analyzingCvIds.has(cv.id ?? '') ? 'animate-pulse' : ''}`} />
-                          {analyzingCvIds.has(cv.id ?? '')
+                          <Sparkles className={`h-3.5 w-3.5 ${cv.id != null && analyzingCvIds.has(cv.id) ? 'animate-pulse' : ''}`} />
+                          {cv.id != null && analyzingCvIds.has(cv.id)
                             ? (lang === 'VI' ? 'Đang phân tích...' : 'Analyzing...')
                             : (lang === 'VI' ? 'Phân tích AI' : 'AI Analyze')}
                         </Button>
