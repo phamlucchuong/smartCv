@@ -21,6 +21,8 @@ import java.util.UUID;
 @Slf4j
 public class S3Service {
 
+    public record CvUploadResult(String s3Key, String url) {}
+
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
 
@@ -74,7 +76,7 @@ public class S3Service {
         return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
     }
 
-    public String uploadCv(MultipartFile file, String candidateId) {
+    public CvUploadResult uploadCv(MultipartFile file, String candidateId) {
         validateFile(file);
 
         String key = "cvs/" + candidateId + "/" + UUID.randomUUID() + ".pdf";
@@ -93,6 +95,11 @@ public class S3Service {
             throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
         }
 
+        String url = generateFreshUrl(key);
+        return new CvUploadResult(key, url);
+    }
+
+    public String generateFreshUrl(String key) {
         return generatePresignedUrl(key);
     }
 
