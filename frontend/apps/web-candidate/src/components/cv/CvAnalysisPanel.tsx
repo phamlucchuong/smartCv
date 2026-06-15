@@ -107,16 +107,16 @@ export function CvAnalysisPanel({ analysisResultJson, analysisStatus, onRetry }:
       {/* Score header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-baseline gap-1">
-          <span className={cn('text-4xl font-bold tabular-nums', scoreColor(analysis.overallScore))}>
-            {analysis.overallScore}
+          <span className={cn('text-4xl font-bold tabular-nums', scoreColor(analysis.overallScore ?? 0))}>
+            {analysis.overallScore ?? 0}
           </span>
           <span className="text-sm text-muted-foreground">/ 100</span>
-          <span className={cn('ml-2 text-sm font-medium', scoreColor(analysis.overallScore))}>
-            · {analysis.scoreLabel}
+          <span className={cn('ml-2 text-sm font-medium', scoreColor(analysis.overallScore ?? 0))}>
+            · {analysis.scoreLabel ?? ''}
           </span>
         </div>
         <Badge variant="outline" className="text-xs">
-          {t('cv_analysis_target_position')}: {analysis.targetPosition}
+          {t('cv_analysis_target_position')}: {analysis.targetPosition ?? ''}
         </Badge>
       </div>
 
@@ -162,7 +162,7 @@ export function CvAnalysisPanel({ analysisResultJson, analysisStatus, onRetry }:
           <CollapsibleSection title={t('cv_analysis_strengths')} count={analysis.strengths.length}>
             <ul className="space-y-2">
               {analysis.strengths.map((s, i) => (
-                <li key={i} className="text-sm">
+                <li key={`${s.area}-${i}`} className="text-sm">
                   <span className="font-medium text-emerald-600 dark:text-emerald-400">{s.area}:</span>{' '}
                   <span className="text-muted-foreground">{s.detail}</span>
                 </li>
@@ -175,7 +175,7 @@ export function CvAnalysisPanel({ analysisResultJson, analysisStatus, onRetry }:
           <CollapsibleSection title={t('cv_analysis_weaknesses')} count={analysis.weaknesses.length}>
             <ul className="space-y-2">
               {analysis.weaknesses.map((w, i) => (
-                <li key={i} className="text-sm">
+                <li key={`${w.area}-${i}`} className="text-sm">
                   <span className="font-medium text-amber-600 dark:text-amber-400">{w.area}:</span>{' '}
                   <span className="text-muted-foreground">{w.detail}</span>
                 </li>
@@ -188,7 +188,7 @@ export function CvAnalysisPanel({ analysisResultJson, analysisStatus, onRetry }:
           <CollapsibleSection title={t('cv_analysis_tips')} count={analysis.tips.length}>
             <ul className="space-y-3">
               {analysis.tips.map((tip, i) => (
-                <li key={i} className="text-sm space-y-1">
+                <li key={`${tip.area}-${i}`} className="text-sm space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{tip.area}</span>
                     <span className={cn('px-1.5 py-0.5 rounded text-xs border', priorityBadgeClass(tip.priority))}>
