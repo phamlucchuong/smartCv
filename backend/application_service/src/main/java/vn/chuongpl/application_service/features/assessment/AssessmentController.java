@@ -34,6 +34,35 @@ public class AssessmentController {
                 .build();
     }
 
+    @GetMapping("/api/assessments")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<List<AssessmentResponse>> getRecruiterAssessments(
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<AssessmentResponse>>builder()
+                .data(assessmentService.getRecruiterAssessments(userId))
+                .build();
+    }
+
+    @PutMapping("/api/assessments/{id}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<AssessmentResponse> updateAssessment(
+            @PathVariable String id,
+            @RequestBody AssessmentCreateRequest request,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<AssessmentResponse>builder()
+                .data(assessmentService.updateAssessment(id, request, userId))
+                .build();
+    }
+
+    @DeleteMapping("/api/assessments/{id}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<Void> deleteAssessment(
+            @PathVariable String id,
+            @AuthenticationPrincipal String userId) {
+        assessmentService.deleteAssessment(id, userId);
+        return ApiResponse.<Void>builder().message("Assessment deleted").build();
+    }
+
     @PatchMapping("/api/assessments/{id}/assign")
     @PreAuthorize("hasRole('RECRUITER')")
     public ApiResponse<Void> assignToCandidate(
