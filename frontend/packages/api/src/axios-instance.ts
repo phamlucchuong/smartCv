@@ -95,10 +95,17 @@ AXIOS_INSTANCE.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    if ((import.meta as any).env?.VITE_MOCK_AUTH === 'true') {
+      return Promise.reject(error);
+    }
+
     const refreshToken = getCookie(REFRESH_COOKIE);
     if (!refreshToken) {
       _signOutHandler?.();
-      if (typeof window !== 'undefined') window.location.href = '/signin';
+      if (typeof window !== 'undefined') {
+        const isRecruiter = window.location.pathname.startsWith('/employer') || window.location.port === '3001';
+        window.location.href = isRecruiter ? '/login' : '/signin';
+      }
       return Promise.reject(error);
     }
 
@@ -130,7 +137,10 @@ AXIOS_INSTANCE.interceptors.response.use(
       removeCookieRaw(ACCESS_COOKIE);
       removeCookieRaw(REFRESH_COOKIE);
       _signOutHandler?.();
-      if (typeof window !== 'undefined') window.location.href = '/signin';
+      if (typeof window !== 'undefined') {
+        const isRecruiter = window.location.pathname.startsWith('/employer') || window.location.port === '3001';
+        window.location.href = isRecruiter ? '/login' : '/signin';
+      }
       return Promise.reject(err);
     } finally {
       isRefreshing = false;

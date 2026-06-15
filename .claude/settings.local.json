@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Skill(claude-api)",
+      "Bash(python3 *)",
+      "Read(//usr/bin/**)",
+      "Read(//home/chuongpl/.local/bin/**)",
+      "Bash(python3.12 -m ensurepip --upgrade)",
+      "Bash(curl -sS https://bootstrap.pypa.io/get-pip.py)",
+      "Bash(python3.12)",
+      "Bash(python3.12 --break-system-packages)",
+      "Bash(python3.12 -m pytest tests/test_context_loader.py -v)",
+      "Bash(python3.12 -m pytest tests/test_docx_parser.py -v)",
+      "Bash(python3.12 -m pytest tests/test_llm_client.py -v)",
+      "Bash(python3.12 *)",
+      "Bash(claude --version)"
+    ]
+  }
+}

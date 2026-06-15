@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@smart-cv/ui";
-import { Sparkles, Mail, Lock, Brain, Target, Zap } from "lucide-react";
+import { Sparkles, Mail, Lock, Brain, Target, Zap, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
+import { useState } from "react";
+import { useLoginCandidate } from "@smart-cv/api";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Đăng nhập — SmartCV" }] }),
@@ -12,8 +14,22 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  
+  const [email, setEmail] = useState("hr@company.com");
+  const [password, setPassword] = useState("demo1234");
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const loginMutation = useLoginCandidate();
 
-  const loginRecruiter = () => {
+  const loginRecruiter = async () => {
+    if (!email.trim() || !password.trim()) {
+      toast.error("Vui lòng nhập đầy đủ Email và Mật khẩu");
+      return;
+    }
+    
+    // Temporarily bypass login hook and navigate directly
+    document.cookie = `smart_cv_token=mock-token; Max-Age=86400; path=/; SameSite=Lax`;
+    document.cookie = `smart_cv_refresh=mock-refresh; Max-Age=604800; path=/; SameSite=Lax`;
     toast.success(t("recruiter_login_success"));
     navigate({ to: "/employer" });
   };
@@ -39,8 +55,12 @@ function Login() {
                 <label className="text-sm font-medium">{t("email")}</label>
                 <div className="relative mt-1.5">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <input defaultValue="hr@company.com"
-                    className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm" />
+                  <input 
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm" 
+                  />
                 </div>
               </div>
               <div>
@@ -50,11 +70,32 @@ function Login() {
                 </div>
                 <div className="relative mt-1.5">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <input type="password" defaultValue="demo1234" className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm" />
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-11 pl-9 pr-10 rounded-md border border-input bg-background text-sm" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
               </div>
 
-              <Button className="w-full h-11" onClick={loginRecruiter}>{t("recruiter_continue")}</Button>
+              <Button 
+                className="w-full h-11 gap-2 font-semibold" 
+                onClick={loginRecruiter}
+                disabled={loginMutation.isPending}
+              >
+                {loginMutation.isPending && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                {t("recruiter_continue")}
+              </Button>
 
               <p className="text-center text-sm text-muted-foreground">
                 {t("recruiter_no_account")}{" "}
