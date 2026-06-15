@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from '@smart-cv/i18n'
 import { Badge, Button, cn } from '@smart-cv/ui'
-import type { CvItemAnalysisStatus } from '@smart-cv/api'
+import type { UserModels } from '@smart-cv/api'
 
 interface StrengthItem {
   area: string
@@ -36,7 +36,7 @@ interface CvFullAnalysisResult {
 
 interface CvAnalysisPanelProps {
   analysisResultJson: string | null | undefined
-  analysisStatus: CvItemAnalysisStatus | undefined
+  analysisStatus: UserModels.CvItemAnalysisStatus | undefined
   onRetry: () => void
 }
 
