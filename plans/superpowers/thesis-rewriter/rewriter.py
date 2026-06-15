@@ -44,6 +44,9 @@ def rewrite_chapter1(doc, chapter: ChapterBucket, llm: LLMClient, kb: str) -> No
         original = get_paragraph_text(para).strip()
         if not original:
             continue
+        if not para.runs:
+            warnings.warn(f"Paragraph at index {idx} has no runs — skipping rewrite")
+            continue
         prompt = (
             f"Ngữ cảnh dự án:\n{kb[:20_000]}\n\n"
             f"Mục hiện tại trong báo cáo: {current_section}\n\n"
@@ -59,7 +62,7 @@ def rewrite_chapter1(doc, chapter: ChapterBucket, llm: LLMClient, kb: str) -> No
 
 def rewrite_chapter2(doc, chapter: ChapterBucket, llm: LLMClient, kb: str) -> None:
     prompt = (
-        f"Ngữ cảnh kỹ thuật của dự án SmartCV:\n{kb}\n\n"
+        f"Ngữ cảnh kỹ thuật của dự án SmartCV:\n{kb[:50_000]}\n\n"
         "Viết nội dung học thuật cho chương 'Cơ Sở Lý Thuyết' của đồ án tốt nghiệp "
         "về dự án SmartCV - nền tảng tuyển dụng thông minh. "
         "Trình bày lý thuyết về: React 19, Spring Boot 3, kiến trúc Microservices, "
@@ -157,9 +160,6 @@ def main():
     llm = LLMClient()
     print(f"LLM mode: {llm.mode}")
 
-    print("Applying keyword replacements...")
-    apply_keyword_replacements(doc)
-
     for chapter in chapters:
         title_upper = chapter.title.upper()
         if re.match(r"CHƯƠNG\s+1\b", title_upper):
@@ -171,6 +171,9 @@ def main():
         elif re.match(r"CHƯƠNG\s+[34]\b", title_upper):
             print(f"→ {chapter.title[:40]}: rewrite heading, clear body")
             rewrite_chapter_heading_only(doc, chapter, llm, kb)
+
+    print("Applying keyword replacements to final document...")
+    apply_keyword_replacements(doc)
 
     print(f"Saving → {output}")
     doc.save(str(output))
