@@ -169,17 +169,24 @@ public class CandidateService {
     // ── CV Management ─────────────────────────────────────────────────────────
 
     public List<CvItem> listCvs(String userId) {
-        return candidateRepository.findByUserIdAndDeletedFalse(userId)
+        List<CvItem> cvs = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND))
                 .getCvs();
+        cvs.forEach(cv -> {
+            if (cv.getS3Key() != null) {
+                cv.setUrl(s3Service.generateFreshUrl(cv.getS3Key()));
+            }
+        });
+        return cvs;
     }
 
-    public void addCvToList(String userId, String url, String filename) {
+    public void addCvToList(String userId, String s3Key, String url, String filename) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
         boolean isFirst = candidate.getCvs().isEmpty();
         CvItem item = CvItem.builder()
                 .id(UUID.randomUUID().toString())
+                .s3Key(s3Key)
                 .url(url)
                 .filename(filename)
                 .isDefault(isFirst)
@@ -223,6 +230,17 @@ public class CandidateService {
         }
         candidate.setUpdatedAt(LocalDateTime.now());
         candidateRepository.save(candidate);
+    }
+
+    public String refreshCvUrl(String userId, String cvId) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        CvItem cv = candidate.getCvs().stream()
+                .filter(c -> cvId.equals(c.getId()))
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
+        if (cv.getS3Key() == null) return cv.getUrl();
+        return s3Service.generateFreshUrl(cv.getS3Key());
     }
 
     public CvItem getCvAnalysis(String userId, String cvId) {
