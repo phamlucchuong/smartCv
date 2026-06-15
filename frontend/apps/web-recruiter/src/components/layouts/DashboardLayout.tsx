@@ -69,7 +69,7 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
     {
       key: "intelligence",
       label: t("recruiter_sidebar_group_intelligence"),
-      items: nav.filter((item) => ["/employer/cv-search", "/employer/assessments"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/cv-search", "/employer/assessments", "/employer/profile"].includes(item.to)),
     },
     {
       key: "account",

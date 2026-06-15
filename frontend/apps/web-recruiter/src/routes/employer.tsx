@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLayout";
 import {
-  LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Bell, Settings,
+  LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Bell, Settings, Building2,
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
 
@@ -19,6 +19,7 @@ function EmployerLayoutRoute() {
     { to: "/employer/ats", label: t("recruiter_nav_ats"), icon: Trello },
     { to: "/employer/cv-search", label: t("recruiter_nav_cv_search"), icon: Search },
     { to: "/employer/assessments", label: t("recruiter_nav_assessments"), icon: ClipboardCheck },
+    { to: "/employer/profile", label: t("recruiter_nav_profile"), icon: Building2 },
     { to: "/employer/billing", label: t("recruiter_nav_billing"), icon: CreditCard },
     { to: "/employer/notifications", label: t("recruiter_nav_notifications"), icon: Bell },
     { to: "/employer/settings", label: t("recruiter_nav_settings"), icon: Settings },
