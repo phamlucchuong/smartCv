@@ -29,8 +29,6 @@ import vn.chuongpl.ai_engine_service.dtos.request.CvFullAnalysisRequest;
 import vn.chuongpl.ai_engine_service.dtos.response.CvFullAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvImproveStructuredResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.ExtractJobTargetResponse;
-import vn.chuongpl.ai_engine_service.dtos.response.StrengthItem;
-import vn.chuongpl.ai_engine_service.dtos.response.WeaknessItem;
 import vn.chuongpl.ai_engine_service.integration.user.CvInfoResponse;
 import vn.chuongpl.ai_engine_service.integration.user.UserClient;
 
