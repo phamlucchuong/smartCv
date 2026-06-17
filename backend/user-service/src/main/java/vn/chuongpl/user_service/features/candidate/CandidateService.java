@@ -14,6 +14,8 @@ import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
 import vn.chuongpl.user_service.features.candidate.settings.CandidateSettings;
 import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferences;
+import vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings;
+import vn.chuongpl.user_service.features.candidate.settings.PreferencesSettingsRequest;
 import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
@@ -267,15 +269,15 @@ public class CandidateService {
     // ── Settings ──────────────────────────────────────────────────────────────
 
     public CandidateSettings getSettings(String userId) {
-        return candidateRepository.findByUserIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND))
-                .getSettings();
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        return ensureSettings(candidate);
     }
 
     public void updateNotificationPreferences(String userId, NotificationPreferences prefs) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        candidate.getSettings().setNotifications(prefs);
+        ensureSettings(candidate).setNotifications(prefs != null ? prefs : new NotificationPreferences());
         candidate.setUpdatedAt(LocalDateTime.now());
         candidateRepository.save(candidate);
     }
@@ -283,9 +285,43 @@ public class CandidateService {
     public void updatePrivacySettings(String userId, PrivacySettings privacy) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        candidate.getSettings().setPrivacy(privacy);
+        ensureSettings(candidate).setPrivacy(privacy != null ? privacy : new PrivacySettings());
         candidate.setUpdatedAt(LocalDateTime.now());
         candidateRepository.save(candidate);
+    }
+
+    public PreferencesSettings updatePreferences(String userId, PreferencesSettingsRequest request) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        PreferencesSettings preferences = ensureSettings(candidate).getPreferences();
+        if (request != null) {
+            if (request.getLanguage() != null) {
+                preferences.setLanguage(request.getLanguage());
+            }
+            if (request.getTheme() != null) {
+                preferences.setTheme(request.getTheme());
+            }
+        }
+        candidate.setUpdatedAt(LocalDateTime.now());
+        candidateRepository.save(candidate);
+        return preferences;
+    }
+
+    private CandidateSettings ensureSettings(Candidate candidate) {
+        if (candidate.getSettings() == null) {
+            candidate.setSettings(new CandidateSettings());
+        }
+        CandidateSettings settings = candidate.getSettings();
+        if (settings.getNotifications() == null) {
+            settings.setNotifications(new NotificationPreferences());
+        }
+        if (settings.getPrivacy() == null) {
+            settings.setPrivacy(new PrivacySettings());
+        }
+        if (settings.getPreferences() == null) {
+            settings.setPreferences(new PreferencesSettings());
+        }
+        return settings;
     }
 
     public void deleteAccount(String userId) {

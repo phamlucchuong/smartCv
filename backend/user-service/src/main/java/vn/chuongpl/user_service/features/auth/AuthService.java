@@ -85,14 +85,19 @@ public class AuthService {
 
     public UserResponse register(RegisterRequest request) {
         List<User> existing = userService.findAllByEmail(request.getEmail());
-        boolean hasVerified = existing.stream().anyMatch(User::isVerified);
-        if (hasVerified) throw new AppException(ErrorCode.EMAIL_EXISTED);
+        boolean hasActiveVerified = existing.stream().anyMatch(u -> u.isVerified() && !u.isDeleted());
+        if (hasActiveVerified) throw new AppException(ErrorCode.EMAIL_EXISTED);
+
+        // Reuse unverified non-deleted records (OTP resend case); ignore deleted accounts
+        List<User> reusable = existing.stream()
+                .filter(u -> !u.isVerified() && !u.isDeleted())
+                .collect(java.util.stream.Collectors.toList());
 
         User user;
-        if (!existing.isEmpty()) {
-            user = existing.get(0);
-            for (int i = 1; i < existing.size(); i++) {
-                userService.hardDeleteUser(existing.get(i).getId());
+        if (!reusable.isEmpty()) {
+            user = reusable.get(0);
+            for (int i = 1; i < reusable.size(); i++) {
+                userService.hardDeleteUser(reusable.get(i).getId());
             }
             user.setUpdatedAt(LocalDateTime.now());
         } else {
