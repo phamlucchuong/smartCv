@@ -92,7 +92,7 @@ function NewJob() {
   const [requirementsText, setRequirementsText] = useState("");
   const [benefitsText, setBenefitsText] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
-  const [skills, setSkills] = useState<string[]>(["Java", "Spring Boot", "REST API", "MySQL", "Docker"]);
+  const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [isNegotiable, setIsNegotiable] = useState(false);
   const [errors, setErrors] = useState<CreateJobFormErrors & { deadline?: string }>({});
@@ -124,6 +124,10 @@ function NewJob() {
     requirementsText,
     benefitsText,
     deadline,
+    qualifiedThreshold,
+    rejectThreshold,
+    autoRejectEnabled,
+    requiredTest,
   };
 
   const handleAddSkill = () => {
@@ -250,14 +254,16 @@ function NewJob() {
       navigate({ to: "/employer/jobs" });
     } catch (err: unknown) {
       const error = err as ApiError;
-      if (error.response?.data?.code === 2003) {
+      const message = error.response?.data?.message ?? "";
+      if (error.response?.data?.code === 2003 &&
+          (message.toLowerCase().includes("deadline") || message.toLowerCase().includes("hạn"))) {
         setErrors((current) => ({
           ...current,
           deadline: "Hạn nộp phải sau ngày hôm nay để đăng tin",
         }));
         setStep(0);
       }
-      toast.error(error.response?.data?.message || "Đăng tin thất bại. Tin đã được giữ ở trạng thái nháp.");
+      toast.error(message || "Đăng tin thất bại. Tin đã được giữ ở trạng thái nháp.");
     }
   };
 
@@ -520,8 +526,7 @@ function NewJob() {
           </div>
           <div className="card-surface p-6 text-sm flex justify-between">
             <div>
-              Gói hiện tại: <strong>Pro</strong> •{" "}
-              {isProfileLoading ? "Đang tải quota..." : `Còn lại ${quotaRemaining} tin`}
+              {isProfileLoading ? "Đang tải quota..." : `Quota còn lại: ${quotaRemaining} tin`}
             </div>
           </div>
         </div>
@@ -663,12 +668,16 @@ function DateField({
           onClick={(e) => {
             try {
               e.currentTarget.showPicker();
-            } catch (err) {}
+            } catch {
+              // showPicker not supported in all browsers
+            }
           }}
           onFocus={(e) => {
             try {
               e.currentTarget.showPicker();
-            } catch (err) {}
+            } catch {
+              // showPicker not supported in all browsers
+            }
           }}
           className="w-full h-10 rounded-md border border-input pl-3 pr-10 text-sm bg-background cursor-pointer"
         />

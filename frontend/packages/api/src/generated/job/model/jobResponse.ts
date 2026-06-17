@@ -24,6 +24,10 @@ export interface JobResponse {
   benefits?: string[];
   status?: JobResponseStatus;
   deadline?: string;
+  qualifiedThreshold?: number;
+  rejectThreshold?: number;
+  autoRejectEnabled?: boolean;
+  requiredTest?: string;
   createdAt?: string;
   updatedAt?: string;
 }

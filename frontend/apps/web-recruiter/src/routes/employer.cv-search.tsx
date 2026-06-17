@@ -49,8 +49,9 @@ function CvSearchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
-  // Reset page to 1 when filters change
+  // Reset page to 1 when filters change — intentional derived-state reset
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [keyword, skill, experience, location]);
 

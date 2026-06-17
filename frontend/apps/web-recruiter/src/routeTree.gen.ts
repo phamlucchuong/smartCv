@@ -30,6 +30,7 @@ import { Route as PublicAboutRouteImport } from './routes/_public.about'
 import { Route as EmployerJobsIndexRouteImport } from './routes/employer.jobs.index'
 import { Route as PublicJobsIndexRouteImport } from './routes/_public.jobs.index'
 import { Route as EmployerJobsNewRouteImport } from './routes/employer.jobs.new'
+import { Route as EmployerJobsIdRouteImport } from './routes/employer.jobs.$id'
 import { Route as EmployerApplicantsIdRouteImport } from './routes/employer.applicants.$id'
 import { Route as PublicJobsIdRouteImport } from './routes/_public.jobs.$id'
 
@@ -137,6 +138,11 @@ const EmployerJobsNewRoute = EmployerJobsNewRouteImport.update({
   path: '/jobs/new',
   getParentRoute: () => EmployerRoute,
 } as any)
+const EmployerJobsIdRoute = EmployerJobsIdRouteImport.update({
+  id: '/jobs/$id',
+  path: '/jobs/$id',
+  getParentRoute: () => EmployerRoute,
+} as any)
 const EmployerApplicantsIdRoute = EmployerApplicantsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/employer/': typeof EmployerIndexRoute
   '/jobs/$id': typeof PublicJobsIdRoute
   '/employer/applicants/$id': typeof EmployerApplicantsIdRoute
+  '/employer/jobs/$id': typeof EmployerJobsIdRoute
   '/employer/jobs/new': typeof EmployerJobsNewRoute
   '/jobs/': typeof PublicJobsIndexRoute
   '/employer/jobs/': typeof EmployerJobsIndexRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/employer': typeof EmployerIndexRoute
   '/jobs/$id': typeof PublicJobsIdRoute
   '/employer/applicants/$id': typeof EmployerApplicantsIdRoute
+  '/employer/jobs/$id': typeof EmployerJobsIdRoute
   '/employer/jobs/new': typeof EmployerJobsNewRoute
   '/jobs': typeof PublicJobsIndexRoute
   '/employer/jobs': typeof EmployerJobsIndexRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/employer/': typeof EmployerIndexRoute
   '/_public/jobs/$id': typeof PublicJobsIdRoute
   '/employer/applicants/$id': typeof EmployerApplicantsIdRoute
+  '/employer/jobs/$id': typeof EmployerJobsIdRoute
   '/employer/jobs/new': typeof EmployerJobsNewRoute
   '/_public/jobs/': typeof PublicJobsIndexRoute
   '/employer/jobs/': typeof EmployerJobsIndexRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/employer/'
     | '/jobs/$id'
     | '/employer/applicants/$id'
+    | '/employer/jobs/$id'
     | '/employer/jobs/new'
     | '/jobs/'
     | '/employer/jobs/'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/employer'
     | '/jobs/$id'
     | '/employer/applicants/$id'
+    | '/employer/jobs/$id'
     | '/employer/jobs/new'
     | '/jobs'
     | '/employer/jobs'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/employer/'
     | '/_public/jobs/$id'
     | '/employer/applicants/$id'
+    | '/employer/jobs/$id'
     | '/employer/jobs/new'
     | '/_public/jobs/'
     | '/employer/jobs/'
@@ -452,6 +464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployerJobsNewRouteImport
       parentRoute: typeof EmployerRoute
     }
+    '/employer/jobs/$id': {
+      id: '/employer/jobs/$id'
+      path: '/jobs/$id'
+      fullPath: '/employer/jobs/$id'
+      preLoaderRoute: typeof EmployerJobsIdRouteImport
+      parentRoute: typeof EmployerRoute
+    }
     '/employer/applicants/$id': {
       id: '/employer/applicants/$id'
       path: '/$id'
@@ -512,6 +531,7 @@ interface EmployerRouteChildren {
   EmployerSettingsRoute: typeof EmployerSettingsRoute
   EmployerVerificationRoute: typeof EmployerVerificationRoute
   EmployerIndexRoute: typeof EmployerIndexRoute
+  EmployerJobsIdRoute: typeof EmployerJobsIdRoute
   EmployerJobsNewRoute: typeof EmployerJobsNewRoute
   EmployerJobsIndexRoute: typeof EmployerJobsIndexRoute
 }
@@ -527,6 +547,7 @@ const EmployerRouteChildren: EmployerRouteChildren = {
   EmployerSettingsRoute: EmployerSettingsRoute,
   EmployerVerificationRoute: EmployerVerificationRoute,
   EmployerIndexRoute: EmployerIndexRoute,
+  EmployerJobsIdRoute: EmployerJobsIdRoute,
   EmployerJobsNewRoute: EmployerJobsNewRoute,
   EmployerJobsIndexRoute: EmployerJobsIndexRoute,
 }

@@ -22,6 +22,10 @@ describe('jobForm', () => {
         requirementsText: 'REST API\nDocker\n',
         benefitsText: 'Laptop\nBonus\n',
         deadline: '2026-06-20',
+        qualifiedThreshold: 70,
+        rejectThreshold: 50,
+        autoRejectEnabled: false,
+        requiredTest: 'Không',
       }),
     ).toEqual({
       title: 'Backend Developer',
@@ -36,6 +40,10 @@ describe('jobForm', () => {
       requirements: ['REST API', 'Docker'],
       benefits: ['Laptop', 'Bonus'],
       deadline: '2026-06-20',
+      qualifiedThreshold: 70,
+      rejectThreshold: 50,
+      autoRejectEnabled: false,
+      requiredTest: undefined,
     })
   })
 
@@ -55,6 +63,10 @@ describe('jobForm', () => {
         requirementsText: '',
         benefitsText: '',
         deadline: '',
+        qualifiedThreshold: 80,
+        rejectThreshold: 40,
+        autoRejectEnabled: true,
+        requiredTest: 'Backend Technical Test',
       }),
     ).toEqual({
       title: 'Backend Developer',
@@ -69,6 +81,10 @@ describe('jobForm', () => {
       requirements: [],
       benefits: [],
       deadline: undefined,
+      qualifiedThreshold: 80,
+      rejectThreshold: 40,
+      autoRejectEnabled: true,
+      requiredTest: 'Backend Technical Test',
     })
   })
 

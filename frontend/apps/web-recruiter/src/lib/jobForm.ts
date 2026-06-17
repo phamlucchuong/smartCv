@@ -12,6 +12,10 @@ export type CreateJobFormValues = {
   requirementsText: string
   benefitsText: string
   deadline: string
+  qualifiedThreshold: number
+  rejectThreshold: number
+  autoRejectEnabled: boolean
+  requiredTest: string
 }
 
 export type CreateJobFormErrors = Partial<
@@ -31,6 +35,10 @@ export type CreateJobPayload = {
   requirements: string[]
   benefits: string[]
   deadline?: string
+  qualifiedThreshold: number
+  rejectThreshold: number
+  autoRejectEnabled: boolean
+  requiredTest?: string
 }
 
 function splitMultiline(value: string) {
@@ -77,6 +85,10 @@ export function buildCreateJobPayload(values: CreateJobFormValues): CreateJobPay
     requirements: splitMultiline(values.requirementsText),
     benefits: splitMultiline(values.benefitsText),
     deadline: values.deadline || undefined,
+    qualifiedThreshold: values.qualifiedThreshold,
+    rejectThreshold: values.rejectThreshold,
+    autoRejectEnabled: values.autoRejectEnabled,
+    requiredTest: values.requiredTest === 'Không' ? undefined : values.requiredTest,
   }
 }
 

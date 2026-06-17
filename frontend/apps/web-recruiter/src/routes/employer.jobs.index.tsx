@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@smart-cv/ui";
-import { useGetMyJobs } from "@smart-cv/api";
+import { useGetMyJobs, usePublishJob, useCloseJob, useDeleteJob } from "@smart-cv/api";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
+import { toast } from "sonner";
 import { Plus, Search, MoreVertical } from "lucide-react";
+import type { JobResponse } from "@smart-cv/api";
 
 export const Route = createFileRoute("/employer/jobs/")({
   head: () => ({ meta: [{ title: "Tin tuyển dụng" }] }),
@@ -50,6 +53,77 @@ function formatJobType(jobType?: string) {
   }
 }
 
+type ApiError = { response?: { data?: { message?: string } } };
+
+function JobActionsMenu({ job, onMutated }: { job: JobResponse; onMutated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const navigate = useNavigate();
+  const publishMutation = usePublishJob();
+  const closeMutation = useCloseJob();
+  const deleteMutation = useDeleteJob();
+
+  const run = async (action: () => Promise<unknown>) => {
+    setIsPending(true);
+    setOpen(false);
+    try {
+      await action();
+      onMutated();
+    } catch (err: unknown) {
+      const e = err as ApiError;
+      toast.error(e.response?.data?.message ?? "Thao tác thất bại");
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setOpen((o) => !o)}>
+        <MoreVertical className="size-4" />
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-10 mt-1 w-44 rounded-md border border-border bg-popover shadow-md p-1 text-sm">
+          <button
+            className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
+            onClick={() => {
+              setOpen(false);
+              navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
+            }}
+          >
+            Chỉnh sửa
+          </button>
+          {job.status === "DRAFT" && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
+              onClick={() => run(() => publishMutation.mutateAsync({ id: job.id! }))}
+            >
+              Đăng tin
+            </button>
+          )}
+          {job.status === "ACTIVE" && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-warning"
+              onClick={() => run(() => closeMutation.mutateAsync({ id: job.id! }))}
+            >
+              Đóng tin
+            </button>
+          )}
+          <button
+            className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-danger"
+            onClick={() => {
+              if (!window.confirm("Xóa tin này? Hành động không thể hoàn tác.")) return;
+              run(() => deleteMutation.mutateAsync({ id: job.id! }));
+            }}
+          >
+            Xóa
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function formatDate(date?: string) {
   if (!date) return "Chưa cập nhật";
   return new Intl.DateTimeFormat("vi-VN", {
@@ -62,8 +136,12 @@ function formatDate(date?: string) {
 function EmployerJobsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useGetMyJobs({ page: 1, size: 20 });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["/api/jobs/my"], exact: false });
   const jobs = data?.data?.items ?? [];
   const total = data?.data?.total ?? 0;
 
@@ -151,7 +229,7 @@ function EmployerJobsPage() {
                 {filteredJobs.map((job) => (
                   <tr key={job.id} className="border-t border-border hover:bg-accent/40">
                     <td className="py-3 px-4">
-                      <Link to="/employer/applicants" className="font-medium hover:text-primary">
+                      <Link to="/employer/jobs/$id" params={{ id: job.id! }} className="font-medium hover:text-primary">
                         {job.title || "Untitled job"}
                       </Link>
                       <div className="text-xs text-muted-foreground">
@@ -165,9 +243,7 @@ function EmployerJobsPage() {
                     <td className="py-3 px-4 text-muted-foreground">{formatJobType(job.jobType)}</td>
                     <td className="py-3 px-4 text-muted-foreground">{formatDate(job.createdAt)}</td>
                     <td className="py-3 px-4 text-right">
-                      <Button size="sm" variant="ghost">
-                        <MoreVertical className="size-4" />
-                      </Button>
+                      <JobActionsMenu job={job} onMutated={invalidate} />
                     </td>
                   </tr>
                 ))}
