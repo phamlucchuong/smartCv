@@ -50,6 +50,16 @@ public class JobController {
         return ApiResponse.<PageResponse<JobResponse>>builder().data(jobService.getMyJobs(userId, page, size)).build();
     }
 
+    @GetMapping("/my/{id}")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
+    public ApiResponse<JobResponse> getMyJobById(@PathVariable String id,
+                                                 @AuthenticationPrincipal String userId,
+                                                 Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<JobResponse>builder().data(jobService.getMyJobById(id, userId, isAdmin)).build();
+    }
+
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<JobResponse>> getAllJobs(@RequestParam(defaultValue = "1") int page,
@@ -113,9 +123,13 @@ public class JobController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> deleteJob(@PathVariable String id) {
-        jobService.deleteJob(id);
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
+    public ApiResponse<Void> deleteJob(@PathVariable String id,
+                                       @AuthenticationPrincipal String userId,
+                                       Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        jobService.deleteJob(id, userId, isAdmin);
         return ApiResponse.<Void>builder().message("Delete job successfully").build();
     }
 }

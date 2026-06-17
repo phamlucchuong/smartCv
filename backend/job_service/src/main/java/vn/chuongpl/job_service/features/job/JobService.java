@@ -43,7 +43,17 @@ public class JobService {
         job.setRecruiterId(recruiterId);
         job.setStatus(JobStatus.DRAFT);
         job.setDeleted(false);
+        if (job.getQualifiedThreshold() == null) job.setQualifiedThreshold(70);
+        if (job.getRejectThreshold() == null)    job.setRejectThreshold(50);
+        if (job.getAutoRejectEnabled() == null)  job.setAutoRejectEnabled(false);
         return jobMapper.toJobResponse(jobRepository.save(job));
+    }
+
+    public JobResponse getMyJobById(String id, String userId, boolean isAdmin) {
+        Job job = jobRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new AppException(ErrorCode.JOB_NOT_FOUND));
+        assertOwner(job, userId, isAdmin);
+        return jobMapper.toJobResponse(job);
     }
 
     public JobResponse getJobById(String id) {
@@ -119,10 +129,10 @@ public class JobService {
         return jobMapper.toJobResponse(saved);
     }
 
-    public void deleteJob(String id) {
-        Job job = jobRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.JOB_NOT_FOUND));
-        if (job.isDeleted()) throw new AppException(ErrorCode.JOB_ALREADY_DELETED);
-
+    public void deleteJob(String id, String userId, boolean isAdmin) {
+        Job job = jobRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new AppException(ErrorCode.JOB_NOT_FOUND));
+        assertOwner(job, userId, isAdmin);
         job.setDeleted(true);
         job.setDeletedAt(LocalDateTime.now());
         jobRepository.save(job);

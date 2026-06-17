@@ -33,6 +33,10 @@ public class JobResponse implements Serializable {
     List<String> benefits;
     JobStatus status;
     LocalDate deadline;
+    Integer qualifiedThreshold;
+    Integer rejectThreshold;
+    Boolean autoRejectEnabled;
+    String requiredTest;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

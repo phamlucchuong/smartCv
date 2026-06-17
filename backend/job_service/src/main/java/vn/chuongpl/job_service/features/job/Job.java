@@ -43,6 +43,10 @@ public class Job {
     @Builder.Default
     JobStatus status = JobStatus.DRAFT;
     LocalDate deadline;
+    Integer qualifiedThreshold;
+    Integer rejectThreshold;
+    Boolean autoRejectEnabled;
+    String requiredTest;
     @Builder.Default
     boolean deleted = false;
     LocalDateTime deletedAt;

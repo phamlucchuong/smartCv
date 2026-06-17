@@ -1,18 +1,21 @@
+export MAVEN_USER_HOME ?= $(CURDIR)/.m2
+MVN ?= mvn
+
 # test commands
 test-user:
-	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && ./mvnw test
+	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && $(MVN) test
 
 test-gateway:
-	set -a; [ -f .env ] && . ./.env; set +a; cd api-gateway/ && ./mvnw test
+	set -a; [ -f .env ] && . ./.env; set +a; cd api-gateway/ && $(MVN) test
 
 test-job:
-	set -a; [ -f .env ] && . ./.env; set +a; cd job_service/ && ./mvnw test
+	set -a; [ -f .env ] && . ./.env; set +a; cd job_service/ && $(MVN) test
 
 test-application:
-	set -a; [ -f .env ] && . ./.env; set +a; cd application_service/ && ./mvnw test
+	set -a; [ -f .env ] && . ./.env; set +a; cd application_service/ && $(MVN) test
 
 test-ai:
-	set -a; [ -f .env ] && . ./.env; set +a; cd ai_engine_service/ && ./mvnw test
+	set -a; [ -f .env ] && . ./.env; set +a; cd ai_engine_service/ && $(MVN) test
 
 test-noti:
 	cd notification-service/ && go test ./... -v
@@ -22,26 +25,26 @@ test: test-user test-gateway test-job test-application test-ai test-noti
 
 # run services
 run-user:
-	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && ./mvnw spring-boot:run
+	set -a; [ -f .env ] && . ./.env; set +a; cd user-service/ && $(MVN) spring-boot:run
 run-gateway:
-	set -a; [ -f .env ] && . ./.env; set +a; cd api-gateway/ && ./mvnw spring-boot:run
+	set -a; [ -f .env ] && . ./.env; set +a; cd api-gateway/ && $(MVN) spring-boot:run
 run-job:
-	set -a; [ -f .env ] && . ./.env; set +a; cd job_service/ && ./mvnw spring-boot:run
+	set -a; [ -f .env ] && . ./.env; set +a; cd job_service/ && $(MVN) spring-boot:run
 run-application:
-	set -a; [ -f .env ] && . ./.env; set +a; cd application_service/ && ./mvnw spring-boot:run
+	set -a; [ -f .env ] && . ./.env; set +a; cd application_service/ && $(MVN) spring-boot:run
 run-ai:
-	set -a; [ -f .env ] && . ./.env; set +a; cd ai_engine_service/ && ./mvnw spring-boot:run
+	set -a; [ -f .env ] && . ./.env; set +a; cd ai_engine_service/ && $(MVN) spring-boot:run
 run-noti:
 	cd notification-service/ && go run cmd/server/main.go
 
 run:
 	@mkdir -p logs
 	@set -a; [ -f .env ] && . ./.env; set +a; \
-	(cd user-service && ./mvnw spring-boot:run 2>&1 | tee ../logs/user-service.log) & \
-	(cd api-gateway && ./mvnw spring-boot:run 2>&1 | tee ../logs/api-gateway.log) & \
-	(cd job_service && ./mvnw spring-boot:run 2>&1 | tee ../logs/job-service.log) & \
-	(cd application_service && ./mvnw spring-boot:run 2>&1 | tee ../logs/application-service.log) & \
-	(cd ai_engine_service && ./mvnw spring-boot:run 2>&1 | tee ../logs/ai-engine-service.log) & \
+	(cd user-service && $(MVN) spring-boot:run 2>&1 | tee ../logs/user-service.log) & \
+	(cd api-gateway && $(MVN) spring-boot:run 2>&1 | tee ../logs/api-gateway.log) & \
+	(cd job_service && $(MVN) spring-boot:run 2>&1 | tee ../logs/job-service.log) & \
+	(cd application_service && $(MVN) spring-boot:run 2>&1 | tee ../logs/application-service.log) & \
+	(cd ai_engine_service && $(MVN) spring-boot:run 2>&1 | tee ../logs/ai-engine-service.log) & \
 	(cd notification-service && go run cmd/server/main.go 2>&1 | tee ../logs/notification-service.log) & \
 	echo "All services starting. Logs in ./logs/ — Ctrl+C or 'make stop' to stop all."; \
 	wait
@@ -58,11 +61,11 @@ logs:
 # run migrations without manual cd (process auto-stops after timeout)
 migrate-user:
 	set -a; [ -f .env ] && . ./.env; set +a; \
-	timeout 45s sh -c 'cd user-service && ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=0 --spring.main.web-application-type=none"' || [ $$? -eq 124 ]
+	timeout 45s sh -c 'cd user-service && $(MVN) spring-boot:run -Dspring-boot.run.arguments="--server.port=0 --spring.main.web-application-type=none"' || [ $$? -eq 124 ]
 
 migrate-job:
 	set -a; [ -f .env ] && . ./.env; set +a; \
-	timeout 45s sh -c 'cd job_service && ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=0 --spring.main.web-application-type=none --app.search.enabled=false --spring.data.elasticsearch.repositories.enabled=false"' || [ $$? -eq 124 ]
+	timeout 45s sh -c 'cd job_service && $(MVN) spring-boot:run -Dspring-boot.run.arguments="--server.port=0 --spring.main.web-application-type=none --app.search.enabled=false --spring.data.elasticsearch.repositories.enabled=false"' || [ $$? -eq 124 ]
 
 migrate-all: migrate-user migrate-job
 

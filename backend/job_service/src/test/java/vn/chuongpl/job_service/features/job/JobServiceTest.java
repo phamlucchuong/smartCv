@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 import vn.chuongpl.job_service.config.RabbitMQConfig;
 import vn.chuongpl.job_service.dtos.PageResponse;
+import vn.chuongpl.job_service.dtos.request.JobCreateRequest;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
 import vn.chuongpl.job_service.enums.ErrorCode;
 import vn.chuongpl.job_service.enums.JobStatus;
@@ -114,15 +115,123 @@ class JobServiceTest {
 
     @Test
     void deleteJob_shouldSoftDeleteAndRemoveIndex() {
-        Job job = Job.builder().id("job-1").deleted(false).build();
+        Job job = Job.builder().id("job-1").recruiterId("recruiter-1").deleted(false).build();
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
         when(jobIndexServiceProvider.getIfAvailable()).thenReturn(jobIndexService);
 
-        jobService.deleteJob("job-1");
+        jobService.deleteJob("job-1", "recruiter-1", false);
 
         assertTrue(job.isDeleted());
         verify(jobRepository).save(job);
         verify(jobIndexService).removeFromIndex("job-1");
+    }
+
+    @Test
+    void deleteJob_shouldThrowNotOwnerForOtherRecruiter() {
+        Job job = Job.builder().id("job-1").recruiterId("owner-1").deleted(false).build();
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> jobService.deleteJob("job-1", "other-recruiter", false));
+
+        assertEquals(ErrorCode.JOB_NOT_OWNER, ex.getErrorCode());
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void deleteJob_shouldAllowAdminToDeleteAnyJob() {
+        Job job = Job.builder().id("job-1").recruiterId("owner-1").deleted(false).build();
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(jobIndexServiceProvider.getIfAvailable()).thenReturn(null);
+
+        jobService.deleteJob("job-1", "admin-id", true);
+
+        assertTrue(job.isDeleted());
+        verify(jobRepository).save(job);
+    }
+
+    @Test
+    void createJob_shouldApplyScreeningDefaults_whenFieldsAreNull() {
+        JobCreateRequest request = new JobCreateRequest();
+        Job mappedJob = Job.builder()
+                .recruiterId("recruiter-1")
+                .qualifiedThreshold(null)
+                .rejectThreshold(null)
+                .autoRejectEnabled(null)
+                .requiredTest(null)
+                .build();
+        Job savedJob = Job.builder().id("job-1").build();
+        JobResponse expected = JobResponse.builder().id("job-1").build();
+
+        when(jobMapper.toJob(request)).thenReturn(mappedJob);
+        when(jobRepository.save(mappedJob)).thenReturn(savedJob);
+        when(jobMapper.toJobResponse(savedJob)).thenReturn(expected);
+
+        jobService.createJob(request, "recruiter-1");
+
+        assertEquals(70, mappedJob.getQualifiedThreshold());
+        assertEquals(50, mappedJob.getRejectThreshold());
+        assertEquals(false, mappedJob.getAutoRejectEnabled());
+    }
+
+    @Test
+    void createJob_shouldPreserveProvidedScreeningValues() {
+        JobCreateRequest request = new JobCreateRequest();
+        Job mappedJob = Job.builder()
+                .recruiterId("recruiter-1")
+                .qualifiedThreshold(80)
+                .rejectThreshold(30)
+                .autoRejectEnabled(true)
+                .requiredTest("Backend Test")
+                .build();
+        Job savedJob = Job.builder().id("job-1").build();
+        JobResponse expected = JobResponse.builder().id("job-1").build();
+
+        when(jobMapper.toJob(request)).thenReturn(mappedJob);
+        when(jobRepository.save(mappedJob)).thenReturn(savedJob);
+        when(jobMapper.toJobResponse(savedJob)).thenReturn(expected);
+
+        jobService.createJob(request, "recruiter-1");
+
+        assertEquals(80, mappedJob.getQualifiedThreshold());
+        assertEquals(30, mappedJob.getRejectThreshold());
+        assertEquals(true, mappedJob.getAutoRejectEnabled());
+        assertEquals("Backend Test", mappedJob.getRequiredTest());
+    }
+
+    @Test
+    void getMyJobById_shouldReturnDraftJobForOwner() {
+        Job job = Job.builder().id("job-1").recruiterId("recruiter-1").status(JobStatus.DRAFT).build();
+        JobResponse expected = JobResponse.builder().id("job-1").status(JobStatus.DRAFT).build();
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(jobMapper.toJobResponse(job)).thenReturn(expected);
+
+        JobResponse actual = jobService.getMyJobById("job-1", "recruiter-1", false);
+
+        assertEquals(JobStatus.DRAFT, actual.getStatus());
+    }
+
+    @Test
+    void getMyJobById_shouldThrowNotOwnerForOtherRecruiter() {
+        Job job = Job.builder().id("job-1").recruiterId("owner-1").status(JobStatus.DRAFT).build();
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> jobService.getMyJobById("job-1", "other-recruiter", false));
+
+        assertEquals(ErrorCode.JOB_NOT_OWNER, ex.getErrorCode());
+    }
+
+    @Test
+    void getMyJobById_shouldAllowAdminToViewAnyJob() {
+        Job job = Job.builder().id("job-1").recruiterId("owner-1").status(JobStatus.CLOSED).build();
+        JobResponse expected = JobResponse.builder().id("job-1").status(JobStatus.CLOSED).build();
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(jobMapper.toJobResponse(job)).thenReturn(expected);
+
+        JobResponse actual = jobService.getMyJobById("job-1", "admin-id", true);
+
+        assertEquals(JobStatus.CLOSED, actual.getStatus());
     }
 
     @Test
