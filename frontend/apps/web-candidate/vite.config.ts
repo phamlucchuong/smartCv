@@ -18,7 +18,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: '../../coverage/web-candidate',
-      include: ['src/store/**/*.ts'],
+      include: ['src/store/**/*.ts', 'src/routes/**/*.tsx', 'src/components/layouts/**/*.tsx'],
     },
   },
   server: {

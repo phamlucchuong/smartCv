@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { Bell, Settings, Shield, TriangleAlert } from 'lucide-react'
+import { Bell, Globe2, Moon, Settings, Shield, Sun, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useGetSettings, useUpdateNotifications, useUpdatePrivacy,
@@ -12,20 +12,30 @@ import {
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/useAuthStore'
-import { usePreferencesStore } from '../store/usePreferencesStore'
+import { useCandidatePreferences } from '../store/candidatePreferences'
 
 export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,
 })
 
-type SectionKey = 'account' | 'notifications' | 'privacy' | 'danger'
+type SectionKey = 'account' | 'notifications' | 'privacy' | 'preferences' | 'danger'
 
 function SettingsPage() {
   const { t } = useTranslation()
-  const lang = usePreferencesStore((s) => s.language)
+  const {
+    language: lang,
+    theme,
+    setLanguage,
+    setTheme,
+    isLoading: preferencesLoading,
+  } = useCandidatePreferences()
   const navigate = useNavigate()
   const { isAuthenticated, userId, signOut } = useAuthStore()
-  const { data: settingsData } = useGetSettings({ query: { enabled: isAuthenticated } })
+  const settingsQueryKey = React.useMemo(
+    () => [...getGetSettingsQueryKey(), userId ?? 'anonymous', 'settings-page'] as const,
+    [userId],
+  )
+  const { data: settingsData } = useGetSettings({ query: { enabled: isAuthenticated && !!userId, queryKey: settingsQueryKey } })
   const settingsPayload = settingsData?.data
 
   const { data: meData } = useGetMe2({ query: { enabled: isAuthenticated } })
@@ -118,6 +128,7 @@ function SettingsPage() {
     { key: 'account', label: 'Account', icon: <Settings className="h-4 w-4" /> },
     { key: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" /> },
     { key: 'privacy', label: 'Privacy', icon: <Shield className="h-4 w-4" /> },
+    { key: 'preferences', label: 'Preferences', icon: <Globe2 className="h-4 w-4" /> },
     { key: 'danger', label: 'Danger Zone', icon: <TriangleAlert className="h-4 w-4" /> },
   ]
 
@@ -237,6 +248,64 @@ function SettingsPage() {
               <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => handlePrivacyToggle('publicProfile')} />
               <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => handlePrivacyToggle('showSalaryExpectation')} />
               <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => setPrivacy((p) => ({ ...p, activityStatus: !p.activityStatus }))} />
+            </CardContent>
+          </Card>
+        )}
+
+        {activeSection === 'preferences' && (
+          <Card>
+            <CardContent className="space-y-6 p-6">
+              <h2 className="text-xl font-semibold text-foreground">Language & Appearance</h2>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground">Language</h3>
+                <div className="inline-flex rounded-lg border border-border bg-muted/50 p-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={lang === 'EN' ? 'default' : 'ghost'}
+                    disabled={preferencesLoading}
+                    onClick={() => setLanguage('EN')}
+                  >
+                    EN
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={lang === 'VI' ? 'default' : 'ghost'}
+                    disabled={preferencesLoading}
+                    onClick={() => setLanguage('VI')}
+                  >
+                    VI
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground">Appearance</h3>
+                <div className="inline-flex rounded-lg border border-border bg-muted/50 p-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={theme === 'light' ? 'default' : 'ghost'}
+                    disabled={preferencesLoading}
+                    onClick={() => setTheme('light')}
+                    className="gap-2"
+                  >
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={theme === 'dark' ? 'default' : 'ghost'}
+                    disabled={preferencesLoading}
+                    onClick={() => setTheme('dark')}
+                    className="gap-2"
+                  >
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

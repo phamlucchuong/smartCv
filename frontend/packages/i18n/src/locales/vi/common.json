@@ -412,6 +412,9 @@
   "profile_phone": "Số điện thoại",
   "profile_address": "Địa chỉ",
   "profile_job_title": "Chức danh",
+  "profile_linkedin": "LinkedIn",
+  "profile_github": "GitHub",
+  "profile_portfolio": "Portfolio",
   "profile_bio": "Giới thiệu bản thân",
   "profile_applied": "Đã ứng tuyển",
   "profile_saved": "Đã lưu",
@@ -460,5 +463,7 @@
   "cv_analysis_score_excellent": "Xuất sắc",
   "cv_analysis_score_good": "Tốt",
   "cv_analysis_score_fair": "Khá",
-  "cv_analysis_score_poor": "Cần cải thiện"
+  "cv_analysis_score_poor": "Cần cải thiện",
+  "wishlists_filter_expiring_soon": "Sắp hết hạn",
+  "validation_required": "Trường này không được để trống"
 }

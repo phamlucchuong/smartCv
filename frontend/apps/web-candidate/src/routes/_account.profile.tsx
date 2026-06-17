@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { Button, Card, CardContent, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { Briefcase, Camera, Eye, MapPin } from 'lucide-react'
+import { Briefcase, Camera, Eye, MapPin, Github, Linkedin, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useGetMe2, useUpdate1, useUpdateUser, useUploadAvatar,
@@ -105,13 +105,14 @@ const YEARS = Array.from({ length: 30 }, (_, i) => String(CURRENT_YEAR - i))
 type ScrollSelectOption = { value: string; label: string }
 
 function ScrollSelect({
-  value, onChange, options, placeholder, disabled,
+  value, onChange, options, placeholder, disabled, error,
 }: {
   value: string
   onChange: (v: string) => void
   options: ScrollSelectOption[]
   placeholder: string
   disabled?: boolean
+  error?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
   const [placement, setPlacement] = React.useState<'bottom' | 'top'>('bottom')
@@ -149,7 +150,7 @@ function ScrollSelect({
         onClick={handleToggle}
         className={`border-input bg-background flex h-9 w-full items-center justify-between rounded-md border pl-2 pr-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 ${
           disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/30'
-        }`}
+        } ${error ? 'border-destructive focus:ring-2 focus:ring-destructive/40' : ''}`}
       >
         <span className={selected ? 'text-foreground' : 'text-muted-foreground'}>
           {selected ? selected.label : placeholder}
@@ -196,19 +197,19 @@ function ScrollSelect({
 
 // ── Reusable selects ─────────────────────────────────────────────
 function MonthSelect({
-  value, onChange, disabled, lang,
-}: { value: string; onChange: (v: string) => void; disabled?: boolean; lang: string }) {
+  value, onChange, disabled, lang, error,
+}: { value: string; onChange: (v: string) => void; disabled?: boolean; lang: string; error?: boolean }) {
   const placeholder = lang === 'VI' ? 'Tháng' : 'Month'
   const options = MONTHS.map((m) => ({ value: m.value, label: lang === 'VI' ? m.vi : m.en }))
-  return <ScrollSelect value={value} onChange={onChange} options={options} placeholder={placeholder} disabled={disabled} />
+  return <ScrollSelect value={value} onChange={onChange} options={options} placeholder={placeholder} disabled={disabled} error={error} />
 }
 
 function YearSelect({
-  value, onChange, disabled, lang,
-}: { value: string; onChange: (v: string) => void; disabled?: boolean; lang: string }) {
+  value, onChange, disabled, lang, error,
+}: { value: string; onChange: (v: string) => void; disabled?: boolean; lang: string; error?: boolean }) {
   const placeholder = lang === 'VI' ? 'Năm' : 'Year'
   const options = YEARS.map((y) => ({ value: y, label: y }))
-  return <ScrollSelect value={value} onChange={onChange} options={options} placeholder={placeholder} disabled={disabled} />
+  return <ScrollSelect value={value} onChange={onChange} options={options} placeholder={placeholder} disabled={disabled} error={error} />
 }
 
 // ── DateRangeRow ─────────────────────────────────────────────────
@@ -216,21 +217,26 @@ function DateRangeRow({
   startMonth, startYear, endMonth, endYear, isCurrent,
   onStartMonth, onStartYear, onEndMonth, onEndYear, onCurrentChange,
   lang, startLabel, endLabel, currentLabel,
+  startMonthError, startYearError, endMonthError, endYearError,
 }: {
   startMonth: string; startYear: string; endMonth: string; endYear: string; isCurrent: boolean
   onStartMonth: (v: string) => void; onStartYear: (v: string) => void
   onEndMonth: (v: string) => void; onEndYear: (v: string) => void
   onCurrentChange: (v: boolean) => void
   lang: string; startLabel: string; endLabel: string; currentLabel: string
+  startMonthError?: string; startYearError?: string; endMonthError?: string; endYearError?: string
 }) {
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
       <div className="space-y-1">
         <p className="text-xs font-medium text-muted-foreground">{startLabel}</p>
         <div className="grid grid-cols-2 gap-1">
-          <MonthSelect value={startMonth} onChange={onStartMonth} lang={lang} />
-          <YearSelect value={startYear} onChange={onStartYear} lang={lang} />
+          <MonthSelect value={startMonth} onChange={onStartMonth} lang={lang} error={!!startMonthError} />
+          <YearSelect value={startYear} onChange={onStartYear} lang={lang} error={!!startYearError} />
         </div>
+        {(startMonthError || startYearError) && (
+          <p className="text-[10px] text-destructive leading-tight">{startMonthError || startYearError}</p>
+        )}
       </div>
 
       <span className="pb-1 text-xs text-muted-foreground">→</span>
@@ -249,9 +255,12 @@ function DateRangeRow({
           </label>
         </div>
         <div className="grid grid-cols-2 gap-1">
-          <MonthSelect value={endMonth} onChange={onEndMonth} disabled={isCurrent} lang={lang} />
-          <YearSelect value={endYear} onChange={onEndYear} disabled={isCurrent} lang={lang} />
+          <MonthSelect value={endMonth} onChange={onEndMonth} disabled={isCurrent} lang={lang} error={!!endMonthError} />
+          <YearSelect value={endYear} onChange={onEndYear} disabled={isCurrent} lang={lang} error={!!endYearError} />
         </div>
+        {!isCurrent && (endMonthError || endYearError) && (
+          <p className="text-[10px] text-destructive leading-tight">{endMonthError || endYearError}</p>
+        )}
       </div>
     </div>
   )
@@ -307,13 +316,19 @@ function ProfilePage() {
   const bio           = profile?.bio         ?? ''
   const title         = profile?.title       ?? ''
   const address       = profile?.address     ?? ''
+  const linkedinUrl   = profile?.linkedinUrl  ?? ''
+  const githubUrl     = profile?.githubUrl    ?? ''
+  const portfolioUrl  = profile?.portfolioUrl ?? ''
   const experiences: UserModels.WorkExperience[] = profile?.experiences   ?? []
   const educations: UserModels.Education[]        = profile?.educations    ?? []
   const certifications: UserModels.Certification[] = profile?.certifications ?? []
   const initials   = toInitials(fullName)
 
   const [editMode, setEditMode] = React.useState(false)
-  const [draft, setDraft] = React.useState({ name: '', email: '', phone: '', location: '', title: '', bio: '' })
+  const [draft, setDraft] = React.useState({
+    name: '', email: '', phone: '', location: '', title: '', bio: '',
+    linkedinUrl: '', githubUrl: '', portfolioUrl: ''
+  })
 
   const [editingExpId,  setEditingExpId]  = React.useState<string | null>(null)
   const [editingEduId,  setEditingEduId]  = React.useState<string | null>(null)
@@ -333,19 +348,60 @@ function ProfilePage() {
     name: '', issuer: '', issueMonth: '', issueYear: '', credentialUrl: '',
   })
 
-  const displayValues = { name: fullName, email, phone, location: address, title }
+  const [basicErrors, setBasicErrors] = React.useState<Record<string, string>>({})
+  const [expErrors, setExpErrors] = React.useState<Record<string, string>>({})
+  const [eduErrors, setEduErrors] = React.useState<Record<string, string>>({})
+  const [certErrors, setCertErrors] = React.useState<Record<string, string>>({})
+
+  const displayValues = {
+    name: fullName,
+    email,
+    phone,
+    location: address,
+    title,
+    linkedinUrl,
+    githubUrl,
+    portfolioUrl,
+  }
 
   const handleEditClick = () => {
-    setDraft({ name: fullName, email, phone, location: address, title, bio })
+    setDraft({
+      name: fullName,
+      email,
+      phone,
+      location: address,
+      title,
+      bio,
+      linkedinUrl,
+      githubUrl,
+      portfolioUrl,
+    })
+    setBasicErrors({})
     setEditMode(true)
   }
 
   const handleSave = () => {
     if (!profile || !candidateId || !userId) return
+    const errors: Record<string, string> = {}
+    if (!draft.name.trim()) errors.name = t('validation_required')
+    if (!draft.location.trim()) errors.location = t('validation_required')
+    if (!draft.title.trim()) errors.title = t('validation_required')
+    if (Object.keys(errors).length > 0) {
+      setBasicErrors(errors)
+      return
+    }
     Promise.all([
       updateCandidateMutation.mutateAsync({
         id: candidateId,
-        data: { ...buildCandidateRequest(profile), address: draft.location, title: draft.title, bio: draft.bio },
+        data: {
+          ...buildCandidateRequest(profile),
+          address: draft.location,
+          title: draft.title,
+          bio: draft.bio,
+          linkedinUrl: draft.linkedinUrl,
+          githubUrl: draft.githubUrl,
+          portfolioUrl: draft.portfolioUrl,
+        },
       }),
       updateUserMutation.mutateAsync({ userId, data: { fullName: draft.name } }),
     ]).then(() => {
@@ -358,6 +414,19 @@ function ProfilePage() {
 
   const handleSaveExp = () => {
     if (!profile || !candidateId) return
+    const errors: Record<string, string> = {}
+    if (!expForm.title.trim()) errors.title = t('validation_required')
+    if (!expForm.company.trim()) errors.company = t('validation_required')
+    if (!expForm.startMonth) errors.startMonth = t('validation_required')
+    if (!expForm.startYear) errors.startYear = t('validation_required')
+    if (!expForm.isCurrent) {
+      if (!expForm.endMonth) errors.endMonth = t('validation_required')
+      if (!expForm.endYear) errors.endYear = t('validation_required')
+    }
+    if (Object.keys(errors).length > 0) {
+      setExpErrors(errors)
+      return
+    }
     const newExp: UserModels.WorkExperience = {
       title:     expForm.title || undefined,
       company:   expForm.company || undefined,
@@ -391,6 +460,15 @@ function ProfilePage() {
 
   const handleSaveEdu = () => {
     if (!profile || !candidateId) return
+    const errors: Record<string, string> = {}
+    if (!eduForm.school.trim()) errors.school = t('validation_required')
+    if (!eduForm.degree.trim()) errors.degree = t('validation_required')
+    if (!eduForm.startYear) errors.startYear = t('validation_required')
+    if (!eduForm.isCurrent && !eduForm.endYear) errors.endYear = t('validation_required')
+    if (Object.keys(errors).length > 0) {
+      setEduErrors(errors)
+      return
+    }
     const newEdu: UserModels.Education = {
       institution: eduForm.school || undefined,
       degree:      eduForm.degree || undefined,
@@ -422,6 +500,15 @@ function ProfilePage() {
 
   const handleSaveCert = () => {
     if (!profile || !candidateId) return
+    const errors: Record<string, string> = {}
+    if (!certForm.name.trim()) errors.name = t('validation_required')
+    if (!certForm.issuer.trim()) errors.issuer = t('validation_required')
+    if (!certForm.issueMonth) errors.issueMonth = t('validation_required')
+    if (!certForm.issueYear) errors.issueYear = t('validation_required')
+    if (Object.keys(errors).length > 0) {
+      setCertErrors(errors)
+      return
+    }
     const newCert: UserModels.Certification = {
       name:          certForm.name || undefined,
       issuer:        certForm.issuer || undefined,
@@ -486,9 +573,9 @@ function ProfilePage() {
 
   const displayAvatarUrl = profile?.avatarUrl ?? null
 
-  const resetExpForm  = () => { setEditingExpId(null);  setShowAddExp(false);  setExpForm({ title: '', company: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false, achievements: [] }) }
-  const resetEduForm  = () => { setEditingEduId(null);  setShowAddEdu(false);  setEduForm({ school: '', degree: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false }) }
-  const resetCertForm = () => { setEditingCertId(null); setShowAddCert(false); setCertForm({ name: '', issuer: '', issueMonth: '', issueYear: '', credentialUrl: '' }) }
+  const resetExpForm  = () => { setEditingExpId(null);  setShowAddExp(false);  setExpForm({ title: '', company: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false, achievements: [] }); setExpErrors({}) }
+  const resetEduForm  = () => { setEditingEduId(null);  setShowAddEdu(false);  setEduForm({ school: '', degree: '', startMonth: '', startYear: '', endMonth: '', endYear: '', isCurrent: false }); setEduErrors({}) }
+  const resetCertForm = () => { setEditingCertId(null); setShowAddCert(false); setCertForm({ name: '', issuer: '', issueMonth: '', issueYear: '', credentialUrl: '' }); setCertErrors({}) }
 
   const basicInfoFields: [string, keyof typeof displayValues][] = [
     [t('profile_full_name'), 'name'],
@@ -496,6 +583,9 @@ function ProfilePage() {
     [t('profile_phone'),     'phone'],
     [t('profile_address'),   'location'],
     [t('profile_job_title'), 'title'],
+    [t('profile_linkedin'),  'linkedinUrl'],
+    [t('profile_github'),    'githubUrl'],
+    [t('profile_portfolio'), 'portfolioUrl'],
   ]
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{lang === 'VI' ? 'Đang tải hồ sơ...' : 'Loading profile...'}</div>
@@ -539,6 +629,43 @@ function ProfilePage() {
               <h1 className="text-xl font-semibold text-foreground">{fullName}</h1>
               <p className="text-sm text-muted-foreground">{title}</p>
               <p className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{address}</p>
+              {(linkedinUrl || githubUrl || portfolioUrl) && (
+                <div className="mt-3 flex items-center gap-3">
+                  {linkedinUrl && (
+                    <a
+                      href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="LinkedIn"
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                  )}
+                  {githubUrl && (
+                    <a
+                      href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="GitHub"
+                    >
+                      <Github className="h-4 w-4" />
+                    </a>
+                  )}
+                  {portfolioUrl && (
+                    <a
+                      href={portfolioUrl.startsWith('http') ? portfolioUrl : `https://${portfolioUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Portfolio"
+                    >
+                      <Globe className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
             <hr className="border-border" />
             <div className="space-y-2 text-sm">
@@ -552,7 +679,7 @@ function ProfilePage() {
             ) : (
               <div className="flex gap-2">
                 <Button className="w-full" disabled={updateCandidateMutation.isPending || updateUserMutation.isPending} onClick={handleSave}>{t('profile_save')}</Button>
-                <Button variant="outline" className="w-full" onClick={() => setEditMode(false)}>{t('profile_cancel')}</Button>
+                <Button variant="outline" className="w-full" onClick={() => { setEditMode(false); setBasicErrors({}); }}>{t('profile_cancel')}</Button>
               </div>
             )}
           </CardContent>
@@ -569,14 +696,37 @@ function ProfilePage() {
                   <span className="w-32 shrink-0 font-medium text-muted-foreground">{label}</span>
                   {editMode
                     ? (
-                      <Input
-                        value={draft[key as keyof typeof draft] as string}
-                        onChange={(e) => setDraft((p) => ({ ...p, [key]: e.target.value }))}
-                        readOnly={key === 'email' || key === 'phone'}
-                        className={key === 'email' || key === 'phone' ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-80' : ''}
-                      />
+                      <div className="flex-1">
+                        <Input
+                          value={draft[key as keyof typeof draft] as string}
+                          onChange={(e) => {
+                            setDraft((p) => ({ ...p, [key]: e.target.value }));
+                            if (basicErrors[key]) setBasicErrors((errs) => ({ ...errs, [key]: '' }));
+                          }}
+                          readOnly={key === 'email' || key === 'phone'}
+                          className={`${key === 'email' || key === 'phone' ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-80' : ''} ${
+                            basicErrors[key] ? 'border-destructive focus-visible:ring-destructive' : ''
+                          }`}
+                        />
+                        {basicErrors[key] && (
+                          <p className="mt-1 text-xs text-destructive">{basicErrors[key]}</p>
+                        )}
+                      </div>
                     )
-                    : <span className="text-foreground">{displayValues[key]}</span>
+                    : (
+                      key.endsWith('Url') && displayValues[key] ? (
+                        <a
+                          href={displayValues[key].startsWith('http') ? displayValues[key] : `https://${displayValues[key]}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary hover:underline break-all"
+                        >
+                          {displayValues[key]}
+                        </a>
+                      ) : (
+                        <span className="text-foreground">{displayValues[key]}</span>
+                      )
+                    )
                   }
                 </div>
               ))}
@@ -594,64 +744,178 @@ function ProfilePage() {
           <Card>
             <CardContent className="space-y-4 p-6">
               <h2 className="border-l-4 border-primary pl-3 text-lg font-semibold text-foreground">{t('profile_work_exp')}</h2>
-              {experiences.map((item, idx) => (
-                <div key={idx} className="rounded-xl border border-border p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-foreground">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">{item.company}</p>
-                      {(item.startDate || item.endDate || item.current) && (
-                        <p className="mt-0.5 text-xs text-muted-foreground/70">
-                          {formatExpDateRange(item.startDate, item.endDate, item.current, lang)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="sm" onClick={() => {
-                        setEditingExpId(String(idx))
-                        const startParts = item.startDate?.split('-') ?? []
-                        const endParts   = item.endDate?.split('-')   ?? []
-                        setExpForm({
-                          title: item.title ?? '', company: item.company ?? '',
-                          startMonth: startParts[1] ?? '', startYear: startParts[0] ?? '',
-                          endMonth:   endParts[1]   ?? '', endYear:   endParts[0]   ?? '',
-                          isCurrent: item.current ?? false, achievements: [],
-                        })
-                      }}>{t('profile_edit_btn')}</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDeleteExp(idx)}>{t('profile_delete_btn')}</Button>
-                    </div>
+              {experiences.map((item, idx) => {
+                const isEditingThis = editingExpId === String(idx);
+                return (
+                  <div key={idx} className="rounded-xl border border-border p-4">
+                    {isEditingThis ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <div>
+                            <Input
+                              value={expForm.title}
+                              onChange={(e) => {
+                                setExpForm((p) => ({ ...p, title: e.target.value }));
+                                if (expErrors.title) setExpErrors((errs) => ({ ...errs, title: '' }));
+                              }}
+                              placeholder={t('profile_job_position')}
+                              className={expErrors.title ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            />
+                            {expErrors.title && <p className="mt-1 text-xs text-destructive">{expErrors.title}</p>}
+                          </div>
+                          <div>
+                            <Input
+                              value={expForm.company}
+                              onChange={(e) => {
+                                setExpForm((p) => ({ ...p, company: e.target.value }));
+                                if (expErrors.company) setExpErrors((errs) => ({ ...errs, company: '' }));
+                              }}
+                              placeholder={t('profile_company')}
+                              className={expErrors.company ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            />
+                            {expErrors.company && <p className="mt-1 text-xs text-destructive">{expErrors.company}</p>}
+                          </div>
+                        </div>
+                        <DateRangeRow
+                          startMonth={expForm.startMonth} startYear={expForm.startYear}
+                          endMonth={expForm.endMonth}     endYear={expForm.endYear}
+                          isCurrent={expForm.isCurrent}
+                          onStartMonth={(v) => {
+                            setExpForm((p) => ({ ...p, startMonth: v }));
+                            if (expErrors.startMonth) setExpErrors((errs) => ({ ...errs, startMonth: '' }));
+                          }}
+                          onStartYear={(v)  => {
+                            setExpForm((p) => ({ ...p, startYear:  v }));
+                            if (expErrors.startYear) setExpErrors((errs) => ({ ...errs, startYear: '' }));
+                          }}
+                          onEndMonth={(v)   => {
+                            setExpForm((p) => ({ ...p, endMonth:   v }));
+                            if (expErrors.endMonth) setExpErrors((errs) => ({ ...errs, endMonth: '' }));
+                          }}
+                          onEndYear={(v)    => {
+                            setExpForm((p) => ({ ...p, endYear:    v }));
+                            if (expErrors.endYear) setExpErrors((errs) => ({ ...errs, endYear: '' }));
+                          }}
+                          onCurrentChange={(v) => {
+                            setExpForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }));
+                            setExpErrors((errs) => ({ ...errs, endMonth: '', endYear: '' }));
+                          }}
+                          lang={lang}
+                          startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
+                          startMonthError={expErrors.startMonth}
+                          startYearError={expErrors.startYear}
+                          endMonthError={expErrors.endMonth}
+                          endYearError={expErrors.endYear}
+                        />
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveExp}>
+                            {t('profile_save')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={resetExpForm}>{t('profile_cancel')}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-foreground">{item.title}</h3>
+                          <p className="text-sm text-muted-foreground">{item.company}</p>
+                          {(item.startDate || item.endDate || item.current) && (
+                            <p className="mt-0.5 text-xs text-muted-foreground/70">
+                              {formatExpDateRange(item.startDate, item.endDate, item.current, lang)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setEditingExpId(String(idx))
+                            const startParts = item.startDate?.split('-') ?? []
+                            const endParts   = item.endDate?.split('-')   ?? []
+                            setExpForm({
+                              title: item.title ?? '', company: item.company ?? '',
+                              startMonth: startParts[1] ?? '', startYear: startParts[0] ?? '',
+                              endMonth:   endParts[1]   ?? '', endYear:   endParts[0]   ?? '',
+                              isCurrent: item.current ?? false, achievements: [],
+                            })
+                          }}>{t('profile_edit_btn')}</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteExp(idx)}>{t('profile_delete_btn')}</Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
-              {editingExpId !== null || showAddExp ? (
-                <>
+                );
+              })}
+              {showAddExp ? (
+                <div className="space-y-4 rounded-xl border border-border border-dashed p-4">
                   <div className="grid gap-2 md:grid-cols-2">
-                    <Input value={expForm.title}   onChange={(e) => setExpForm((p) => ({ ...p, title:   e.target.value }))} placeholder={t('profile_job_position')} />
-                    <Input value={expForm.company} onChange={(e) => setExpForm((p) => ({ ...p, company: e.target.value }))} placeholder={t('profile_company')} />
+                    <div>
+                      <Input
+                        value={expForm.title}
+                        onChange={(e) => {
+                          setExpForm((p) => ({ ...p, title: e.target.value }));
+                          if (expErrors.title) setExpErrors((errs) => ({ ...errs, title: '' }));
+                        }}
+                        placeholder={t('profile_job_position')}
+                        className={expErrors.title ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {expErrors.title && <p className="mt-1 text-xs text-destructive">{expErrors.title}</p>}
+                    </div>
+                    <div>
+                      <Input
+                        value={expForm.company}
+                        onChange={(e) => {
+                          setExpForm((p) => ({ ...p, company: e.target.value }));
+                          if (expErrors.company) setExpErrors((errs) => ({ ...errs, company: '' }));
+                        }}
+                        placeholder={t('profile_company')}
+                        className={expErrors.company ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {expErrors.company && <p className="mt-1 text-xs text-destructive">{expErrors.company}</p>}
+                    </div>
                   </div>
                   <DateRangeRow
                     startMonth={expForm.startMonth} startYear={expForm.startYear}
                     endMonth={expForm.endMonth}     endYear={expForm.endYear}
                     isCurrent={expForm.isCurrent}
-                    onStartMonth={(v) => setExpForm((p) => ({ ...p, startMonth: v }))}
-                    onStartYear={(v)  => setExpForm((p) => ({ ...p, startYear:  v }))}
-                    onEndMonth={(v)   => setExpForm((p) => ({ ...p, endMonth:   v }))}
-                    onEndYear={(v)    => setExpForm((p) => ({ ...p, endYear:    v }))}
-                    onCurrentChange={(v) => setExpForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }))}
+                    onStartMonth={(v) => {
+                      setExpForm((p) => ({ ...p, startMonth: v }));
+                      if (expErrors.startMonth) setExpErrors((errs) => ({ ...errs, startMonth: '' }));
+                    }}
+                    onStartYear={(v)  => {
+                      setExpForm((p) => ({ ...p, startYear:  v }));
+                      if (expErrors.startYear) setExpErrors((errs) => ({ ...errs, startYear: '' }));
+                    }}
+                    onEndMonth={(v)   => {
+                      setExpForm((p) => ({ ...p, endMonth:   v }));
+                      if (expErrors.endMonth) setExpErrors((errs) => ({ ...errs, endMonth: '' }));
+                    }}
+                    onEndYear={(v)    => {
+                      setExpForm((p) => ({ ...p, endYear:    v }));
+                      if (expErrors.endYear) setExpErrors((errs) => ({ ...errs, endYear: '' }));
+                    }}
+                    onCurrentChange={(v) => {
+                      setExpForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }));
+                      setExpErrors((errs) => ({ ...errs, endMonth: '', endYear: '' }));
+                    }}
                     lang={lang}
                     startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
+                    startMonthError={expErrors.startMonth}
+                    startYearError={expErrors.startYear}
+                    endMonthError={expErrors.endMonth}
+                    endYearError={expErrors.endYear}
                   />
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveExp}>
-                      {editingExpId ? t('profile_save_exp') : t('profile_add_exp')}
+                      {t('profile_save')}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={resetExpForm}>{t('profile_cancel')}</Button>
                   </div>
-                </>
+                </div>
               ) : (
-                <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddExp(true)}>
-                  + {t('profile_add_exp')}
-                </Button>
+                editingExpId === null && (
+                  <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddExp(true)}>
+                    + {t('profile_add_exp')}
+                  </Button>
+                )
               )}
             </CardContent>
           </Card>
@@ -660,60 +924,160 @@ function ProfilePage() {
           <Card>
             <CardContent className="space-y-4 p-6">
               <h2 className="border-l-4 border-primary pl-3 text-lg font-semibold text-foreground">{t('profile_education')}</h2>
-              {educations.map((item, idx) => (
-                <div key={idx} className="flex items-start justify-between gap-3 rounded-xl border border-border p-4">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground">{item.institution}</p>
-                    <p className="text-sm text-muted-foreground">{item.degree}</p>
-                    {(item.startYear || item.endYear) && (
-                      <p className="mt-0.5 text-xs text-muted-foreground/70">
-                        {formatEduDateRange(item.startYear, item.endYear, lang)}
-                      </p>
+              {educations.map((item, idx) => {
+                const isEditingThis = editingEduId === String(idx);
+                return (
+                  <div key={idx} className="rounded-xl border border-border p-4">
+                    {isEditingThis ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <div>
+                            <Input
+                              value={eduForm.school}
+                              onChange={(e) => {
+                                setEduForm((p) => ({ ...p, school: e.target.value }));
+                                if (eduErrors.school) setEduErrors((errs) => ({ ...errs, school: '' }));
+                              }}
+                              placeholder={t('profile_school')}
+                              className={eduErrors.school ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            />
+                            {eduErrors.school && <p className="mt-1 text-xs text-destructive">{eduErrors.school}</p>}
+                          </div>
+                          <div>
+                            <Input
+                              value={eduForm.degree}
+                              onChange={(e) => {
+                                setEduForm((p) => ({ ...p, degree: e.target.value }));
+                                if (eduErrors.degree) setEduErrors((errs) => ({ ...errs, degree: '' }));
+                              }}
+                              placeholder={t('profile_degree')}
+                              className={eduErrors.degree ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            />
+                            {eduErrors.degree && <p className="mt-1 text-xs text-destructive">{eduErrors.degree}</p>}
+                          </div>
+                        </div>
+                        <DateRangeRow
+                          startMonth={eduForm.startMonth} startYear={eduForm.startYear}
+                          endMonth={eduForm.endMonth}     endYear={eduForm.endYear}
+                          isCurrent={eduForm.isCurrent}
+                          onStartMonth={(v) => setEduForm((p) => ({ ...p, startMonth: v }))}
+                          onStartYear={(v)  => {
+                            setEduForm((p) => ({ ...p, startYear:  v }));
+                            if (eduErrors.startYear) setEduErrors((errs) => ({ ...errs, startYear: '' }));
+                          }}
+                          onEndMonth={(v)   => setEduForm((p) => ({ ...p, endMonth:   v }))}
+                          onEndYear={(v)    => {
+                            setEduForm((p) => ({ ...p, endYear:    v }));
+                            if (eduErrors.endYear) setEduErrors((errs) => ({ ...errs, endYear: '' }));
+                          }}
+                          onCurrentChange={(v) => {
+                            setEduForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }));
+                            setEduErrors((errs) => ({ ...errs, endYear: '' }));
+                          }}
+                          lang={lang}
+                          startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
+                          startYearError={eduErrors.startYear}
+                          endYearError={eduErrors.endYear}
+                        />
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveEdu}>
+                            {t('profile_save')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={resetEduForm}>{t('profile_cancel')}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">{item.institution}</p>
+                          <p className="text-sm text-muted-foreground">{item.degree}</p>
+                          {(item.startYear || item.endYear) && (
+                            <p className="mt-0.5 text-xs text-muted-foreground/70">
+                              {formatEduDateRange(item.startYear, item.endYear, lang)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setEditingEduId(String(idx))
+                            setEduForm({
+                              school: item.institution ?? '', degree: item.degree ?? '',
+                              startMonth: '', startYear: item.startYear ? String(item.startYear) : '',
+                              endMonth:   '', endYear:   item.endYear   ? String(item.endYear)   : '',
+                              isCurrent: !item.endYear,
+                            })
+                          }}>{t('profile_edit_btn')}</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteEdu(idx)}>{t('profile_delete_btn')}</Button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setEditingEduId(String(idx))
-                      setEduForm({
-                        school: item.institution ?? '', degree: item.degree ?? '',
-                        startMonth: '', startYear: item.startYear ? String(item.startYear) : '',
-                        endMonth:   '', endYear:   item.endYear   ? String(item.endYear)   : '',
-                        isCurrent: !item.endYear,
-                      })
-                    }}>{t('profile_edit_btn')}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteEdu(idx)}>{t('profile_delete_btn')}</Button>
-                  </div>
-                </div>
-              ))}
-              {editingEduId !== null || showAddEdu ? (
-                <>
+                );
+              })}
+              {showAddEdu ? (
+                <div className="space-y-4 rounded-xl border border-border border-dashed p-4">
                   <div className="grid gap-2 md:grid-cols-2">
-                    <Input value={eduForm.school} onChange={(e) => setEduForm((p) => ({ ...p, school: e.target.value }))} placeholder={t('profile_school')} />
-                    <Input value={eduForm.degree} onChange={(e) => setEduForm((p) => ({ ...p, degree: e.target.value }))} placeholder={t('profile_degree')} />
+                    <div>
+                      <Input
+                        value={eduForm.school}
+                        onChange={(e) => {
+                          setEduForm((p) => ({ ...p, school: e.target.value }));
+                          if (eduErrors.school) setEduErrors((errs) => ({ ...errs, school: '' }));
+                        }}
+                        placeholder={t('profile_school')}
+                        className={eduErrors.school ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {eduErrors.school && <p className="mt-1 text-xs text-destructive">{eduErrors.school}</p>}
+                    </div>
+                    <div>
+                      <Input
+                        value={eduForm.degree}
+                        onChange={(e) => {
+                          setEduForm((p) => ({ ...p, degree: e.target.value }));
+                          if (eduErrors.degree) setEduErrors((errs) => ({ ...errs, degree: '' }));
+                        }}
+                        placeholder={t('profile_degree')}
+                        className={eduErrors.degree ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {eduErrors.degree && <p className="mt-1 text-xs text-destructive">{eduErrors.degree}</p>}
+                    </div>
                   </div>
                   <DateRangeRow
                     startMonth={eduForm.startMonth} startYear={eduForm.startYear}
                     endMonth={eduForm.endMonth}     endYear={eduForm.endYear}
                     isCurrent={eduForm.isCurrent}
                     onStartMonth={(v) => setEduForm((p) => ({ ...p, startMonth: v }))}
-                    onStartYear={(v)  => setEduForm((p) => ({ ...p, startYear:  v }))}
+                    onStartYear={(v)  => {
+                      setEduForm((p) => ({ ...p, startYear:  v }));
+                      if (eduErrors.startYear) setEduErrors((errs) => ({ ...errs, startYear: '' }));
+                    }}
                     onEndMonth={(v)   => setEduForm((p) => ({ ...p, endMonth:   v }))}
-                    onEndYear={(v)    => setEduForm((p) => ({ ...p, endYear:    v }))}
-                    onCurrentChange={(v) => setEduForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }))}
+                    onEndYear={(v)    => {
+                      setEduForm((p) => ({ ...p, endYear:    v }));
+                      if (eduErrors.endYear) setEduErrors((errs) => ({ ...errs, endYear: '' }));
+                    }}
+                    onCurrentChange={(v) => {
+                      setEduForm((p) => ({ ...p, isCurrent: v, endMonth: '', endYear: '' }));
+                      setEduErrors((errs) => ({ ...errs, endYear: '' }));
+                    }}
                     lang={lang}
                     startLabel={t('profile_start')} endLabel={t('profile_end')} currentLabel={t('profile_current')}
+                    startYearError={eduErrors.startYear}
+                    endYearError={eduErrors.endYear}
                   />
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveEdu}>
-                      {editingEduId ? t('profile_save_edu') : t('profile_add_edu')}
+                      {t('profile_save')}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={resetEduForm}>{t('profile_cancel')}</Button>
                   </div>
-                </>
+                </div>
               ) : (
-                <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddEdu(true)}>
-                  + {t('profile_add_edu')}
-                </Button>
+                editingEduId === null && (
+                  <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddEdu(true)}>
+                    + {t('profile_add_edu')}
+                  </Button>
+                )
               )}
             </CardContent>
           </Card>
@@ -722,61 +1086,185 @@ function ProfilePage() {
           <Card>
             <CardContent className="space-y-4 p-6">
               <h2 className="border-l-4 border-primary pl-3 text-lg font-semibold text-foreground">{t('profile_certifications')}</h2>
-              {certifications.map((item, idx) => (
-                <div key={idx} className="flex items-start justify-between gap-3 rounded-xl border border-border p-4">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">{item.issuer}</p>
-                    {item.issuedDate && (
-                      <p className="mt-0.5 text-xs text-muted-foreground/70">
-                        {formatMonthYear(item.issuedDate, lang)}
-                      </p>
-                    )}
-                    {item.credentialUrl && (
-                      <a href={item.credentialUrl} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-xs text-primary hover:underline">
-                        {item.credentialUrl}
-                      </a>
+              {certifications.map((item, idx) => {
+                const isEditingThis = editingCertId === String(idx);
+                return (
+                  <div key={idx} className="rounded-xl border border-border p-4">
+                    {isEditingThis ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <div>
+                            <Input
+                              value={certForm.name}
+                              onChange={(e) => {
+                                setCertForm((p) => ({ ...p, name: e.target.value }));
+                                if (certErrors.name) setCertErrors((errs) => ({ ...errs, name: '' }));
+                              }}
+                              placeholder={t('profile_cert_name')}
+                              className={certErrors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            />
+                            {certErrors.name && <p className="mt-1 text-xs text-destructive">{certErrors.name}</p>}
+                          </div>
+                          <div>
+                            <Input
+                              value={certForm.issuer}
+                              onChange={(e) => {
+                                setCertForm((p) => ({ ...p, issuer: e.target.value }));
+                                if (certErrors.issuer) setCertErrors((errs) => ({ ...errs, issuer: '' }));
+                              }}
+                              placeholder={t('profile_cert_issuer')}
+                              className={certErrors.issuer ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            />
+                            {certErrors.issuer && <p className="mt-1 text-xs text-destructive">{certErrors.issuer}</p>}
+                          </div>
+                          <div className="md:col-span-2">
+                            <Input value={certForm.credentialUrl} onChange={(e) => setCertForm((p) => ({ ...p, credentialUrl: e.target.value }))} placeholder={t('profile_cert_url')} />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground">{t('profile_cert_issue_date')}</p>
+                          <div className="grid grid-cols-2 gap-2 md:w-1/2">
+                            <div>
+                              <MonthSelect
+                                value={certForm.issueMonth}
+                                onChange={(v) => {
+                                  setCertForm((p) => ({ ...p, issueMonth: v }));
+                                  if (certErrors.issueMonth) setCertErrors((errs) => ({ ...errs, issueMonth: '' }));
+                                }}
+                                lang={lang}
+                                error={!!certErrors.issueMonth}
+                              />
+                            </div>
+                            <div>
+                              <YearSelect
+                                value={certForm.issueYear}
+                                onChange={(v) => {
+                                  setCertForm((p) => ({ ...p, issueYear: v }));
+                                  if (certErrors.issueYear) setCertErrors((errs) => ({ ...errs, issueYear: '' }));
+                                }}
+                                lang={lang}
+                                error={!!certErrors.issueYear}
+                              />
+                            </div>
+                          </div>
+                          {(certErrors.issueMonth || certErrors.issueYear) && (
+                            <p className="text-[10px] text-destructive leading-tight">{certErrors.issueMonth || certErrors.issueYear}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveCert}>
+                            {t('profile_save')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={resetCertForm}>{t('profile_cancel')}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">{item.issuer}</p>
+                          {item.issuedDate && (
+                            <p className="mt-0.5 text-xs text-muted-foreground/70">
+                              {formatMonthYear(item.issuedDate, lang)}
+                            </p>
+                          )}
+                          {item.credentialUrl && (
+                            <a href={item.credentialUrl} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-xs text-primary hover:underline">
+                              {item.credentialUrl}
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setEditingCertId(String(idx))
+                            const parts = item.issuedDate?.split('-') ?? []
+                            setCertForm({
+                              name: item.name ?? '', issuer: item.issuer ?? '',
+                              issueMonth: parts[1] ?? '', issueYear: parts[0] ?? '',
+                              credentialUrl: item.credentialUrl ?? '',
+                            })
+                          }}>{t('profile_edit_btn')}</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteCert(idx)}>{t('profile_delete_btn')}</Button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setEditingCertId(String(idx))
-                      const parts = item.issuedDate?.split('-') ?? []
-                      setCertForm({
-                        name: item.name ?? '', issuer: item.issuer ?? '',
-                        issueMonth: parts[1] ?? '', issueYear: parts[0] ?? '',
-                        credentialUrl: item.credentialUrl ?? '',
-                      })
-                    }}>{t('profile_edit_btn')}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteCert(idx)}>{t('profile_delete_btn')}</Button>
-                  </div>
-                </div>
-              ))}
-              {editingCertId !== null || showAddCert ? (
-                <>
+                );
+              })}
+              {showAddCert ? (
+                <div className="space-y-4 rounded-xl border border-border border-dashed p-4">
                   <div className="grid gap-2 md:grid-cols-2">
-                    <Input value={certForm.name}          onChange={(e) => setCertForm((p) => ({ ...p, name:          e.target.value }))} placeholder={t('profile_cert_name')} />
-                    <Input value={certForm.issuer}         onChange={(e) => setCertForm((p) => ({ ...p, issuer:        e.target.value }))} placeholder={t('profile_cert_issuer')} />
-                    <Input value={certForm.credentialUrl} onChange={(e) => setCertForm((p) => ({ ...p, credentialUrl: e.target.value }))} placeholder={t('profile_cert_url')} className="md:col-span-2" />
+                    <div>
+                      <Input
+                        value={certForm.name}
+                        onChange={(e) => {
+                          setCertForm((p) => ({ ...p, name: e.target.value }));
+                          if (certErrors.name) setCertErrors((errs) => ({ ...errs, name: '' }));
+                        }}
+                        placeholder={t('profile_cert_name')}
+                        className={certErrors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {certErrors.name && <p className="mt-1 text-xs text-destructive">{certErrors.name}</p>}
+                    </div>
+                    <div>
+                      <Input
+                        value={certForm.issuer}
+                        onChange={(e) => {
+                          setCertForm((p) => ({ ...p, issuer: e.target.value }));
+                          if (certErrors.issuer) setCertErrors((errs) => ({ ...errs, issuer: '' }));
+                        }}
+                        placeholder={t('profile_cert_issuer')}
+                        className={certErrors.issuer ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {certErrors.issuer && <p className="mt-1 text-xs text-destructive">{certErrors.issuer}</p>}
+                    </div>
+                    <div className="md:col-span-2">
+                      <Input value={certForm.credentialUrl} onChange={(e) => setCertForm((p) => ({ ...p, credentialUrl: e.target.value }))} placeholder={t('profile_cert_url')} />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">{t('profile_cert_issue_date')}</p>
                     <div className="grid grid-cols-2 gap-2 md:w-1/2">
-                      <MonthSelect value={certForm.issueMonth} onChange={(v) => setCertForm((p) => ({ ...p, issueMonth: v }))} lang={lang} />
-                      <YearSelect  value={certForm.issueYear}  onChange={(v) => setCertForm((p) => ({ ...p, issueYear:  v }))} lang={lang} />
+                      <div>
+                        <MonthSelect
+                          value={certForm.issueMonth}
+                          onChange={(v) => {
+                            setCertForm((p) => ({ ...p, issueMonth: v }));
+                            if (certErrors.issueMonth) setCertErrors((errs) => ({ ...errs, issueMonth: '' }));
+                          }}
+                          lang={lang}
+                          error={!!certErrors.issueMonth}
+                        />
+                      </div>
+                      <div>
+                        <YearSelect
+                          value={certForm.issueYear}
+                          onChange={(v) => {
+                            setCertForm((p) => ({ ...p, issueYear: v }));
+                            if (certErrors.issueYear) setCertErrors((errs) => ({ ...errs, issueYear: '' }));
+                          }}
+                          lang={lang}
+                          error={!!certErrors.issueYear}
+                        />
+                      </div>
                     </div>
+                    {(certErrors.issueMonth || certErrors.issueYear) && (
+                      <p className="text-[10px] text-destructive leading-tight">{certErrors.issueMonth || certErrors.issueYear}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" disabled={updateCandidateMutation.isPending} onClick={handleSaveCert}>
-                      {editingCertId ? t('profile_save_cert') : t('profile_add_cert')}
+                      {t('profile_save')}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={resetCertForm}>{t('profile_cancel')}</Button>
                   </div>
-                </>
+                </div>
               ) : (
-                <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddCert(true)}>
-                  + {t('profile_add_cert')}
-                </Button>
+                editingCertId === null && (
+                  <Button variant="outline" size="sm" className="w-full border-dashed py-5 hover:bg-accent/40 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2" onClick={() => setShowAddCert(true)}>
+                    + {t('profile_add_cert')}
+                  </Button>
+                )
               )}
             </CardContent>
           </Card>

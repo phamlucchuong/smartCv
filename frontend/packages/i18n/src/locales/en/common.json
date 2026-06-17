@@ -412,6 +412,9 @@
   "profile_phone": "Phone Number",
   "profile_address": "Address",
   "profile_job_title": "Job Title",
+  "profile_linkedin": "LinkedIn",
+  "profile_github": "GitHub",
+  "profile_portfolio": "Portfolio",
   "profile_bio": "About Me",
   "profile_applied": "Applied",
   "profile_saved": "Saved",
@@ -460,5 +463,7 @@
   "cv_analysis_score_excellent": "Excellent",
   "cv_analysis_score_good": "Good",
   "cv_analysis_score_fair": "Fair",
-  "cv_analysis_score_poor": "Poor"
+  "cv_analysis_score_poor": "Poor",
+  "validation_required": "This field is required",
+  "wishlists_filter_expiring_soon": "Expiring Soon"
 }
