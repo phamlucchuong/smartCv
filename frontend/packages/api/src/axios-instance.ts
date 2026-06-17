@@ -30,7 +30,7 @@ export const AXIOS_INSTANCE = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-function getPrefixedUrl(url: string | undefined): string | undefined {
+export function getPrefixedUrl(url: string | undefined): string | undefined {
   if (!url) return url;
   if (
     url.startsWith('/user/') ||
@@ -48,6 +48,7 @@ function getPrefixedUrl(url: string | undefined): string | undefined {
   if (
     url.startsWith('/api/users') ||
     url.startsWith('/api/auth') ||
+    url.startsWith('/api/recruiters') ||
     url.startsWith('/api/candidates') ||
     url.startsWith('/api/companies') ||
     url.startsWith('/api/wishlists')

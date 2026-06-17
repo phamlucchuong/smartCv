@@ -30,6 +30,7 @@ import type {
   ApiResponseCvUploadResponse,
   ApiResponseListCvItem,
   ApiResponseListEnrichedJobSuggestion,
+  ApiResponseMapStringString,
   ApiResponsePageResponseCandidateResponse,
   ApiResponseString,
   ApiResponseVoid,
@@ -1207,6 +1208,92 @@ export function useListCvs<TData = Awaited<ReturnType<typeof listCvs>>, TError =
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListCvsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const refreshCvUrl = (
+    cvId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseMapStringString>(
+      {url: `/api/candidates/cvs/${cvId}/url`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getRefreshCvUrlQueryKey = (cvId?: string,) => {
+    return [
+    `/api/candidates/cvs/${cvId}/url`
+    ] as const;
+    }
+
+    
+export const getRefreshCvUrlQueryOptions = <TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getRefreshCvUrlQueryKey(cvId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof refreshCvUrl>>> = ({ signal }) => refreshCvUrl(cvId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(cvId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type RefreshCvUrlQueryResult = NonNullable<Awaited<ReturnType<typeof refreshCvUrl>>>
+export type RefreshCvUrlQueryError = unknown
+
+
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof refreshCvUrl>>,
+          TError,
+          Awaited<ReturnType<typeof refreshCvUrl>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof refreshCvUrl>>,
+          TError,
+          Awaited<ReturnType<typeof refreshCvUrl>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getRefreshCvUrlQueryOptions(cvId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

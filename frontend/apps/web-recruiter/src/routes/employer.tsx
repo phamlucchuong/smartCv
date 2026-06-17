@@ -1,11 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLayout";
+import Cookies from "js-cookie";
 import {
   LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Bell, Settings, Building2,
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
+import { hasRecruiterRole } from "../lib/recruiterAuth";
 
 export const Route = createFileRoute("/employer")({
+  beforeLoad: () => {
+    const token = Cookies.get("smart_cv_token");
+    if (!token || !hasRecruiterRole(token)) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: EmployerLayoutRoute,
 });
 

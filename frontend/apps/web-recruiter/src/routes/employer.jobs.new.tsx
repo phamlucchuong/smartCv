@@ -1,10 +1,24 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Stepper } from "@/components/ui-kit/Stepper";
 import { Button } from "@smart-cv/ui";
 import { AIInsightBox } from "@/components/ui-kit/AIInsightBox";
+import { RecruiterApi, useCreateJob, usePublishJob, useUpdateJob } from "@smart-cv/api";
 import { toast } from "sonner";
-import { Plus, Minus, X, Search } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  X,
+  Search,
+  Calendar,
+} from "lucide-react";
+import {
+  buildCreateJobPayload,
+  getTomorrowDateInputValue,
+  validateCreateJobStep,
+  type CreateJobFormErrors,
+} from "@/lib/jobForm";
 
 export const Route = createFileRoute("/employer/jobs/new")({
   head: () => ({ meta: [{ title: "Đăng tin tuyển dụng" }] }),
@@ -13,29 +27,136 @@ export const Route = createFileRoute("/employer/jobs/new")({
 
 const STEPS = ["Thông tin cơ bản", "Mô tả công việc", "Quy tắc sàng lọc", "Xem trước & Đăng"];
 
+const JOB_TYPE_OPTIONS = [
+  { label: "Full-time", value: "FULL_TIME" },
+  { label: "Part-time", value: "PART_TIME" },
+  { label: "Remote", value: "REMOTE" },
+  { label: "Hợp đồng", value: "CONTRACT" },
+  { label: "Thực tập", value: "INTERNSHIP" },
+] as const;
+
+const EXPERIENCE_LEVEL_OPTIONS = [
+  { label: "Thực tập sinh", value: "INTERN" },
+  { label: "Junior", value: "JUNIOR" },
+  { label: "Middle", value: "MIDDLE" },
+  { label: "Senior", value: "SENIOR" },
+  { label: "Lead", value: "LEAD" },
+] as const;
+
+type ApiError = {
+  response?: {
+    data?: {
+      code?: number;
+      message?: string;
+    };
+  };
+};
+
+function getJobTypeLabel(jobType: string) {
+  return JOB_TYPE_OPTIONS.find((option) => option.value === jobType)?.label ?? "Chưa chọn";
+}
+
+function getExperienceLabel(experienceLevel: string) {
+  return EXPERIENCE_LEVEL_OPTIONS.find((option) => option.value === experienceLevel)?.label ?? "Chưa chọn";
+}
+
+function formatSalary(salaryMin: string, salaryMax: string, isNegotiable: boolean) {
+  if (isNegotiable) return "Thỏa thuận";
+  if (!salaryMin && !salaryMax) return "Chưa cập nhật";
+
+  const formatter = new Intl.NumberFormat("vi-VN");
+  const min = salaryMin ? formatter.format(Number(salaryMin)) : "";
+  const max = salaryMax ? formatter.format(Number(salaryMax)) : "";
+
+  if (min && max) return `${min} - ${max} VND`;
+  if (min) return `Từ ${min} VND`;
+  return `Đến ${max} VND`;
+}
+
 function NewJob() {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
-  const [skills, setSkills] = useState(["Java", "Spring Boot", "REST API", "MySQL", "Docker"]);
+  const queryClient = useQueryClient();
+
+  const { data: profileResponse, isLoading: isProfileLoading, isError: isProfileError } = RecruiterApi.useGetMe1();
+  const companyName = profileResponse?.data?.companyName?.trim() ?? "";
+  const quotaRemaining = profileResponse?.data?.quotaJobPost ?? 0;
+
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [jobType, setJobType] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [salaryMin, setSalaryMin] = useState("");
+  const [salaryMax, setSalaryMax] = useState("");
+  const [description, setDescription] = useState("");
+  const [requirementsText, setRequirementsText] = useState("");
+  const [benefitsText, setBenefitsText] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState("");
+  const [skills, setSkills] = useState<string[]>(["Java", "Spring Boot", "REST API", "MySQL", "Docker"]);
   const [newSkill, setNewSkill] = useState("");
   const [isNegotiable, setIsNegotiable] = useState(false);
+  const [errors, setErrors] = useState<CreateJobFormErrors & { deadline?: string }>({});
 
   const [qualifiedThreshold, setQualifiedThreshold] = useState(70);
   const [rejectThreshold, setRejectThreshold] = useState(50);
   const [autoRejectEnabled, setAutoRejectEnabled] = useState(false);
   const [requiredTest, setRequiredTest] = useState("Không");
+  const [draftJobId, setDraftJobId] = useState<string | null>(null);
+
+  const createJobMutation = useCreateJob();
+  const updateJobMutation = useUpdateJob();
+  const publishJobMutation = usePublishJob();
+  const isSubmitting = createJobMutation.isPending || updateJobMutation.isPending || publishJobMutation.isPending;
+
+  const tomorrow = getTomorrowDateInputValue();
+
+  const formValues = {
+    title,
+    description,
+    companyName,
+    location,
+    jobType,
+    experienceLevel,
+    salaryMin,
+    salaryMax,
+    isNegotiable,
+    skills,
+    requirementsText,
+    benefitsText,
+    deadline,
+  };
 
   const handleAddSkill = () => {
-    if (!newSkill.trim()) return;
-    if (skills.includes(newSkill.trim())) {
+    const trimmedSkill = newSkill.trim();
+    if (!trimmedSkill) return;
+    if (skills.some((skill) => skill.toLowerCase() === trimmedSkill.toLowerCase())) {
       toast.error("Kỹ năng này đã tồn tại!");
       return;
     }
-    setSkills([...skills, newSkill.trim()]);
+    setSkills([...skills, trimmedSkill]);
     setNewSkill("");
   };
 
+  const clearError = (field: keyof typeof errors) => {
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const validateCurrentStep = () => {
+    const nextErrors = validateCreateJobStep(step, {
+      title,
+      location,
+      jobType,
+      description,
+      experienceLevel,
+    });
+
+    setErrors((current) => ({ ...current, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const handleNextStep = () => {
+    if (step <= 1 && !validateCurrentStep()) return;
+
     if (step === 2) {
       if (qualifiedThreshold <= 0 || rejectThreshold <= 0) {
         toast.error("Ngưỡng điểm sàng lọc phải lớn hơn 0%");
@@ -50,24 +171,146 @@ function NewJob() {
         return;
       }
     }
-    setStep(step + 1);
+
+    setStep((current) => current + 1);
+  };
+
+  const ensureProfileReady = () => {
+    if (isProfileLoading) {
+      toast.info("Đang tải thông tin doanh nghiệp. Vui lòng thử lại sau ít giây.");
+      return false;
+    }
+
+    if (isProfileError) {
+      toast.error("Không thể tải hồ sơ doanh nghiệp. Vui lòng thử lại.");
+      return false;
+    }
+
+    if (!companyName) {
+      toast.error("Vui lòng cập nhật tên công ty trong hồ sơ doanh nghiệp trước khi đăng tin.");
+      navigate({ to: "/employer/profile" });
+      return false;
+    }
+
+    return true;
+  };
+
+  const invalidateJobsList = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/jobs/my"], exact: false });
+  };
+
+  const persistDraft = async () => {
+    const payload = buildCreateJobPayload(formValues);
+
+    if (draftJobId) {
+      await updateJobMutation.mutateAsync({ id: draftJobId, data: payload });
+      return draftJobId;
+    }
+
+    const created = await createJobMutation.mutateAsync({ data: payload });
+    const nextDraftId = created.data?.id;
+    if (!nextDraftId) throw new Error("No job id returned");
+    setDraftJobId(nextDraftId);
+    return nextDraftId;
+  };
+
+  const handleDraft = async () => {
+    if (!ensureProfileReady()) return;
+    const basicErrors = validateCreateJobStep(0, { title, location, jobType, description, experienceLevel });
+    const detailErrors = validateCreateJobStep(1, { title, location, jobType, description, experienceLevel });
+    const nextErrors = { ...basicErrors, ...detailErrors };
+    setErrors((current) => ({ ...current, ...nextErrors }));
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      await persistDraft();
+      await invalidateJobsList();
+      toast.success("Đã lưu nháp");
+      navigate({ to: "/employer/jobs" });
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error(error.response?.data?.message || "Lưu nháp thất bại");
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!ensureProfileReady()) return;
+
+    if (quotaRemaining === 0) {
+      toast.error("Bạn đã hết quota đăng tin. Vui lòng nâng cấp gói để tiếp tục.");
+      navigate({ to: "/employer/billing" });
+      return;
+    }
+
+    try {
+      const jobId = await persistDraft();
+      await publishJobMutation.mutateAsync({ id: jobId });
+      await invalidateJobsList();
+      toast.success("Đăng tin thành công");
+      navigate({ to: "/employer/jobs" });
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      if (error.response?.data?.code === 2003) {
+        setErrors((current) => ({
+          ...current,
+          deadline: "Hạn nộp phải sau ngày hôm nay để đăng tin",
+        }));
+        setStep(0);
+      }
+      toast.error(error.response?.data?.message || "Đăng tin thất bại. Tin đã được giữ ở trạng thái nháp.");
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">Đăng tin tuyển dụng mới</h1>
-      <div className="card-surface p-5"><Stepper steps={STEPS} current={step} /></div>
+      <div className="card-surface p-5">
+        <Stepper steps={STEPS} current={step} />
+      </div>
 
       {step === 0 && (
         <div className="card-surface p-6 space-y-4">
           <h2 className="font-semibold">Thông tin cơ bản</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            <F label="Vị trí" value="Backend Java Developer" />
-            <F label="Phòng ban" value="Engineering" />
-            <F label="Địa điểm" value="Ho Chi Minh City" />
-            <S label="Loại hình" opts={["Full-time", "Part-time", "Internship", "Bootcamp", "Hybrid"]} />
-            <S label="Hình thức" opts={["Onsite", "Remote", "Hybrid"]} />
-            <F label="Số lượng tuyển" value="2" />
+            <TextField
+              label="Vị trí"
+              value={title}
+              onChange={(value) => {
+                setTitle(value);
+                clearError("title");
+              }}
+              error={errors.title}
+            />
+            <TextField
+              label="Địa điểm"
+              value={location}
+              onChange={(value) => {
+                setLocation(value);
+                clearError("location");
+              }}
+              error={errors.location}
+            />
+            <SelectField
+              label="Loại hình"
+              value={jobType}
+              onChange={(value) => {
+                setJobType(value);
+                clearError("jobType");
+              }}
+              options={JOB_TYPE_OPTIONS}
+              placeholder="Chọn loại hình công việc"
+              error={errors.jobType}
+            />
+            <DateField
+              label="Hạn nộp hồ sơ"
+              value={deadline}
+              min={tomorrow}
+              onChange={(value) => {
+                setDeadline(value);
+                clearError("deadline");
+              }}
+              error={errors.deadline}
+            />
             <div className="md:col-span-2 flex items-center gap-2 py-2">
               <input
                 type="checkbox"
@@ -82,39 +325,65 @@ function NewJob() {
             </div>
             {!isNegotiable && (
               <>
-                <F label="Lương tối thiểu (VND)" value="25000000" />
-                <F label="Lương tối đa (VND)" value="40000000" />
+                <TextField
+                  label="Lương tối thiểu (VND)"
+                  type="number"
+                  value={salaryMin}
+                  onChange={setSalaryMin}
+                />
+                <TextField
+                  label="Lương tối đa (VND)"
+                  type="number"
+                  value={salaryMax}
+                  onChange={setSalaryMax}
+                />
               </>
             )}
           </div>
         </div>
       )}
+
       {step === 1 && (
         <div className="space-y-4">
           <div className="card-surface p-6 space-y-4">
             <h2 className="font-semibold">Mô tả công việc</h2>
-            <T label="Mô tả" />
-            <T label="Trách nhiệm" />
-            <T label="Yêu cầu" />
-            <T label="Quyền lợi" />
+            <TextAreaField
+              label="Mô tả"
+              value={description}
+              onChange={(value) => {
+                setDescription(value);
+                clearError("description");
+              }}
+              error={errors.description}
+            />
+            <TextAreaField
+              label="Yêu cầu"
+              value={requirementsText}
+              onChange={setRequirementsText}
+              placeholder="Mỗi yêu cầu trên một dòng"
+            />
+            <TextAreaField
+              label="Quyền lợi"
+              value={benefitsText}
+              onChange={setBenefitsText}
+              placeholder="Mỗi quyền lợi trên một dòng"
+            />
             <div className="grid md:grid-cols-2 gap-4">
-              <S label="Kinh nghiệm" opts={["1-3 năm", "3-5 năm", "5+ năm"]} />
-              <div className="flex items-center gap-2 pt-8">
-                <input
-                  type="checkbox"
-                  id="requireDegree"
-                  className="size-4 rounded border-input accent-primary cursor-pointer"
-                  defaultChecked
-                />
-                <label htmlFor="requireDegree" className="text-sm font-medium cursor-pointer animate-fade-in">
-                  Yêu cầu bằng Đại học
-                </label>
-              </div>
+              <SelectField
+                label="Kinh nghiệm"
+                value={experienceLevel}
+                onChange={(value) => {
+                  setExperienceLevel(value);
+                  clearError("experienceLevel");
+                }}
+                options={EXPERIENCE_LEVEL_OPTIONS}
+                placeholder="Chọn mức kinh nghiệm"
+                error={errors.experienceLevel}
+              />
             </div>
             <div>
               <label className="text-sm font-medium">Kỹ năng yêu cầu</label>
-              
-              {/* Badges container */}
+
               <div className="flex flex-wrap gap-2 mt-2">
                 {skills.map((skill, index) => (
                   <span
@@ -133,7 +402,6 @@ function NewJob() {
                 ))}
               </div>
 
-              {/* Input field and Add button */}
               <div className="flex gap-2 mt-3 max-w-md">
                 <input
                   type="text"
@@ -167,65 +435,22 @@ function NewJob() {
           </AIInsightBox>
         </div>
       )}
+
       {step === 2 && (
         <div className="space-y-4">
           <div className="card-surface p-6 space-y-4">
             <h2 className="font-semibold">Quy tắc sàng lọc AI</h2>
             <div className="flex flex-wrap items-end gap-6">
-              <div className="w-36">
-                <label className="text-sm font-medium">Ngưỡng đạt (%)</label>
-                <div className="relative mt-1.5 flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => setQualifiedThreshold(prev => Math.max(1, prev - 1))}
-                    className="absolute left-1 flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={qualifiedThreshold}
-                    onChange={(e) => setQualifiedThreshold(parseInt(e.target.value) || 0)}
-                    className="w-full h-10 rounded-md border border-input px-8 text-center text-sm bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setQualifiedThreshold(prev => Math.min(100, prev + 1))}
-                    className="absolute right-1 flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="w-36">
-                <label className="text-sm font-medium">Ngưỡng từ chối (%)</label>
-                <div className="relative mt-1.5 flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => setRejectThreshold(prev => Math.max(1, prev - 1))}
-                    className="absolute left-1 flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={rejectThreshold}
-                    onChange={(e) => setRejectThreshold(parseInt(e.target.value) || 0)}
-                    className="w-full h-10 rounded-md border border-input px-8 text-center text-sm bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setRejectThreshold(prev => Math.min(100, prev + 1))}
-                    className="absolute right-1 flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </div>
-              </div>
+              <ThresholdField
+                label="Ngưỡng đạt (%)"
+                value={qualifiedThreshold}
+                setValue={setQualifiedThreshold}
+              />
+              <ThresholdField
+                label="Ngưỡng từ chối (%)"
+                value={rejectThreshold}
+                setValue={setRejectThreshold}
+              />
               <div className="flex items-center gap-2 pb-2.5">
                 <input
                   type="checkbox"
@@ -255,29 +480,35 @@ function NewJob() {
               <div>• Điểm {rejectThreshold}–{qualifiedThreshold - 1}% → <span className="text-warning font-medium">Under Review</span></div>
               <div>• Điểm &lt; {rejectThreshold}% → <span className="text-danger font-medium">Not Qualified {autoRejectEnabled && "(Auto-Rejected by AI)"}</span></div>
               <div className="mt-2 text-xs text-muted-foreground border-t border-border/50 pt-1.5">
-                {autoRejectEnabled 
+                {autoRejectEnabled
                   ? "✓ AI sẽ tự động gửi email từ chối tới các ứng viên dưới ngưỡng mà không cần sự can thiệp từ Recruiter."
-                  : "ℹ AI chỉ phân loại và đánh dấu. Recruiter vẫn có thể xem lại và thay đổi quyết định thủ công."
-                }
+                  : "ℹ AI chỉ phân loại và đánh dấu. Recruiter vẫn có thể xem lại và thay đổi quyết định thủ công."}
               </div>
             </div>
           </div>
         </div>
       )}
+
       {step === 3 && (
         <div className="space-y-4">
           <div className="card-surface p-6">
             <h2 className="font-semibold">Xem trước tin tuyển dụng</h2>
             <div className="mt-4 rounded-xl border border-border p-5">
-              <h3 className="text-xl font-bold">Backend Java Developer</h3>
-              <div className="text-sm text-muted-foreground">FPT Software • Ho Chi Minh City • Hybrid</div>
+              <h3 className="text-xl font-bold">{title || "Chưa nhập vị trí"}</h3>
+              <div className="text-sm text-muted-foreground">
+                {(companyName || "Chưa cập nhật tên công ty")} • {location || "Chưa nhập địa điểm"} • {getJobTypeLabel(jobType)}
+              </div>
               <div className="mt-3 text-sm text-success font-semibold">
-                {isNegotiable ? "Thỏa thuận" : "25–40M VND"}
+                {formatSalary(salaryMin, salaryMax, isNegotiable)}
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {skills.map((s) => (
-                  <span key={s} className="text-xs bg-secondary px-2 py-0.5 rounded-md">{s}</span>
-                ))}
+                {skills.length > 0 ? skills.map((skill) => (
+                  <span key={skill} className="text-xs bg-secondary px-2 py-0.5 rounded-md">{skill}</span>
+                )) : <span className="text-xs text-muted-foreground">Chưa có kỹ năng yêu cầu</span>}
+              </div>
+              <div className="mt-4 space-y-2 text-sm">
+                <div><strong>Kinh nghiệm:</strong> {getExperienceLabel(experienceLevel)}</div>
+                <div><strong>Hạn nộp:</strong> {deadline || "Không giới hạn"}</div>
               </div>
             </div>
           </div>
@@ -288,7 +519,10 @@ function NewJob() {
             </div>
           </div>
           <div className="card-surface p-6 text-sm flex justify-between">
-            <div>Gói hiện tại: <strong>Pro</strong> • Còn lại 12/20 tin trong tháng</div>
+            <div>
+              Gói hiện tại: <strong>Pro</strong> •{" "}
+              {isProfileLoading ? "Đang tải quota..." : `Còn lại ${quotaRemaining} tin`}
+            </div>
           </div>
         </div>
       )}
@@ -298,11 +532,15 @@ function NewJob() {
           {step === 0 ? "Huỷ" : "Quay lại"}
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline">Lưu nháp</Button>
+          <Button variant="outline" onClick={handleDraft} disabled={isSubmitting}>
+            {createJobMutation.isPending || updateJobMutation.isPending ? "Đang lưu..." : "Lưu nháp"}
+          </Button>
           {step < STEPS.length - 1 ? (
             <Button onClick={handleNextStep}>Tiếp theo</Button>
           ) : (
-            <Button onClick={() => { toast.success("Đăng tin thành công"); navigate({ to: "/employer/jobs" }); }}>Đăng tin</Button>
+            <Button onClick={handlePublish} disabled={isSubmitting}>
+              {isSubmitting ? "Đang xử lý..." : "Đăng tin"}
+            </Button>
           )}
         </div>
       </div>
@@ -310,29 +548,173 @@ function NewJob() {
   );
 }
 
-function F({ label, value }: { label: string; value: string }) {
+function TextField({
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  type?: "text" | "number";
+}) {
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
-      <input defaultValue={value} className="mt-1.5 w-full h-10 rounded-md border border-input px-3 text-sm bg-background" />
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full h-10 rounded-md border border-input px-3 text-sm bg-background"
+      />
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }
-function S({ label, opts }: { label: string; opts: string[] }) {
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ReadonlyArray<{ label: string; value: string }>;
+  placeholder: string;
+  error?: string;
+}) {
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
-      <select className="mt-1.5 w-full h-10 rounded-md border border-input px-3 text-sm bg-background">
-        {opts.map((o) => <option key={o}>{o}</option>)}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full h-10 rounded-md border border-input px-3 text-sm bg-background"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }
-function T({ label }: { label: string }) {
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  error,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  placeholder?: string;
+}) {
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
-      <textarea rows={3} className="mt-1.5 w-full rounded-md border border-input px-3 py-2 text-sm bg-background" placeholder={`Nhập ${label.toLowerCase()}...`} />
+      <textarea
+        rows={4}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full rounded-md border border-input px-3 py-2 text-sm bg-background"
+        placeholder={placeholder || `Nhập ${label.toLowerCase()}...`}
+      />
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+  min,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  min: string;
+  error?: string;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium">{label}</label>
+      <div className="relative mt-1.5 flex items-center">
+        <input
+          type="date"
+          min={min}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onClick={(e) => {
+            try {
+              e.currentTarget.showPicker();
+            } catch (err) {}
+          }}
+          onFocus={(e) => {
+            try {
+              e.currentTarget.showPicker();
+            } catch (err) {}
+          }}
+          className="w-full h-10 rounded-md border border-input pl-3 pr-10 text-sm bg-background cursor-pointer"
+        />
+        <Calendar className="absolute right-3 size-4 text-muted-foreground pointer-events-none" />
+      </div>
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+function ThresholdField({
+  label,
+  value,
+  setValue,
+}: {
+  label: string;
+  value: number;
+  setValue: (value: number) => void;
+}) {
+  return (
+    <div className="w-36">
+      <label className="text-sm font-medium">{label}</label>
+      <div className="relative mt-1.5 flex items-center">
+        <button
+          type="button"
+          onClick={() => setValue(Math.max(1, value - 1))}
+          className="absolute left-1 flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+        >
+          <Minus className="size-4" />
+        </button>
+        <input
+          type="number"
+          min="1"
+          max="100"
+          value={value}
+          onChange={(e) => setValue(parseInt(e.target.value, 10) || 0)}
+          className="w-full h-10 rounded-md border border-input px-8 text-center text-sm bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <button
+          type="button"
+          onClick={() => setValue(Math.min(100, value + 1))}
+          className="absolute right-1 flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+        >
+          <Plus className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -351,8 +733,8 @@ function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const filtered = opts.filter((o) =>
-    o.toLowerCase().includes(search.toLowerCase())
+  const filtered = opts.filter((option) =>
+    option.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -384,20 +766,18 @@ function SearchableSelect({
             {filtered.length === 0 ? (
               <div className="text-xs text-muted-foreground p-2">Không tìm thấy kết quả</div>
             ) : (
-              filtered.map((o) => (
+              filtered.map((option) => (
                 <button
-                  key={o}
+                  key={option}
                   type="button"
                   onClick={() => {
-                    onChange(o);
+                    onChange(option);
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs rounded hover:bg-secondary transition-colors cursor-pointer ${
-                    o === value ? "bg-primary/10 text-primary font-medium" : ""
-                  }`}
+                  className={`w-full text-left px-2.5 py-1.5 text-xs rounded hover:bg-secondary transition-colors cursor-pointer ${option === value ? "bg-primary/10 text-primary font-medium" : ""}`}
                 >
-                  {o}
+                  {option}
                 </button>
               ))
             )}

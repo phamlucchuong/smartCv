@@ -5,6 +5,21 @@ import { Sparkles, Building2, User, Mail, Lock, Phone, Eye, EyeOff, ArrowRight }
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
 import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from "@smart-cv/api";
+import { useAuthStore } from "../store/useAuthStore";
+import {
+  buildRecruiterRegistrationPayload,
+  ensureRecruiterRole,
+  extractAuthTokens,
+} from "../lib/recruiterAuth";
+
+type ApiError = {
+  response?: {
+    data?: {
+      code?: number;
+      message?: string;
+    };
+  };
+};
 
 export const Route = createFileRoute("/signup/recruiter")({
   head: () => ({ meta: [{ title: "Đăng ký nhà tuyển dụng — SmartCV" }] }),
@@ -22,6 +37,7 @@ function maskContact(contact: string): string {
 function RecruiterSignup() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const signIn = useAuthStore((state) => state.signIn);
 
   const [companyName, setCompanyName] = useState("FPT Software");
   const [fullname, setFullname] = useState("Trần Thị HR");
@@ -81,34 +97,28 @@ function RecruiterSignup() {
       return;
     }
 
-    if (import.meta.env.VITE_MOCK_AUTH === "true") {
-      toast.success("Đăng ký tài khoản thành công! (MOCKED)");
-      navigate({ to: "/login" });
-      return;
-    }
-
     try {
       await registerMutation.mutateAsync({
-        data: {
-          fullname: fullname.trim(),
-          email: email.trim(),
+        data: buildRecruiterRegistrationPayload({
+          companyName,
+          fullname,
+          email,
+          phone,
           password,
-          phone: phone.trim(),
-          preferredVerification: "EMAIL",
-          role: "RECRUITER",
-        },
+        }),
       });
       toast.success("Mã OTP đã được gửi tới email tuyển dụng của bạn!");
       openOtpPanel();
-    } catch (err: any) {
-      const code = err?.response?.data?.code;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      const code = error.response?.data?.code;
       if (code === 3003) {
         toast.info("Tài khoản đã được đăng ký nhưng chưa xác minh. Vui lòng xác minh OTP.");
         openOtpPanel();
       } else if (code === 3001) {
         toast.error("Email này đã được sử dụng.");
       } else {
-        toast.error(err?.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.");
+        toast.error(error.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.");
       }
     }
   };
@@ -141,18 +151,24 @@ function RecruiterSignup() {
     if (code.length < 6) return;
     setOtpError("");
     try {
-      await verifyMutation.mutateAsync({
+      const result = await verifyMutation.mutateAsync({
         data: {
           contact: email,
           verificationType: "EMAIL",
           code,
         },
       });
-      toast.success("Xác minh tài khoản thành công! Vui lòng đăng nhập.");
+
+      const { accessToken, refreshToken } = extractAuthTokens(result);
+      ensureRecruiterRole(accessToken);
+      signIn(accessToken, refreshToken);
+
+      toast.success("Xác minh tài khoản thành công!");
       setOtpOpen(false);
-      navigate({ to: "/login" });
-    } catch (err: any) {
-      setOtpError(err?.response?.data?.message || "Mã OTP không chính xác. Vui lòng kiểm tra lại.");
+      navigate({ to: "/employer" });
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      setOtpError(error.response?.data?.message || "Mã OTP không chính xác. Vui lòng kiểm tra lại.");
     }
   };
 

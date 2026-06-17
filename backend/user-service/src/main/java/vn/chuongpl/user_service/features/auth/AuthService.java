@@ -118,6 +118,10 @@ public class AuthService {
 
         User savedUser = userService.saveUser(user);
 
+        if ("RECRUITER".equals(roleName)) {
+            recruiterService.createBasicProfile(savedUser.getId(), request.getCompanyName());
+        }
+
         String target = "SMS".equalsIgnoreCase(request.getPreferredVerification()) ? request.getPhone() : request.getEmail();
         notificationClient.sendOTP(target, request.getPreferredVerification(), "VERIFY_ACCOUNT");
 

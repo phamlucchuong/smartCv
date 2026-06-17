@@ -84,7 +84,7 @@ class AuthServiceTest {
 
     @Test
     void register_shouldAssignCandidateRole() {
-        RegisterRequest request = new RegisterRequest("User A", "a@b.com", "12345678", "0909", "EMAIL", "CANDIDATE");
+        RegisterRequest request = new RegisterRequest("User A", "a@b.com", "12345678", "0909", "EMAIL", "CANDIDATE", null);
         User savedUser = User.builder().id("u1").email("a@b.com").roles(new HashSet<>()).createdAt(LocalDateTime.now()).build();
         UserResponse response = UserResponse.builder().id("u1").email("a@b.com").build();
         Role candidate = Role.builder().name("CANDIDATE").description("Job seeker").build();
@@ -103,7 +103,7 @@ class AuthServiceTest {
 
     @Test
     void register_shouldAssignRecruiterRole() {
-        RegisterRequest request = new RegisterRequest("User B", "b@b.com", "12345678", "0908", "SMS", "RECRUITER");
+        RegisterRequest request = new RegisterRequest("User B", "b@b.com", "12345678", "0908", "SMS", "RECRUITER", "ACME");
         User savedUser = User.builder().id("u2").email("b@b.com").roles(new HashSet<>()).createdAt(LocalDateTime.now()).build();
         UserResponse response = UserResponse.builder().id("u2").email("b@b.com").build();
         Role recruiter = Role.builder().name("RECRUITER").description("Company recruiter").build();
@@ -118,11 +118,12 @@ class AuthServiceTest {
 
         assertEquals("u2", actual.getId());
         verify(notificationClient).sendOTP("0908", "SMS", "VERIFY_ACCOUNT");
+        verify(recruiterService).createBasicProfile("u2", "ACME");
     }
 
     @Test
     void register_shouldOverwriteWhenUserExistsButUnverified() {
-        RegisterRequest request = new RegisterRequest("User New", "a@b.com", "12345678", "0909", "EMAIL", "CANDIDATE");
+        RegisterRequest request = new RegisterRequest("User New", "a@b.com", "12345678", "0909", "EMAIL", "CANDIDATE", null);
         User existingUser = User.builder().id("u1").email("a@b.com").fullName("User Old").phone("0101").verified(false).build();
         UserResponse response = UserResponse.builder().id("u1").email("a@b.com").fullName("User New").build();
         Role candidate = Role.builder().name("CANDIDATE").description("Job seeker").build();
@@ -155,7 +156,7 @@ class AuthServiceTest {
 
     @Test
     void register_shouldThrowWhenRoleIsUnsupported() {
-        RegisterRequest request = new RegisterRequest("User C", "c@b.com", "12345678", "0907", "EMAIL", "ADMIN");
+        RegisterRequest request = new RegisterRequest("User C", "c@b.com", "12345678", "0907", "EMAIL", "ADMIN", null);
         when(userService.findAllByEmail("c@b.com")).thenReturn(java.util.Collections.emptyList());
 
         AppException ex = assertThrows(AppException.class, () -> authService.register(request));

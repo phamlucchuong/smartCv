@@ -1,12 +1,29 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { Button } from "@smart-cv/ui";
 import { Sparkles, Mail, Lock, Brain, Target, Zap, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
 import { useState } from "react";
+import Cookies from "js-cookie";
 import { useLoginCandidate } from "@smart-cv/api";
+import { hasRecruiterRole } from "../lib/recruiterAuth";
+import { useAuthStore } from "../store/useAuthStore";
+import { ensureRecruiterRole, extractAuthTokens } from "../lib/recruiterAuth";
+
+type ApiError = {
+  response?: {
+    data?: {
+      code?: number;
+      message?: string;
+    };
+  };
+};
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: () => {
+    const token = Cookies.get("smart_cv_token");
+    if (token && hasRecruiterRole(token)) throw redirect({ to: "/employer" });
+  },
   head: () => ({ meta: [{ title: "Đăng nhập — SmartCV" }] }),
   component: Login,
 });
@@ -14,6 +31,8 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const signIn = useAuthStore((state) => state.signIn);
+  const signOut = useAuthStore((state) => state.signOut);
   
   const [email, setEmail] = useState("hr@company.com");
   const [password, setPassword] = useState("demo1234");
@@ -27,11 +46,39 @@ function Login() {
       return;
     }
     
-    // Temporarily bypass login hook and navigate directly
-    document.cookie = `smart_cv_token=mock-token; Max-Age=86400; path=/; SameSite=Lax`;
-    document.cookie = `smart_cv_refresh=mock-refresh; Max-Age=604800; path=/; SameSite=Lax`;
-    toast.success(t("recruiter_login_success"));
-    navigate({ to: "/employer" });
+    try {
+      const result = await loginMutation.mutateAsync({
+        data: {
+          email: email.trim(),
+          password,
+        },
+      });
+
+      if (result.code !== undefined && result.code !== 1000 && result.code !== 0 && result.code !== 200) {
+        toast.error(result.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+        return;
+      }
+
+      if (!result.data) {
+        toast.error(result.message || "Không nhận được phản hồi từ máy chủ.");
+        return;
+      }
+
+      const { accessToken, refreshToken } = extractAuthTokens(result);
+      ensureRecruiterRole(accessToken);
+      signIn(accessToken, refreshToken);
+      toast.success(t("recruiter_login_success"));
+      navigate({ to: "/employer" });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "This account does not have recruiter access.") {
+        signOut();
+        toast.error(err.message);
+        return;
+      }
+
+      const error = err as ApiError;
+      toast.error(error.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+    }
   };
 
   return (
