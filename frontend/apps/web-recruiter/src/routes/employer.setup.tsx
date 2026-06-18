@@ -34,7 +34,7 @@ function SetupPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, isLoading, refetch } = RecruiterApi.useGetMe1();
+  const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
   const status = recruiter?.status;
 
@@ -57,7 +57,8 @@ function SetupPage() {
     contactEmail: "",
     contactPhone: "",
   });
-  const [licenseFileName, setLicenseFileName] = useState<string | null>(null);
+  // File held in state until submit — not uploaded to S3 until the form is submitted
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const formInitialized = useRef(false);
   useEffect(() => {
@@ -78,10 +79,9 @@ function SetupPage() {
       contactEmail: recruiter.contactEmail ?? "",
       contactPhone: recruiter.contactPhone ?? "",
     });
-    if (recruiter.businessLicenseUrl) setLicenseFileName("Đã tải lên");
   }, [recruiter]);
 
-  // APPROVED users belong on the dashboard, not the setup page
+  // APPROVED users go directly to dashboard
   useEffect(() => {
     if (status === "APPROVED") {
       navigate({ to: "/employer", replace: true });
@@ -97,30 +97,10 @@ function SetupPage() {
     ) => setForm((prev) => ({ ...prev, [key]: e.target.value })),
   });
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Just store in state — upload happens only on submit
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      await uploadLicenseMutation.mutateAsync({ data: { file } });
-      // Only set the name after confirmed server success
-      setLicenseFileName(file.name);
-      toast.success("Tải lên giấy phép kinh doanh thành công");
-      refetch();
-    } catch {
-      toast.error("Tải lên thất bại. Vui lòng thử lại.");
-    }
-  };
-
-  const handleSave = async (): Promise<boolean> => {
-    if (!recruiter?.id) return false;
-    try {
-      await updateMutation.mutateAsync({ id: recruiter.id, data: form });
-      toast.success("Đã lưu thông tin");
-      return true;
-    } catch {
-      toast.error("Lưu thất bại. Vui lòng thử lại.");
-      return false;
-    }
+    if (file) setPendingFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,14 +113,32 @@ function SetupPage() {
         return;
       }
     }
-    if (!recruiter.businessLicenseUrl) {
+    const hasLicense = !!recruiter.businessLicenseUrl || !!pendingFile;
+    if (!hasLicense) {
       toast.error("Vui lòng tải lên giấy phép kinh doanh.");
       return;
     }
 
-    const saved = await handleSave();
-    if (!saved) return;
+    // 1. Upload license to S3 (only if a new file was selected)
+    if (pendingFile) {
+      try {
+        await uploadLicenseMutation.mutateAsync({ data: { file: pendingFile } });
+        setPendingFile(null);
+      } catch {
+        toast.error("Tải lên giấy phép kinh doanh thất bại. Vui lòng thử lại.");
+        return;
+      }
+    }
 
+    // 2. Save profile data
+    try {
+      await updateMutation.mutateAsync({ id: recruiter.id, data: form });
+    } catch {
+      toast.error("Lưu thông tin thất bại. Vui lòng thử lại.");
+      return;
+    }
+
+    // 3. Submit for approval
     try {
       await submitMutation.mutateAsync();
       toast.success("Hồ sơ đã được gửi để phê duyệt!");
@@ -148,15 +146,18 @@ function SetupPage() {
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { code?: number } } })
         ?.response?.data?.code;
-      if (code === 5004) {
-        toast.error("Vui lòng điền đầy đủ các trường bắt buộc trước khi nộp hồ sơ.");
-      } else {
-        toast.error("Không thể nộp hồ sơ. Vui lòng thử lại.");
-      }
+      toast.error(
+        code === 5004
+          ? "Vui lòng điền đầy đủ các trường bắt buộc trước khi nộp hồ sơ."
+          : "Không thể nộp hồ sơ. Vui lòng thử lại."
+      );
     }
   };
 
-  const isBusy = updateMutation.isPending || submitMutation.isPending;
+  const isBusy =
+    uploadLicenseMutation.isPending ||
+    updateMutation.isPending ||
+    submitMutation.isPending;
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
@@ -253,30 +254,29 @@ function SetupPage() {
                     className="rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-primary transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {uploadLicenseMutation.isPending ? (
-                      <div className="space-y-2">
-                        <div className="h-6 w-6 mx-auto animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        <p className="text-sm text-muted-foreground">
-                          Đang tải lên...
-                        </p>
-                      </div>
-                    ) : licenseFileName ? (
+                    {pendingFile ? (
                       <div className="flex items-center justify-center gap-2 text-primary">
                         <FileText className="size-5" />
                         <span className="text-sm font-medium">
-                          {licenseFileName}
+                          {pendingFile.name}
                         </span>
-                        {recruiter?.businessLicenseUrl && (
-                          <a
-                            href={recruiter.businessLicenseUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="ml-1 text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
-                          >
-                            Xem <ExternalLink className="size-3" />
-                          </a>
-                        )}
+                        <span className="text-xs text-muted-foreground">
+                          (chưa tải lên)
+                        </span>
+                      </div>
+                    ) : recruiter?.businessLicenseUrl ? (
+                      <div className="flex items-center justify-center gap-2 text-primary">
+                        <FileText className="size-5" />
+                        <span className="text-sm font-medium">Đã tải lên</span>
+                        <a
+                          href={recruiter.businessLicenseUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-1 text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                        >
+                          Xem <ExternalLink className="size-3" />
+                        </a>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -312,24 +312,15 @@ function SetupPage() {
                   </div>
                 </section>
 
-                <div className="flex gap-3 justify-end pt-4 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleSave()}
-                    disabled={isBusy}
-                  >
-                    {updateMutation.isPending && !submitMutation.isPending
-                      ? "Đang lưu..."
-                      : "Lưu nháp"}
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isBusy || uploadLicenseMutation.isPending}
-                  >
-                    {submitMutation.isPending
-                      ? "Đang gửi..."
-                      : "Nộp hồ sơ để phê duyệt"}
+                <div className="pt-4 border-t">
+                  <Button type="submit" className="w-full" disabled={isBusy}>
+                    {uploadLicenseMutation.isPending
+                      ? "Đang tải lên giấy phép..."
+                      : updateMutation.isPending
+                        ? "Đang lưu thông tin..."
+                        : submitMutation.isPending
+                          ? "Đang gửi hồ sơ..."
+                          : "Nộp hồ sơ để phê duyệt"}
                   </Button>
                 </div>
               </form>
