@@ -1,23 +1,42 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Button } from "@smart-cv/ui";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button, buttonVariants, cn } from "@smart-cv/ui";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { RecruiterApi } from "@smart-cv/api";
-
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { Sparkles, Upload, FileText, Clock, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/employer/setup")({
   head: () => ({ meta: [{ title: "Company Profile Setup — SmartCV" }] }),
   component: SetupPage,
 });
 
+const REQUIRED_FIELDS = [
+  "companyName",
+  "taxCode",
+  "companyAddress",
+  "companyCity",
+  "companySize",
+  "companyType",
+  "industry",
+] as const;
+
+const FIELD_LABELS: Record<string, string> = {
+  companyName: "Tên công ty",
+  taxCode: "Mã số thuế",
+  companyAddress: "Địa chỉ",
+  companyCity: "Tỉnh / Thành phố",
+  companySize: "Quy mô",
+  companyType: "Loại hình",
+  industry: "Ngành nghề",
+};
+
 function SetupPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, isLoading, refetch } = RecruiterApi.useGetMe1();
+  const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
-  const isApproved = recruiter?.status === 'APPROVED';
+  const status = recruiter?.status;
 
   const updateMutation = RecruiterApi.useUpdate();
   const submitMutation = RecruiterApi.useSubmitForApproval();
@@ -38,8 +57,8 @@ function SetupPage() {
     contactEmail: "",
     contactPhone: "",
   });
-  const [licenseFileName, setLicenseFileName] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  // File held in state until submit — not uploaded to S3 until the form is submitted
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const formInitialized = useRef(false);
   useEffect(() => {
@@ -60,179 +79,268 @@ function SetupPage() {
       contactEmail: recruiter.contactEmail ?? "",
       contactPhone: recruiter.contactPhone ?? "",
     });
-    if (recruiter.businessLicenseUrl) setLicenseFileName("Đã tải lên");
   }, [recruiter]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  // APPROVED users go directly to dashboard
+  useEffect(() => {
+    if (status === "APPROVED") {
+      navigate({ to: "/employer", replace: true });
+    }
+  }, [status, navigate]);
 
   const field = (key: keyof typeof form) => ({
     value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-      setForm((prev) => ({ ...prev, [key]: e.target.value })),
+    onChange: (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >
+    ) => setForm((prev) => ({ ...prev, [key]: e.target.value })),
   });
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Just store in state — upload happens only on submit
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setLicenseFileName(file.name);
-    try {
-      await uploadLicenseMutation.mutateAsync({ data: { file } });
-      toast.success("Tải lên giấy phép kinh doanh thành công");
-      refetch();
-    } catch {
-      toast.error("Tải lên thất bại. Vui lòng thử lại.");
-      setLicenseFileName(null);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!recruiter?.id) return;
-    setIsSaving(true);
-    try {
-      await updateMutation.mutateAsync({ id: recruiter.id, data: form });
-      toast.success("Đã lưu thông tin");
-      refetch();
-    } catch {
-      toast.error("Lưu thất bại. Vui lòng thử lại.");
-      throw new Error("save_failed");
-    } finally {
-      setIsSaving(false);
-    }
+    if (file) setPendingFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recruiter?.id) return;
-    setIsSaving(true);
+
+    for (const key of REQUIRED_FIELDS) {
+      if (!form[key].trim()) {
+        toast.error(`Vui lòng điền "${FIELD_LABELS[key]}" trước khi nộp hồ sơ.`);
+        return;
+      }
+    }
+    const hasLicense = !!recruiter.businessLicenseUrl || !!pendingFile;
+    if (!hasLicense) {
+      toast.error("Vui lòng tải lên giấy phép kinh doanh.");
+      return;
+    }
+
+    // 1. Upload license to S3 (only if a new file was selected)
+    if (pendingFile) {
+      try {
+        await uploadLicenseMutation.mutateAsync({ data: { file: pendingFile } });
+        setPendingFile(null);
+      } catch {
+        toast.error("Tải lên giấy phép kinh doanh thất bại. Vui lòng thử lại.");
+        return;
+      }
+    }
+
+    // 2. Save profile data
     try {
       await updateMutation.mutateAsync({ id: recruiter.id, data: form });
-      refetch();
-      setIsSaving(false);
+    } catch {
+      toast.error("Lưu thông tin thất bại. Vui lòng thử lại.");
+      return;
+    }
+
+    // 3. Submit for approval
+    try {
       await submitMutation.mutateAsync();
       toast.success("Hồ sơ đã được gửi để phê duyệt!");
       navigate({ to: "/employer/pending", replace: true });
     } catch (err: unknown) {
-      setIsSaving(false);
-      if ((err as Error)?.message === "save_failed") return;
-      const code = (err as { response?: { data?: { code?: number } } })?.response?.data?.code;
-      if (code === 5004) {
-        toast.error("Vui lòng điền đầy đủ các trường bắt buộc trước khi nộp hồ sơ.");
-      } else {
-        toast.error("Không thể nộp hồ sơ. Vui lòng thử lại.");
-      }
+      const code = (err as { response?: { data?: { code?: number } } })
+        ?.response?.data?.code;
+      toast.error(
+        code === 5004
+          ? "Vui lòng điền đầy đủ các trường bắt buộc trước khi nộp hồ sơ."
+          : "Không thể nộp hồ sơ. Vui lòng thử lại."
+      );
     }
   };
 
+  const isBusy =
+    uploadLicenseMutation.isPending ||
+    updateMutation.isPending ||
+    submitMutation.isPending;
+
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Hoàn thiện hồ sơ công ty</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Điền đầy đủ thông tin để được phê duyệt đăng tuyển dụng.
-        </p>
-      </div>
-
-      {isApproved && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <AlertCircle className="size-5 text-amber-600 mt-0.5 shrink-0" />
-          <p className="text-sm text-amber-800">
-            Tài khoản của bạn đã được xác minh. Để thay đổi thông tin, vui lòng liên hệ{" "}
-            <a href="mailto:support@smartcv.vn" className="underline font-medium">
-              support@smartcv.vn
-            </a>.
-          </p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Company info */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Thông tin công ty</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Tên công ty *" {...field("companyName")} disabled={isApproved} />
-            <Field label="Mã số thuế *" {...field("taxCode")} disabled={isApproved} />
-            <Field label="Địa chỉ *" {...field("companyAddress")} disabled={isApproved} />
-            <Field label="Tỉnh / Thành phố *" {...field("companyCity")} disabled={isApproved} />
-            <SelectField
-              label="Quy mô *"
-              {...field("companySize")}
-              disabled={isApproved}
-              options={["1-10", "11-50", "51-200", "201-500", "500+"]}
-            />
-            <SelectField
-              label="Loại hình *"
-              {...field("companyType")}
-              disabled={isApproved}
-              options={["STARTUP", "TNHH", "CO_PHAN", "AGENCY", "OUTSOURCING", "PRODUCT"]}
-            />
-            <Field label="Ngành nghề *" {...field("industry")} disabled={isApproved} />
-            <Field label="Website" {...field("companyWebsite")} disabled={isApproved} />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+      {/* Left panel */}
+      <div className="flex flex-col px-6 lg:px-16 py-10">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Sparkles className="size-4" />
           </div>
-          <TextareaField label="Mô tả công ty" {...field("companyDescription")} disabled={isApproved} />
-        </section>
+          <span className="font-bold text-lg">SmartCV</span>
+        </Link>
 
-        {/* Business license */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Giấy phép kinh doanh *</h2>
-          <div
-            className="rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-primary transition-colors"
-            onClick={() => !isApproved && fileInputRef.current?.click()}
-          >
-            {licenseFileName ? (
-              <div className="flex items-center justify-center gap-2 text-primary">
-                <FileText className="size-5" />
-                <span className="text-sm font-medium">{licenseFileName}</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Upload className="size-8 mx-auto text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Tải lên PDF hoặc ảnh (tối đa 10 MB)
-                </p>
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,image/jpeg,image/png"
-              onChange={handleFileChange}
-              disabled={isApproved}
-            />
+        {isLoading || !status ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-          {uploadLicenseMutation.isPending && (
-            <p className="text-sm text-muted-foreground">Đang tải lên...</p>
-          )}
-        </section>
-
-        {/* HR contact */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Liên hệ HR</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Người phụ trách" {...field("contactName")} disabled={isApproved} />
-            <Field label="Email liên hệ" {...field("contactEmail")} type="email" disabled={isApproved} />
-            <Field label="Số điện thoại" {...field("contactPhone")} disabled={isApproved} />
-            <Field label="LinkedIn" {...field("linkedinUrl")} disabled={isApproved} />
+        ) : status === "PENDING" ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="max-w-md w-full text-center space-y-4">
+              <Clock className="size-12 mx-auto text-primary" />
+              <p className="text-lg font-semibold">Hồ sơ đang chờ phê duyệt</p>
+              <p className="text-sm text-muted-foreground">
+                Quản trị viên sẽ xem xét trong 1–2 ngày làm việc.
+              </p>
+              <Link
+                to="/employer/pending"
+                className={cn(buttonVariants(), "w-full justify-center")}
+              >
+                Xem trạng thái
+              </Link>
+            </div>
           </div>
-        </section>
+        ) : (
+          /* DRAFT / REJECTED */
+          <div className="flex-1 flex items-start pt-10 lg:items-center">
+            <div className="w-full max-w-lg mx-auto">
+              <h1 className="text-3xl font-bold">Hoàn thiện hồ sơ công ty</h1>
+              <p className="text-muted-foreground mt-2 text-sm">
+                Điền đầy đủ thông tin để được phê duyệt đăng tuyển dụng.
+              </p>
 
-        {!isApproved && (
-          <div className="flex gap-3 justify-end pt-4 border-t">
-            <Button type="button" variant="outline" onClick={handleSave} disabled={isSaving || submitMutation.isPending}>
-              {isSaving ? "Đang lưu..." : "Lưu nháp"}
-            </Button>
-            <Button type="submit" disabled={submitMutation.isPending || uploadLicenseMutation.isPending}>
-              {submitMutation.isPending ? "Đang gửi..." : "Nộp hồ sơ để phê duyệt"}
-            </Button>
+              {status === "REJECTED" && recruiter?.rejectionNote && (
+                <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                  <p className="text-sm font-medium text-destructive">
+                    Hồ sơ bị từ chối:
+                  </p>
+                  <p className="text-sm mt-1 text-foreground">
+                    {recruiter.rejectionNote}
+                  </p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+                <section className="space-y-4">
+                  <h2 className="text-base font-semibold border-b pb-2">
+                    Thông tin công ty
+                  </h2>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Field label="Tên công ty *" {...field("companyName")} />
+                    <Field label="Mã số thuế *" {...field("taxCode")} />
+                    <Field label="Địa chỉ *" {...field("companyAddress")} />
+                    <Field label="Tỉnh / Thành phố *" {...field("companyCity")} />
+                    <SelectField
+                      label="Quy mô *"
+                      {...field("companySize")}
+                      options={["1-10", "11-50", "51-200", "201-500", "500+"]}
+                    />
+                    <SelectField
+                      label="Loại hình *"
+                      {...field("companyType")}
+                      options={[
+                        "STARTUP",
+                        "TNHH",
+                        "CO_PHAN",
+                        "AGENCY",
+                        "OUTSOURCING",
+                        "PRODUCT",
+                      ]}
+                    />
+                    <Field label="Ngành nghề *" {...field("industry")} />
+                    <Field label="Website" {...field("companyWebsite")} />
+                  </div>
+                  <TextareaField
+                    label="Mô tả công ty"
+                    {...field("companyDescription")}
+                  />
+                </section>
+
+                <section className="space-y-4">
+                  <h2 className="text-base font-semibold border-b pb-2">
+                    Giấy phép kinh doanh *
+                  </h2>
+                  <div
+                    className="rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {pendingFile ? (
+                      <div className="flex items-center justify-center gap-2 text-primary">
+                        <FileText className="size-5" />
+                        <span className="text-sm font-medium">
+                          {pendingFile.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          (chưa tải lên)
+                        </span>
+                      </div>
+                    ) : recruiter?.businessLicenseUrl ? (
+                      <div className="flex items-center justify-center gap-2 text-primary">
+                        <FileText className="size-5" />
+                        <span className="text-sm font-medium">Đã tải lên</span>
+                        <a
+                          href={recruiter.businessLicenseUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-1 text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                        >
+                          Xem <ExternalLink className="size-3" />
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="size-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Tải lên PDF hoặc ảnh (tối đa 10 MB)
+                        </p>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,image/jpeg,image/png"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h2 className="text-base font-semibold border-b pb-2">
+                    Liên hệ HR
+                  </h2>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Field label="Người phụ trách" {...field("contactName")} />
+                    <Field
+                      label="Email liên hệ"
+                      {...field("contactEmail")}
+                      type="email"
+                    />
+                    <Field label="Số điện thoại" {...field("contactPhone")} />
+                    <Field label="LinkedIn" {...field("linkedinUrl")} />
+                  </div>
+                </section>
+
+                <div className="pt-4 border-t">
+                  <Button type="submit" className="w-full" disabled={isBusy}>
+                    {uploadLicenseMutation.isPending
+                      ? "Đang tải lên giấy phép..."
+                      : updateMutation.isPending
+                        ? "Đang lưu thông tin..."
+                        : submitMutation.isPending
+                          ? "Đang gửi hồ sơ..."
+                          : "Nộp hồ sơ để phê duyệt"}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
-      </form>
+      </div>
+
+      {/* Right panel — branding */}
+      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-primary via-brand-blue to-ai p-12 text-primary-foreground">
+        <div className="max-w-md space-y-3">
+          <h2 className="text-3xl font-bold leading-tight">
+            Bắt đầu tuyển dụng cùng SmartCV
+          </h2>
+          <p className="opacity-90">
+            Kết nối với hàng ngàn ứng viên tiềm năng. Hồ sơ của bạn sẽ được
+            xem xét trong 1–2 ngày làm việc.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -250,10 +358,14 @@ function Field({
   type?: string;
   disabled?: boolean;
 }) {
+  const id = label.replace(/[\s*]+/g, "-").toLowerCase();
   return (
     <div>
-      <label className="text-sm font-medium">{label}</label>
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
       <input
+        id={id}
         type={type}
         value={value}
         onChange={onChange}
@@ -275,10 +387,14 @@ function TextareaField({
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   disabled?: boolean;
 }) {
+  const id = label.replace(/[\s*]+/g, "-").toLowerCase();
   return (
     <div>
-      <label className="text-sm font-medium">{label}</label>
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
       <textarea
+        id={id}
         value={value}
         onChange={onChange}
         disabled={disabled}
@@ -302,10 +418,14 @@ function SelectField({
   options: string[];
   disabled?: boolean;
 }) {
+  const id = label.replace(/[\s*]+/g, "-").toLowerCase();
   return (
     <div>
-      <label className="text-sm font-medium">{label}</label>
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
       <select
+        id={id}
         value={value}
         onChange={onChange}
         disabled={disabled}

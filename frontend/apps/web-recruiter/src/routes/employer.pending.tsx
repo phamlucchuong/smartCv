@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { buttonVariants, cn } from "@smart-cv/ui";
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { RecruiterApi } from "@smart-cv/api";
 import { useEffect } from "react";
+import { useAuthStore } from "../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/pending")({
   head: () => ({ meta: [{ title: "Account Under Review — SmartCV" }] }),
@@ -11,20 +12,41 @@ export const Route = createFileRoute("/employer/pending")({
 
 function PendingPage() {
   const navigate = useNavigate();
+  const signOut = useAuthStore((state) => state.signOut);
   const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
   const status = recruiter?.status;
 
   useEffect(() => {
     if (status === 'APPROVED') {
-      navigate({ to: '/employer', replace: true });
+      signOut();
+      navigate({ to: '/login', replace: true });
     }
-  }, [status, navigate]);
+  }, [status, navigate, signOut]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (status === 'APPROVED') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="max-w-md w-full text-center space-y-4">
+          <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="size-10 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold">Hồ sơ đã được phê duyệt!</h1>
+          <p className="text-sm text-muted-foreground">
+            Vui lòng đăng nhập lại để truy cập dashboard tuyển dụng.
+          </p>
+          <Link to="/login" className={cn(buttonVariants(), "w-full justify-center")}>
+            Đăng nhập
+          </Link>
+        </div>
       </div>
     );
   }

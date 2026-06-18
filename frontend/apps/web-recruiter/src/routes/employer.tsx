@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Outlet, useRouterState } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLayout";
 import Cookies from "js-cookie";
 import {
@@ -42,9 +42,17 @@ export const Route = createFileRoute("/employer")({
 });
 
 function EmployerLayoutRoute() {
+  // All hooks unconditionally before any conditional return
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { t } = useTranslation();
-  const { data } = RecruiterApi.useGetMe1();
+  const isGate = GATE_PATHS.some((p) => pathname.startsWith(p));
+  // Disable fetch on gate paths — they handle their own data fetching
+  const { data } = RecruiterApi.useGetMe1({ query: { enabled: !isGate } });
   const recruiter = data?.data;
+
+  if (isGate) {
+    return <Outlet />;
+  }
 
   const nav: NavItem[] = [
     { to: "/employer", label: t("recruiter_nav_overview"), icon: LayoutDashboard },

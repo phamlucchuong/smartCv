@@ -74,6 +74,10 @@ AXIOS_INSTANCE.interceptors.request.use((config) => {
   if (config.url) {
     config.url = getPrefixedUrl(config.url);
   }
+  // FormData requests need a boundary in Content-Type — let Axios set it automatically
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 

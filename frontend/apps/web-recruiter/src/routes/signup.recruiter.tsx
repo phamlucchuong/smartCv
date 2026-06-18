@@ -1,16 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@smart-cv/ui";
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Building2, User, Mail, Lock, Phone, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Sparkles, User, Mail, Lock, Phone, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
-import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp, RecruiterApi } from "@smart-cv/api";
-import { useAuthStore } from "../store/useAuthStore";
+import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from "@smart-cv/api";
 import {
   buildRecruiterRegistrationPayload,
   ensureRecruiterRole,
   extractAuthTokens,
 } from "../lib/recruiterAuth";
+import { useAuthStore } from "../store/useAuthStore";
 
 type ApiError = {
   response?: {
@@ -39,12 +39,11 @@ function RecruiterSignup() {
   const { t } = useTranslation();
   const signIn = useAuthStore((state) => state.signIn);
 
-  const [companyName, setCompanyName] = useState("FPT Software");
-  const [fullname, setFullname] = useState("Trần Thị HR");
-  const [email, setEmail] = useState("hr@company.com");
-  const [phone, setPhone] = useState("0901234567");
-  const [password, setPassword] = useState("demo1234");
-  const [confirmPassword, setConfirmPassword] = useState("demo1234");
+  const [fullname, setFullname] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -84,7 +83,7 @@ function RecruiterSignup() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName.trim() || !fullname.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+    if (!fullname.trim() || !email.trim() || !phone.trim() || !password.trim()) {
       toast.error("Vui lòng điền đầy đủ các trường thông tin");
       return;
     }
@@ -100,7 +99,6 @@ function RecruiterSignup() {
     try {
       await registerMutation.mutateAsync({
         data: buildRecruiterRegistrationPayload({
-          companyName,
           fullname,
           email,
           phone,
@@ -162,17 +160,6 @@ function RecruiterSignup() {
       const { accessToken, refreshToken } = extractAuthTokens(result);
       ensureRecruiterRole(accessToken);
       signIn(accessToken, refreshToken);
-
-      // Profile auto-created with DRAFT status on first getMe() call.
-      // Pre-fill companyName so the setup form has it ready.
-      const userId = useAuthStore.getState().userId;
-      if (userId && companyName.trim()) {
-        try {
-          await RecruiterApi.create({ userId, companyName: companyName.trim() });
-        } catch {
-          // Ignore — getMe auto-creates if this fails
-        }
-      }
 
       toast.success("Xác minh tài khoản thành công!");
       setOtpOpen(false);
@@ -279,20 +266,6 @@ function RecruiterSignup() {
                 </form>
               ) : (
                 <form onSubmit={handleSignup} className="space-y-4">
-                  {/* Company Name */}
-                  <div>
-                    <label className="text-sm font-medium">{t("recruiter_company_name")}</label>
-                    <div className="relative mt-1.5">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
-                      />
-                    </div>
-                  </div>
-
                   {/* Fullname */}
                   <div>
                     <label className="text-sm font-medium">{t("recruiter_contact_name")}</label>

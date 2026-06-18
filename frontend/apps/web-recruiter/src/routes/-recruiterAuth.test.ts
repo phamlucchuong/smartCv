@@ -67,17 +67,15 @@ describe('recruiterAuth', () => {
     expect(hasRecruiterRole('not-a-jwt')).toBe(false)
   })
 
-  it('includes companyName in the registration payload', () => {
+  it('builds registration payload without company name', () => {
     expect(
       buildRecruiterRegistrationPayload({
-        companyName: 'ACME',
         fullname: 'Recruiter User',
         email: 'hr@company.com',
         phone: '0901234567',
         password: 'password123',
       }),
     ).toEqual({
-      companyName: 'ACME',
       fullname: 'Recruiter User',
       email: 'hr@company.com',
       phone: '0901234567',
