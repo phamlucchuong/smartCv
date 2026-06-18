@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
 import { useState } from "react";
 import Cookies from "js-cookie";
-import { useLoginCandidate } from "@smart-cv/api";
+import { useLoginCandidate, RecruiterApi } from "@smart-cv/api";
 import { hasRecruiterRole } from "../lib/recruiterAuth";
 import { useAuthStore } from "../store/useAuthStore";
 import { ensureRecruiterRole, extractAuthTokens } from "../lib/recruiterAuth";
@@ -34,8 +34,8 @@ function Login() {
   const signIn = useAuthStore((state) => state.signIn);
   const signOut = useAuthStore((state) => state.signOut);
   
-  const [email, setEmail] = useState("hr@company.com");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   
   const loginMutation = useLoginCandidate();
@@ -66,13 +66,29 @@ function Login() {
 
       const { accessToken, refreshToken } = extractAuthTokens(result);
       ensureRecruiterRole(accessToken);
+      // Set cookies first so RecruiterApi.getMe1() can make an authenticated request
       signIn(accessToken, refreshToken);
+
+      // Verify a recruiter profile exists for this account
+      try {
+        const me = await RecruiterApi.getMe1();
+        if (!me?.data) {
+          signOut();
+          toast.error("Không tìm thấy hồ sơ nhà tuyển dụng. Vui lòng đăng ký tài khoản nhà tuyển dụng.");
+          return;
+        }
+      } catch {
+        signOut();
+        toast.error("Không tìm thấy hồ sơ nhà tuyển dụng. Vui lòng đăng ký tài khoản nhà tuyển dụng.");
+        return;
+      }
+
       toast.success(t("recruiter_login_success"));
       navigate({ to: "/employer" });
     } catch (err: unknown) {
       if (err instanceof Error && err.message === "This account does not have recruiter access.") {
         signOut();
-        toast.error(err.message);
+        toast.error("Tài khoản này không có quyền nhà tuyển dụng.");
         return;
       }
 
