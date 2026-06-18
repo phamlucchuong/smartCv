@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.job_service.dtos.ApiResponse;
 import vn.chuongpl.job_service.dtos.PageResponse;
 import vn.chuongpl.job_service.dtos.request.JobCreateRequest;
+import vn.chuongpl.job_service.dtos.request.JobRejectRequest;
 import vn.chuongpl.job_service.dtos.request.JobSearchRequest;
 import vn.chuongpl.job_service.dtos.request.JobUpdateRequest;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
@@ -63,8 +64,11 @@ public class JobController {
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<JobResponse>> getAllJobs(@RequestParam(defaultValue = "1") int page,
-                                                             @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.<PageResponse<JobResponse>>builder().data(jobService.getAllJobs(page, size)).build();
+                                                             @RequestParam(defaultValue = "10") int size,
+                                                             @RequestParam(required = false) String moderationStatus) {
+        return ApiResponse.<PageResponse<JobResponse>>builder()
+                .data(jobService.getAllJobs(moderationStatus, page, size))
+                .build();
     }
 
     @GetMapping("/{id}")
@@ -104,22 +108,55 @@ public class JobController {
         return ApiResponse.<JobResponse>builder().data(jobService.updateJob(id, request, userId, isAdmin)).build();
     }
 
-    @PatchMapping("/{id}/publish")
+    @PatchMapping("/{id}/submit")
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
-    public ApiResponse<JobResponse> publishJob(@PathVariable String id,
-                                               @AuthenticationPrincipal String userId,
-                                               Authentication authentication) {
+    public ApiResponse<JobResponse> submitJob(@PathVariable String id,
+                                              @AuthenticationPrincipal String userId,
+                                              Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        return ApiResponse.<JobResponse>builder().data(jobService.publishJob(id, userId, isAdmin)).build();
+        return ApiResponse.<JobResponse>builder().data(jobService.submitJob(id, userId, isAdmin)).build();
     }
 
-    @PatchMapping("/{id}/close")
+    @PatchMapping("/{id}/withdraw")
     @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
-    public ApiResponse<JobResponse> closeJob(@PathVariable String id,
-                                             @AuthenticationPrincipal String userId,
-                                             Authentication authentication) {
+    public ApiResponse<JobResponse> withdrawJob(@PathVariable String id,
+                                                @AuthenticationPrincipal String userId,
+                                                Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        return ApiResponse.<JobResponse>builder().data(jobService.closeJob(id, userId, isAdmin)).build();
+        return ApiResponse.<JobResponse>builder().data(jobService.withdrawJob(id, userId, isAdmin)).build();
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
+    public ApiResponse<JobResponse> activateJob(@PathVariable String id,
+                                                @AuthenticationPrincipal String userId,
+                                                Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<JobResponse>builder().data(jobService.activateJob(id, userId, isAdmin)).build();
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
+    public ApiResponse<JobResponse> deactivateJob(@PathVariable String id,
+                                                  @AuthenticationPrincipal String userId,
+                                                  Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return ApiResponse.<JobResponse>builder().data(jobService.deactivateJob(id, userId, isAdmin)).build();
+    }
+
+    @PatchMapping("/admin/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<JobResponse> approveJob(@PathVariable String id,
+                                               @AuthenticationPrincipal String userId) {
+        return ApiResponse.<JobResponse>builder().data(jobService.approveJob(id, userId)).build();
+    }
+
+    @PatchMapping("/admin/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<JobResponse> rejectJob(@PathVariable String id,
+                                              @Valid @RequestBody JobRejectRequest request,
+                                              @AuthenticationPrincipal String userId) {
+        return ApiResponse.<JobResponse>builder().data(jobService.rejectJob(id, request, userId)).build();
     }
 
     @DeleteMapping("/{id}")

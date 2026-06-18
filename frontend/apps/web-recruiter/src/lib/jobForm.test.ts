@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCreateJobPayload,
   getTomorrowDateInputValue,
+  validateDraftJob,
   validateCreateJobStep,
 } from './jobForm'
 
@@ -115,6 +116,30 @@ describe('jobForm', () => {
       description: 'Vui lòng nhập mô tả công việc',
       experienceLevel: 'Vui lòng chọn mức kinh nghiệm',
     })
+  })
+
+  it('validates drafts with only title required', () => {
+    expect(
+      validateDraftJob({
+        title: '',
+        location: '',
+        jobType: '',
+        description: '',
+        experienceLevel: '',
+      }),
+    ).toEqual({
+      title: 'Vui lòng nhập vị trí tuyển dụng',
+    })
+
+    expect(
+      validateDraftJob({
+        title: 'Backend Developer',
+        location: '',
+        jobType: '',
+        description: '',
+        experienceLevel: '',
+      }),
+    ).toEqual({})
   })
 
   it('returns tomorrow in input date format', () => {

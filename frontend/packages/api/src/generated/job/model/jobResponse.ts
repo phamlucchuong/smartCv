@@ -22,7 +22,13 @@ export interface JobResponse {
   skills?: string[];
   requirements?: string[];
   benefits?: string[];
+  /** @deprecated use moderationStatus + visibilityStatus instead */
   status?: JobResponseStatus;
+  moderationStatus?: string;
+  visibilityStatus?: string;
+  moderationNote?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
   deadline?: string;
   qualifiedThreshold?: number;
   rejectThreshold?: number;

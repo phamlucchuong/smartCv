@@ -71,6 +71,16 @@ export function validateCreateJobStep(step: number, values: Pick<CreateJobFormVa
   return errors
 }
 
+export function validateDraftJob(values: Pick<CreateJobFormValues, 'title' | 'location' | 'jobType' | 'description' | 'experienceLevel'>): CreateJobFormErrors {
+  const errors: CreateJobFormErrors = {}
+
+  if (!values.title.trim()) {
+    errors.title = 'Vui lòng nhập vị trí tuyển dụng'
+  }
+
+  return errors
+}
+
 export function buildCreateJobPayload(values: CreateJobFormValues): CreateJobPayload {
   return {
     title: values.title.trim(),

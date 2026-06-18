@@ -7,8 +7,9 @@ import { AIInsightBox } from "@/components/ui-kit/AIInsightBox";
 import {
   RecruiterApi,
   useUpdateJob,
-  usePublishJob,
+  useSubmitJob,
   useGetMyJobById,
+  getMyJobById,
 } from "@smart-cv/api";
 import { toast } from "sonner";
 import { Plus, Minus, X, Search, Calendar } from "lucide-react";
@@ -140,7 +141,7 @@ function EditJob() {
   );
 }
 
-type JobData = NonNullable<ReturnType<typeof useGetMyJobById>["data"]>["data"];
+type JobData = NonNullable<Awaited<ReturnType<typeof getMyJobById>>["data"]>;
 
 function initFormFromJob(job: NonNullable<JobData>): FormFields {
   return {
@@ -190,12 +191,13 @@ function EditJobForm({
     setForm((f) => ({ ...f, [k]: v }));
 
   const updateJobMutation = useUpdateJob();
-  const publishJobMutation = usePublishJob();
+  const submitJobMutation = useSubmitJob();
   const isSubmitting =
-    updateJobMutation.isPending || publishJobMutation.isPending;
+    updateJobMutation.isPending || submitJobMutation.isPending;
 
   const tomorrow = getTomorrowDateInputValue();
-  const isReadOnly = job.status === "CLOSED" || job.status === "EXPIRED";
+  const isReadOnly = job.moderationStatus === "PENDING" ||
+    job.visibilityStatus === "EXPIRED";
 
   const formValues = {
     title: form.title,
@@ -283,24 +285,30 @@ function EditJobForm({
     }
   };
 
-  const handlePublish = async () => {
-    if (quotaRemaining === 0) {
-      toast.error("Bạn đã hết quota đăng tin.");
-      navigate({ to: "/employer/billing" });
-      return;
-    }
+  const handleSubmit = async () => {
     try {
       await updateJobMutation.mutateAsync({
         id,
         data: buildCreateJobPayload(formValues) as unknown as JobUpdateRequest,
       });
-      await publishJobMutation.mutateAsync({ id });
+      if (quotaRemaining === 0) {
+        await invalidateJobs();
+        toast.error("Bạn đã hết quota đăng tin. Tin đã được lưu dưới dạng nháp.");
+        navigate({ to: "/employer/billing" });
+        return;
+      }
+      await submitJobMutation.mutateAsync({ id });
       await invalidateJobs();
-      toast.success("Đăng tin thành công");
+      toast.success("Đã gửi tin để duyệt");
       navigate({ to: "/employer/jobs" });
     } catch (err: unknown) {
       const e = err as ApiError;
       const message = e.response?.data?.message ?? "";
+      if (e.response?.data?.code === 2005) {
+        setErrors((current) => ({ ...current, title: "Tên tin tuyển dụng này đã tồn tại" }));
+        setStep(0);
+        return;
+      }
       if (
         e.response?.data?.code === 2003 &&
         (message.toLowerCase().includes("deadline") ||
@@ -308,11 +316,19 @@ function EditJobForm({
       ) {
         setErrors((current) => ({
           ...current,
-          deadline: "Hạn nộp phải sau ngày hôm nay để đăng tin",
+          deadline: "Hạn nộp phải sau ngày hôm nay để gửi duyệt",
         }));
         setStep(0);
+        toast.error(message || "Gửi duyệt thất bại");
+        return;
       }
-      toast.error(message || "Đăng tin thất bại");
+      if (e.response?.data?.code === 6005) {
+        await invalidateJobs();
+        toast.error("Bạn đã hết quota đăng tin. Tin đã được lưu dưới dạng nháp.");
+        navigate({ to: "/employer/billing" });
+        return;
+      }
+      toast.error(message || "Gửi duyệt thất bại");
     }
   };
 
@@ -322,8 +338,8 @@ function EditJobForm({
 
       {isReadOnly && (
         <div className="card-surface p-4 text-sm text-warning border border-warning/30">
-          Tin tuyển dụng này đã{" "}
-          {job.status === "CLOSED" ? "đóng" : "hết hạn"} và không thể chỉnh
+          Tin tuyển dụng này đang{" "}
+          {job.moderationStatus === "PENDING" ? "chờ duyệt" : "hết hạn"} và không thể chỉnh
           sửa.
         </div>
       )}
@@ -683,9 +699,9 @@ function EditJobForm({
             <Button onClick={handleNextStep}>Tiếp theo</Button>
           ) : (
             !isReadOnly &&
-            job.status === "DRAFT" && (
-              <Button onClick={handlePublish} disabled={isSubmitting}>
-                {isSubmitting ? "Đang xử lý..." : "Đăng tin"}
+            job.moderationStatus === "DRAFT" && (
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? "Đang xử lý..." : "Gửi duyệt"}
               </Button>
             )
           )}

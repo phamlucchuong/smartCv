@@ -11,8 +11,9 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
-import vn.chuongpl.job_service.enums.JobStatus;
+import vn.chuongpl.job_service.enums.JobModerationStatus;
 import vn.chuongpl.job_service.enums.JobType;
+import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.features.job.Job;
 import vn.chuongpl.job_service.features.job.JobMapper;
 
@@ -48,7 +49,9 @@ public class HomeService {
 
     @Cacheable(value = "home:stats", unless = "#result == null")
     public HomeStatsResponse getStats() {
-        Criteria active = Criteria.where("status").is(JobStatus.ACTIVE).and("deleted").is(false);
+        Criteria active = Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
+                .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
+                .and("deleted").is(false);
 
         long activeJobs = mongoTemplate.count(Query.query(active), Job.class);
 
@@ -72,7 +75,9 @@ public class HomeService {
     @Cacheable(value = "home:categories", unless = "#result == null")
     public List<JobCategoryResponse> getCategories() {
         Aggregation agg = Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("status").is(JobStatus.ACTIVE).and("deleted").is(false)),
+                Aggregation.match(Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
+                        .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
+                        .and("deleted").is(false)),
                 Aggregation.group("jobType").count().as("jobCount"),
                 Aggregation.project("jobCount").and("_id").as("name"),
                 Aggregation.sort(Sort.by(Sort.Direction.DESC, "jobCount"))
@@ -85,7 +90,9 @@ public class HomeService {
 
     @Cacheable(value = "home:featured-jobs", unless = "#result == null")
     public List<JobResponse> getFeaturedJobs() {
-        Query q = Query.query(Criteria.where("status").is(JobStatus.ACTIVE).and("deleted").is(false))
+        Query q = Query.query(Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
+                        .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
+                        .and("deleted").is(false))
                 .with(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .limit(6);
         return mongoTemplate.find(q, Job.class).stream().map(jobMapper::toJobResponse).toList();
@@ -94,7 +101,9 @@ public class HomeService {
     @Cacheable(value = "home:top-companies", unless = "#result == null")
     public List<TopCompanyResponse> getTopCompanies() {
         Aggregation agg = Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("status").is(JobStatus.ACTIVE).and("deleted").is(false)),
+                Aggregation.match(Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
+                        .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
+                        .and("deleted").is(false)),
                 Aggregation.group("recruiterId")
                         .count().as("activeJobCount")
                         .first("company").as("name")

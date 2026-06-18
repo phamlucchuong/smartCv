@@ -2,38 +2,51 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@smart-cv/ui";
-import { useGetMyJobs, usePublishJob, useCloseJob, useDeleteJob } from "@smart-cv/api";
+import {
+  useGetMyJobs,
+  useSubmitJob,
+  useWithdrawJob,
+  useActivateJob,
+  useDeactivateJob,
+  useDeleteJob,
+} from "@smart-cv/api";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical } from "lucide-react";
-import type { JobResponse } from "@smart-cv/api";
+
+type JobItem = {
+  id?: string;
+  title?: string;
+  location?: string;
+  company?: string;
+  jobType?: string;
+  moderationStatus?: string;
+  visibilityStatus?: string;
+  moderationNote?: string;
+  createdAt?: string;
+};
 
 export const Route = createFileRoute("/employer/jobs/")({
   head: () => ({ meta: [{ title: "Tin tuyển dụng" }] }),
   component: EmployerJobsPage,
 });
 
-const STATUS_OPTIONS = [
+const MODERATION_STATUS_OPTIONS = [
   { label: "Tất cả trạng thái", value: "" },
-  { label: "Active", value: "ACTIVE" },
-  { label: "Draft", value: "DRAFT" },
-  { label: "Closed", value: "CLOSED" },
-  { label: "Expired", value: "EXPIRED" },
+  { label: "Nháp", value: "DRAFT" },
+  { label: "Chờ duyệt", value: "PENDING" },
+  { label: "Đã duyệt", value: "PUBLISHED" },
 ];
 
-function formatStatus(status?: string) {
-  switch (status) {
-    case "ACTIVE":
-      return "Active";
-    case "DRAFT":
-      return "Draft";
-    case "CLOSED":
-      return "Closed";
-    case "EXPIRED":
-      return "Expired";
-    default:
-      return "Unknown";
+function formatJobStatus(moderationStatus?: string, visibilityStatus?: string) {
+  if (moderationStatus === "DRAFT") return "Draft";
+  if (moderationStatus === "PENDING") return "Chờ duyệt";
+  if (moderationStatus === "PUBLISHED") {
+    if (visibilityStatus === "ACTIVE") return "Active";
+    if (visibilityStatus === "EXPIRED") return "Expired";
+    return "Inactive";
   }
+  return "Unknown";
 }
 
 function formatJobType(jobType?: string) {
@@ -55,12 +68,14 @@ function formatJobType(jobType?: string) {
 
 type ApiError = { response?: { data?: { message?: string } } };
 
-function JobActionsMenu({ job, onMutated }: { job: JobResponse; onMutated: () => void }) {
+function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => void }) {
   const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const navigate = useNavigate();
-  const publishMutation = usePublishJob();
-  const closeMutation = useCloseJob();
+  const submitMutation = useSubmitJob();
+  const withdrawMutation = useWithdrawJob();
+  const activateMutation = useActivateJob();
+  const deactivateMutation = useDeactivateJob();
   const deleteMutation = useDeleteJob();
 
   const run = async (action: () => Promise<unknown>) => {
@@ -77,47 +92,83 @@ function JobActionsMenu({ job, onMutated }: { job: JobResponse; onMutated: () =>
     }
   };
 
+  const isDraft = job.moderationStatus === "DRAFT";
+  const isPendingModeration = job.moderationStatus === "PENDING";
+  const isPublishedActive = job.moderationStatus === "PUBLISHED" && job.visibilityStatus === "ACTIVE";
+  const isPublishedInactive = job.moderationStatus === "PUBLISHED" && job.visibilityStatus === "INACTIVE";
+
   return (
     <div className="relative">
       <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setOpen((o) => !o)}>
         <MoreVertical className="size-4" />
       </Button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-44 rounded-md border border-border bg-popover shadow-md p-1 text-sm">
-          <button
-            className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
-            onClick={() => {
-              setOpen(false);
-              navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
-            }}
-          >
-            Chỉnh sửa
-          </button>
-          {job.status === "DRAFT" && (
+        <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-border bg-popover shadow-md p-1 text-sm">
+          {(isDraft || isPublishedActive || isPublishedInactive) && (
             <button
               className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
-              onClick={() => run(() => publishMutation.mutateAsync({ id: job.id! }))}
+              onClick={() => {
+                setOpen(false);
+                navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
+              }}
             >
-              Đăng tin
+              Chỉnh sửa
             </button>
           )}
-          {job.status === "ACTIVE" && (
+          {isDraft && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-primary"
+              onClick={() => run(() => submitMutation.mutateAsync({ id: job.id! }))}
+            >
+              Gửi duyệt
+            </button>
+          )}
+          {isPendingModeration && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
+              onClick={() => {
+                setOpen(false);
+                navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
+              }}
+            >
+              Xem chi tiết
+            </button>
+          )}
+          {isPendingModeration && (
             <button
               className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-warning"
-              onClick={() => run(() => closeMutation.mutateAsync({ id: job.id! }))}
+              onClick={() => run(() => withdrawMutation.mutateAsync({ id: job.id! }))}
             >
-              Đóng tin
+              Rút về nháp
             </button>
           )}
-          <button
-            className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-danger"
-            onClick={() => {
-              if (!window.confirm("Xóa tin này? Hành động không thể hoàn tác.")) return;
-              run(() => deleteMutation.mutateAsync({ id: job.id! }));
-            }}
-          >
-            Xóa
-          </button>
+          {isPublishedActive && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-warning"
+              onClick={() => run(() => deactivateMutation.mutateAsync({ id: job.id! }))}
+            >
+              Tạm dừng
+            </button>
+          )}
+          {isPublishedInactive && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-success"
+              onClick={() => run(() => activateMutation.mutateAsync({ id: job.id! }))}
+            >
+              Kích hoạt lại
+            </button>
+          )}
+          {isDraft && (
+            <button
+              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-danger"
+              onClick={() => {
+                if (!window.confirm("Xóa tin này? Hành động không thể hoàn tác.")) return;
+                run(() => deleteMutation.mutateAsync({ id: job.id! }));
+              }}
+            >
+              Xóa
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -145,13 +196,13 @@ function EmployerJobsPage() {
   const jobs = data?.data?.items ?? [];
   const total = data?.data?.total ?? 0;
 
-  const filteredJobs = jobs.filter((job) => {
+  const filteredJobs = (jobs as JobItem[]).filter((job) => {
     const matchesSearch = !search.trim() ||
       job.title?.toLowerCase().includes(search.trim().toLowerCase()) ||
       job.location?.toLowerCase().includes(search.trim().toLowerCase()) ||
       job.company?.toLowerCase().includes(search.trim().toLowerCase());
 
-    const matchesStatus = !status || job.status === status;
+    const matchesStatus = !status || job.moderationStatus === status;
     return matchesSearch && matchesStatus;
   });
 
@@ -184,7 +235,7 @@ function EmployerJobsPage() {
           onChange={(e) => setStatus(e.target.value)}
           className="h-9 rounded-md border border-input bg-background text-sm px-3"
         >
-          {STATUS_OPTIONS.map((option) => (
+          {MODERATION_STATUS_OPTIONS.map((option) => (
             <option key={option.value || "all"} value={option.value}>
               {option.label}
             </option>
@@ -236,8 +287,11 @@ function EmployerJobsPage() {
                         {job.location || "Chưa cập nhật"} • {formatJobType(job.jobType)}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <StatusBadge status={formatStatus(job.status)} />
+                    <td className="py-3 px-4 space-y-0.5">
+                      <StatusBadge status={formatJobStatus(job.moderationStatus, job.visibilityStatus)} />
+                      {job.moderationStatus === "DRAFT" && job.moderationNote && (
+                        <p className="text-xs text-danger">{job.moderationNote}</p>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-right text-muted-foreground">-</td>
                     <td className="py-3 px-4 text-muted-foreground">{formatJobType(job.jobType)}</td>

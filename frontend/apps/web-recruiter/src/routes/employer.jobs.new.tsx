@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Stepper } from "@/components/ui-kit/Stepper";
 import { Button } from "@smart-cv/ui";
 import { AIInsightBox } from "@/components/ui-kit/AIInsightBox";
-import { RecruiterApi, useCreateJob, usePublishJob, useUpdateJob } from "@smart-cv/api";
+import { RecruiterApi, useCreateJob, useSubmitJob, useUpdateJob } from "@smart-cv/api";
 import { toast } from "sonner";
 import {
   Plus,
@@ -17,6 +17,7 @@ import {
   buildCreateJobPayload,
   getTomorrowDateInputValue,
   validateCreateJobStep,
+  validateDraftJob,
   type CreateJobFormErrors,
 } from "@/lib/jobForm";
 
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/employer/jobs/new")({
   component: NewJob,
 });
 
-const STEPS = ["Thông tin cơ bản", "Mô tả công việc", "Quy tắc sàng lọc", "Xem trước & Đăng"];
+const STEPS = ["Thông tin cơ bản", "Mô tả công việc", "Quy tắc sàng lọc", "Xem trước & Gửi duyệt"];
 
 const JOB_TYPE_OPTIONS = [
   { label: "Full-time", value: "FULL_TIME" },
@@ -105,8 +106,8 @@ function NewJob() {
 
   const createJobMutation = useCreateJob();
   const updateJobMutation = useUpdateJob();
-  const publishJobMutation = usePublishJob();
-  const isSubmitting = createJobMutation.isPending || updateJobMutation.isPending || publishJobMutation.isPending;
+  const submitJobMutation = useSubmitJob();
+  const isSubmitting = createJobMutation.isPending || updateJobMutation.isPending || submitJobMutation.isPending;
 
   const tomorrow = getTomorrowDateInputValue();
 
@@ -203,6 +204,14 @@ function NewJob() {
     await queryClient.invalidateQueries({ queryKey: ["/api/jobs/my"], exact: false });
   };
 
+  const handleQuotaExceededDraft = async () => {
+    const jobId = await persistDraft();
+    await invalidateJobsList();
+    toast.error("Bạn đã hết quota đăng tin. Tin đã được lưu dưới dạng nháp.");
+    navigate({ to: "/employer/billing" });
+    return jobId;
+  };
+
   const persistDraft = async () => {
     const payload = buildCreateJobPayload(formValues);
 
@@ -220,9 +229,7 @@ function NewJob() {
 
   const handleDraft = async () => {
     if (!ensureProfileReady()) return;
-    const basicErrors = validateCreateJobStep(0, { title, location, jobType, description, experienceLevel });
-    const detailErrors = validateCreateJobStep(1, { title, location, jobType, description, experienceLevel });
-    const nextErrors = { ...basicErrors, ...detailErrors };
+    const nextErrors = validateDraftJob({ title, location, jobType, description, experienceLevel });
     setErrors((current) => ({ ...current, ...nextErrors }));
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -233,37 +240,58 @@ function NewJob() {
       navigate({ to: "/employer/jobs" });
     } catch (err: unknown) {
       const error = err as ApiError;
+      if (error.response?.data?.code === 2005) {
+        setErrors((current) => ({ ...current, title: "Tên tin tuyển dụng này đã tồn tại" }));
+        return;
+      }
       toast.error(error.response?.data?.message || "Lưu nháp thất bại");
     }
   };
 
-  const handlePublish = async () => {
+  const handleSubmit = async () => {
     if (!ensureProfileReady()) return;
-
-    if (quotaRemaining === 0) {
-      toast.error("Bạn đã hết quota đăng tin. Vui lòng nâng cấp gói để tiếp tục.");
-      navigate({ to: "/employer/billing" });
+    const draftErrors = validateDraftJob({ title, location, jobType, description, experienceLevel });
+    setErrors((current) => ({ ...current, ...draftErrors }));
+    if (Object.keys(draftErrors).length > 0) {
+      setStep(0);
       return;
     }
 
     try {
+      if (quotaRemaining === 0) {
+        await handleQuotaExceededDraft();
+        return;
+      }
+
       const jobId = await persistDraft();
-      await publishJobMutation.mutateAsync({ id: jobId });
+      await submitJobMutation.mutateAsync({ id: jobId });
       await invalidateJobsList();
-      toast.success("Đăng tin thành công");
+      toast.success("Đã gửi tin để duyệt");
       navigate({ to: "/employer/jobs" });
     } catch (err: unknown) {
       const error = err as ApiError;
       const message = error.response?.data?.message ?? "";
+      if (error.response?.data?.code === 2005) {
+        setErrors((current) => ({ ...current, title: "Tên tin tuyển dụng này đã tồn tại" }));
+        setStep(0);
+        return;
+      }
       if (error.response?.data?.code === 2003 &&
           (message.toLowerCase().includes("deadline") || message.toLowerCase().includes("hạn"))) {
         setErrors((current) => ({
           ...current,
-          deadline: "Hạn nộp phải sau ngày hôm nay để đăng tin",
+          deadline: "Hạn nộp phải sau ngày hôm nay để gửi duyệt",
         }));
         setStep(0);
+        toast.error(message || "Gửi duyệt thất bại. Tin đã được giữ ở trạng thái nháp.");
+        return;
       }
-      toast.error(message || "Đăng tin thất bại. Tin đã được giữ ở trạng thái nháp.");
+      if (error.response?.data?.code === 6005) {
+        toast.error("Bạn đã hết quota đăng tin. Tin đã được lưu dưới dạng nháp.");
+        navigate({ to: "/employer/billing" });
+        return;
+      }
+      toast.error(message || "Gửi duyệt thất bại. Tin đã được giữ ở trạng thái nháp.");
     }
   };
 
@@ -543,8 +571,8 @@ function NewJob() {
           {step < STEPS.length - 1 ? (
             <Button onClick={handleNextStep}>Tiếp theo</Button>
           ) : (
-            <Button onClick={handlePublish} disabled={isSubmitting}>
-              {isSubmitting ? "Đang xử lý..." : "Đăng tin"}
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Đang xử lý..." : "Gửi duyệt"}
             </Button>
           )}
         </div>
