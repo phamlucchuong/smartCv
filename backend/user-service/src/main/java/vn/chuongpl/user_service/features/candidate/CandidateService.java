@@ -14,8 +14,6 @@ import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
 import vn.chuongpl.user_service.features.candidate.settings.CandidateSettings;
 import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferences;
-import vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings;
-import vn.chuongpl.user_service.features.candidate.settings.PreferencesSettingsRequest;
 import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
@@ -113,6 +111,10 @@ public class CandidateService {
     public String uploadAvatar(String userId, org.springframework.web.multipart.MultipartFile file) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        String oldAvatarUrl = candidate.getAvatarUrl();
+        if (oldAvatarUrl != null && !oldAvatarUrl.isBlank()) {
+            s3Service.deleteAvatar(oldAvatarUrl);
+        }
         String avatarUrl = s3Service.uploadAvatar(file, userId);
         candidate.setAvatarUrl(avatarUrl);
         candidate.setUpdatedAt(LocalDateTime.now());
@@ -290,23 +292,6 @@ public class CandidateService {
         candidateRepository.save(candidate);
     }
 
-    public PreferencesSettings updatePreferences(String userId, PreferencesSettingsRequest request) {
-        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        PreferencesSettings preferences = ensureSettings(candidate).getPreferences();
-        if (request != null) {
-            if (request.getLanguage() != null) {
-                preferences.setLanguage(request.getLanguage());
-            }
-            if (request.getTheme() != null) {
-                preferences.setTheme(request.getTheme());
-            }
-        }
-        candidate.setUpdatedAt(LocalDateTime.now());
-        candidateRepository.save(candidate);
-        return preferences;
-    }
-
     private CandidateSettings ensureSettings(Candidate candidate) {
         if (candidate.getSettings() == null) {
             candidate.setSettings(new CandidateSettings());
@@ -317,9 +302,6 @@ public class CandidateService {
         }
         if (settings.getPrivacy() == null) {
             settings.setPrivacy(new PrivacySettings());
-        }
-        if (settings.getPreferences() == null) {
-            settings.setPreferences(new PreferencesSettings());
         }
         return settings;
     }
@@ -407,7 +389,8 @@ public class CandidateService {
                 .filter(c -> cvId.equals(c.getId()))
                 .findFirst()
                 .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
-        return new CvInfoResponse(cv.getId(), cv.getUrl(), cv.getFilename(), candidate.getUserId());
+        String url = cv.getS3Key() != null ? s3Service.generateFreshUrl(cv.getS3Key()) : cv.getUrl();
+        return new CvInfoResponse(cv.getId(), url, cv.getFilename(), candidate.getUserId());
     }
 
     public void updateCvAnalysis(String cvId, String analysisResult, CvAnalysisStatus status) {

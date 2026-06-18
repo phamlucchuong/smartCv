@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -74,6 +75,29 @@ public class S3Service {
             return generatePresignedUrl(key);
         }
         return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
+    }
+
+    public void deleteAvatar(String avatarUrl) {
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            return;
+        }
+        int idx = avatarUrl.indexOf("avatars/");
+        if (idx == -1) {
+            return;
+        }
+        String key = avatarUrl.substring(idx);
+        if (key.contains("?")) {
+            key = key.substring(0, key.indexOf("?"));
+        }
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build());
+            log.info("Successfully deleted old avatar from S3: key={}", key);
+        } catch (Exception e) {
+            log.error("Failed to delete old avatar from S3: key={}, error={}", key, e.getMessage());
+        }
     }
 
     public CvUploadResult uploadCv(MultipartFile file, String candidateId) {
