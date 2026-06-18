@@ -12,7 +12,6 @@ interface AuthEnvelope {
 }
 
 interface RecruiterSignupValues {
-  companyName: string
   fullname: string
   email: string
   phone: string
@@ -48,7 +47,6 @@ export function ensureRecruiterRole(accessToken: string) {
 
 export function buildRecruiterRegistrationPayload(values: RecruiterSignupValues) {
   return {
-    companyName: values.companyName.trim(),
     fullname: values.fullname.trim(),
     email: values.email.trim(),
     password: values.password ?? '',

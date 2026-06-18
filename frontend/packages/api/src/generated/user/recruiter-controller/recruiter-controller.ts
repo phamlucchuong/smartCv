@@ -447,13 +447,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
       
       
-      const formData = new FormData();
-      if (uploadBusinessLicenseBody.file) {
-        formData.append('file', uploadBusinessLicenseBody.file);
-      }
       return customInstance<ApiResponseRecruiterResponse>(
       {url: `/api/recruiters/me/business-license`, method: 'POST',
-      data: formData, signal
+      headers: {'Content-Type': 'application/json', },
+      data: uploadBusinessLicenseBody, signal
     },
       options);
     }
