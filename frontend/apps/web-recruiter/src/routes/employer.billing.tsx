@@ -21,14 +21,14 @@ export const Route = createFileRoute("/employer/billing")({
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Gói & Thanh toán</h1>
 
-      <div className="card-surface p-6 bg-gradient-to-br from-primary to-brand-blue text-primary-foreground border-0 grid md:grid-cols-2 gap-6 items-center">
+      <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-brand-blue text-white shadow-lg grid md:grid-cols-2 gap-6 items-center">
         <div>
           <div className="text-sm opacity-90">Gói hiện tại</div>
           <div className="text-3xl font-bold mt-1">Pro</div>
           <div className="text-sm opacity-90 mt-1">Gia hạn 15/06/2025</div>
           <div className="mt-4 flex gap-2">
             <Button variant="secondary">Nâng cấp</Button>
-            <Button variant="outline" className="bg-transparent text-primary-foreground border-white/30 hover:bg-white/10 hover:text-primary-foreground"><Zap className="size-4 mr-1" /> Mua Boost</Button>
+            <Button variant="outline" className="bg-transparent text-white border-white/30 hover:bg-white/10 hover:text-white"><Zap className="size-4 mr-1" /> Mua Boost</Button>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">

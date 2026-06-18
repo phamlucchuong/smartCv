@@ -44,12 +44,14 @@ function WishlistsPage() {
 
   const chips = [
     { key: 'all', label: t('wishlists_filter_all') },
+    { key: 'expiring-soon', label: t('wishlists_filter_expiring_soon') },
   ]
 
   const filtered = jobs.filter((job) => {
     const q = query.trim().toLowerCase()
     const matchText = q === '' || (job.title ?? '').toLowerCase().includes(q) || (job.company ?? '').toLowerCase().includes(q)
-    return matchText
+    const matchExpiring = selectedChip === 'all' || ((job as { deadline?: string }).deadline ? new Date((job as { deadline?: string }).deadline!) > new Date() : false)
+    return matchText && matchExpiring
   })
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading wishlists...</div>

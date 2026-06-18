@@ -12,6 +12,7 @@ export * from './apiResponseApplicationResponse';
 export * from './apiResponseAssessmentResponse';
 export * from './apiResponseAssessmentResultResponse';
 export * from './apiResponseAttemptStateResponse';
+export * from './apiResponseListAssessmentResponse';
 export * from './apiResponseListAttemptStateResponse';
 export * from './apiResponseMapStringString';
 export * from './apiResponseMapStringStringData';

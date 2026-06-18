@@ -24,6 +24,7 @@
   "signup_welcome": "Tham gia SmartCV hôm nay",
   "email": "Email",
   "password": "Mật khẩu",
+  "confirm_password": "Xác nhận mật khẩu",
   "full_name": "Họ và tên",
   "create_account": "Tạo tài khoản",
   "new_to_smartcv": "Chưa có tài khoản?",
@@ -105,6 +106,7 @@
   "recruiter_nav_billing": "Gói & Thanh toán",
   "recruiter_nav_notifications": "Thông báo",
   "recruiter_nav_settings": "Cài đặt",
+  "recruiter_nav_profile": "Hồ sơ công ty",
   "recruiter_sidebar_group_overview": "Tổng quan",
   "recruiter_sidebar_group_hiring": "Tuyển dụng",
   "recruiter_sidebar_group_intelligence": "Công cụ thông minh",
@@ -410,6 +412,9 @@
   "profile_phone": "Số điện thoại",
   "profile_address": "Địa chỉ",
   "profile_job_title": "Chức danh",
+  "profile_linkedin": "LinkedIn",
+  "profile_github": "GitHub",
+  "profile_portfolio": "Portfolio",
   "profile_bio": "Giới thiệu bản thân",
   "profile_applied": "Đã ứng tuyển",
   "profile_saved": "Đã lưu",
@@ -458,5 +463,7 @@
   "cv_analysis_score_excellent": "Xuất sắc",
   "cv_analysis_score_good": "Tốt",
   "cv_analysis_score_fair": "Khá",
-  "cv_analysis_score_poor": "Cần cải thiện"
+  "cv_analysis_score_poor": "Cần cải thiện",
+  "wishlists_filter_expiring_soon": "Sắp hết hạn",
+  "validation_required": "Trường này không được để trống"
 }

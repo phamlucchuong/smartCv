@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@smart-cv/ui'
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Upload, FileText, Star, Trash2, RefreshCw, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
@@ -218,6 +218,9 @@ function MyCVPage() {
         <DialogHeader>
           <DialogTitle>{lang === 'VI' ? 'Tải lên CV mới' : 'Upload New CV'}</DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">
+          {lang === 'VI' ? 'Tải lên file PDF (tối đa 5MB)' : 'Upload a PDF file (max 5MB)'}
+        </DialogDescription>
         <input
           ref={fileInputRef}
           type="file"

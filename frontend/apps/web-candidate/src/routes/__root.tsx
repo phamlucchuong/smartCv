@@ -20,11 +20,11 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@smart-cv/ui'
-import { i18n, useTranslation } from '@smart-cv/i18n'
+import { useTranslation } from '@smart-cv/i18n'
 import { registerSignOutHandler, useGetMe2 } from '@smart-cv/api'
 import { Toaster } from 'sonner'
-import { usePreferencesStore } from '../store/usePreferencesStore'
 import { useAuthStore } from '../store/useAuthStore'
+import { useCandidatePreferences } from '../store/candidatePreferences'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -48,11 +48,13 @@ function RootComponent() {
   const [resourceHighlightIndex, setResourceHighlightIndex] = React.useState(0)
 
   const { isAuthenticated, email, fullName, setFullName, signOut } = useAuthStore()
-  const theme = usePreferencesStore((state) => state.theme)
-  const language = usePreferencesStore((state) => state.language)
-  const toggleTheme = usePreferencesStore((state) => state.toggleTheme)
-  const toggleLanguage = usePreferencesStore((state) => state.toggleLanguage)
-  const syncLanguageFromI18n = usePreferencesStore((state) => state.syncLanguageFromI18n)
+  const {
+    theme,
+    language,
+    toggleTheme,
+    toggleLanguage,
+    isLoading: preferencesLoading,
+  } = useCandidatePreferences()
 
   const jobMenuRef = React.useRef<HTMLDivElement>(null)
   const resourceMenuRef = React.useRef<HTMLDivElement>(null)
@@ -127,7 +129,6 @@ function RootComponent() {
 
   const handleToggleLanguage = () => {
     toggleLanguage()
-    i18n.changeLanguage(language === 'EN' ? 'vi' : 'en')
   }
 
   React.useEffect(() => {
@@ -149,11 +150,6 @@ function RootComponent() {
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
-
-  React.useEffect(() => {
-    const currentLanguage = i18n.language?.toUpperCase() === 'VI' ? 'VI' : 'EN'
-    syncLanguageFromI18n(currentLanguage)
-  }, [syncLanguageFromI18n, t])
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -236,6 +232,7 @@ function RootComponent() {
             </Button>
             <button
               onClick={handleToggleLanguage}
+              disabled={preferencesLoading}
               className="border-border bg-muted/60 relative flex h-10 w-[92px] cursor-pointer items-center rounded-lg border p-1 text-sm"
             >
               <span
@@ -247,6 +244,7 @@ function RootComponent() {
             <Button
               variant="outline"
               onClick={toggleTheme}
+              disabled={preferencesLoading}
               size="icon"
               className="border-border bg-muted/60 text-muted-foreground transition-transform duration-300 active:scale-95"
             >

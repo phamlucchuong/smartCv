@@ -21,6 +21,7 @@ public class User {
     String id;
     @Field(name = "full_name")
     String fullName;
+    @Indexed
     String email;
     String password;
     @Indexed(sparse = true)

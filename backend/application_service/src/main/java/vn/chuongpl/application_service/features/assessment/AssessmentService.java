@@ -39,6 +39,34 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
+    public List<AssessmentResponse> getRecruiterAssessments(String recruiterId) {
+        return assessmentRepository.findByRecruiterId(recruiterId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String recruiterId) {
+        Assessment assessment = findAssessmentById(id);
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        assessment.setTitle(req.getTitle());
+        assessment.setDescription(req.getDescription());
+        assessment.setJobId(req.getJobId());
+        assessment.setQuestions(req.getQuestions() != null ? req.getQuestions() : List.of());
+        assessment.setTimeLimitMinutes(req.getTimeLimitMinutes());
+        Assessment saved = assessmentRepository.save(assessment);
+        return toResponse(saved);
+    }
+
+    public void deleteAssessment(String id, String recruiterId) {
+        Assessment assessment = findAssessmentById(id);
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        assessmentRepository.delete(assessment);
+    }
+
     public void assignToCandidate(String assessmentId, String candidateId, String recruiterId) {
         Assessment assessment = findAssessmentById(assessmentId);
         AssessmentAttempt attempt = AssessmentAttempt.builder()

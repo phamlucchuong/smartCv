@@ -24,6 +24,7 @@
   "signup_welcome": "Join SmartCV today",
   "email": "Email",
   "password": "Password",
+  "confirm_password": "Confirm Password",
   "full_name": "Full name",
   "create_account": "Create Account",
   "new_to_smartcv": "New to SmartCV?",
@@ -105,6 +106,7 @@
   "recruiter_nav_billing": "Billing & Plans",
   "recruiter_nav_notifications": "Notifications",
   "recruiter_nav_settings": "Settings",
+  "recruiter_nav_profile": "Company Profile",
   "recruiter_sidebar_group_overview": "Overview",
   "recruiter_sidebar_group_hiring": "Hiring",
   "recruiter_sidebar_group_intelligence": "Intelligence",
@@ -410,6 +412,9 @@
   "profile_phone": "Phone Number",
   "profile_address": "Address",
   "profile_job_title": "Job Title",
+  "profile_linkedin": "LinkedIn",
+  "profile_github": "GitHub",
+  "profile_portfolio": "Portfolio",
   "profile_bio": "About Me",
   "profile_applied": "Applied",
   "profile_saved": "Saved",
@@ -458,5 +463,7 @@
   "cv_analysis_score_excellent": "Excellent",
   "cv_analysis_score_good": "Good",
   "cv_analysis_score_fair": "Fair",
-  "cv_analysis_score_poor": "Poor"
+  "cv_analysis_score_poor": "Poor",
+  "validation_required": "This field is required",
+  "wishlists_filter_expiring_soon": "Expiring Soon"
 }

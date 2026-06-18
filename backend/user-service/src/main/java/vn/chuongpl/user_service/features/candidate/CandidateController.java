@@ -14,6 +14,8 @@ import vn.chuongpl.user_service.dtos.response.CandidateResponse;
 import vn.chuongpl.user_service.dtos.response.CvUploadResponse;
 import vn.chuongpl.user_service.features.candidate.settings.CandidateSettings;
 import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferences;
+import vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings;
+import vn.chuongpl.user_service.features.candidate.settings.PreferencesSettingsRequest;
 import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
 import vn.chuongpl.user_service.integration.ai.SkillExtractPublisher;
 
@@ -178,6 +180,16 @@ public class CandidateController {
                                             @AuthenticationPrincipal String userId) {
         candidateService.updatePrivacySettings(userId, privacy);
         return ApiResponse.<Void>builder().message("Privacy settings updated").build();
+    }
+
+    @PutMapping("/settings/preferences")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<PreferencesSettings> updatePreferences(@RequestBody PreferencesSettingsRequest preferences,
+                                                              @AuthenticationPrincipal String userId) {
+        return ApiResponse.<PreferencesSettings>builder()
+                .data(candidateService.updatePreferences(userId, preferences))
+                .message("Preferences updated")
+                .build();
     }
 
     @DeleteMapping("/me")

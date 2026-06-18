@@ -41,7 +41,9 @@ public class JobDocument {
     @Field(type = FieldType.Keyword)
     List<String> skills;
     @Field(type = FieldType.Keyword)
-    String status;
+    String moderationStatus;
+    @Field(type = FieldType.Keyword)
+    String visibilityStatus;
     @Field(type = FieldType.Date, format = {}, pattern = "uuuu-MM-dd")
     LocalDate deadline;
     @Field(type = FieldType.Date, format = {}, pattern = "uuuu-MM-dd'T'HH:mm:ss")

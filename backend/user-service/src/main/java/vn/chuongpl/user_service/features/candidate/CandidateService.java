@@ -111,6 +111,10 @@ public class CandidateService {
     public String uploadAvatar(String userId, org.springframework.web.multipart.MultipartFile file) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        String oldAvatarUrl = candidate.getAvatarUrl();
+        if (oldAvatarUrl != null && !oldAvatarUrl.isBlank()) {
+            s3Service.deleteAvatar(oldAvatarUrl);
+        }
         String avatarUrl = s3Service.uploadAvatar(file, userId);
         candidate.setAvatarUrl(avatarUrl);
         candidate.setUpdatedAt(LocalDateTime.now());
@@ -267,15 +271,15 @@ public class CandidateService {
     // ── Settings ──────────────────────────────────────────────────────────────
 
     public CandidateSettings getSettings(String userId) {
-        return candidateRepository.findByUserIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND))
-                .getSettings();
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        return ensureSettings(candidate);
     }
 
     public void updateNotificationPreferences(String userId, NotificationPreferences prefs) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        candidate.getSettings().setNotifications(prefs);
+        ensureSettings(candidate).setNotifications(prefs != null ? prefs : new NotificationPreferences());
         candidate.setUpdatedAt(LocalDateTime.now());
         candidateRepository.save(candidate);
     }
@@ -283,9 +287,23 @@ public class CandidateService {
     public void updatePrivacySettings(String userId, PrivacySettings privacy) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        candidate.getSettings().setPrivacy(privacy);
+        ensureSettings(candidate).setPrivacy(privacy != null ? privacy : new PrivacySettings());
         candidate.setUpdatedAt(LocalDateTime.now());
         candidateRepository.save(candidate);
+    }
+
+    private CandidateSettings ensureSettings(Candidate candidate) {
+        if (candidate.getSettings() == null) {
+            candidate.setSettings(new CandidateSettings());
+        }
+        CandidateSettings settings = candidate.getSettings();
+        if (settings.getNotifications() == null) {
+            settings.setNotifications(new NotificationPreferences());
+        }
+        if (settings.getPrivacy() == null) {
+            settings.setPrivacy(new PrivacySettings());
+        }
+        return settings;
     }
 
     public void deleteAccount(String userId) {
@@ -371,7 +389,8 @@ public class CandidateService {
                 .filter(c -> cvId.equals(c.getId()))
                 .findFirst()
                 .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
-        return new CvInfoResponse(cv.getId(), cv.getUrl(), cv.getFilename(), candidate.getUserId());
+        String url = cv.getS3Key() != null ? s3Service.generateFreshUrl(cv.getS3Key()) : cv.getUrl();
+        return new CvInfoResponse(cv.getId(), url, cv.getFilename(), candidate.getUserId());
     }
 
     public void updateCvAnalysis(String cvId, String analysisResult, CvAnalysisStatus status) {

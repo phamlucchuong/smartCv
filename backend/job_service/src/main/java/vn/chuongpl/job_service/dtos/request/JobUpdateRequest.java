@@ -26,4 +26,8 @@ public class JobUpdateRequest {
     List<String> requirements;
     List<String> benefits;
     LocalDate deadline;
+    Integer qualifiedThreshold;
+    Integer rejectThreshold;
+    Boolean autoRejectEnabled;
+    String requiredTest;
 }

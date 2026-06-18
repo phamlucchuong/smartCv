@@ -21,5 +21,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "deploy-on-aws@claude-plugins-official": true
   }
 }

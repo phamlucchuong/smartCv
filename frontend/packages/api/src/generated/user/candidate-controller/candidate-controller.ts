@@ -30,12 +30,15 @@ import type {
   ApiResponseCvUploadResponse,
   ApiResponseListCvItem,
   ApiResponseListEnrichedJobSuggestion,
+  ApiResponseMapStringString,
   ApiResponsePageResponseCandidateResponse,
+  ApiResponsePreferencesSettings,
   ApiResponseString,
   ApiResponseVoid,
   CandidateRequest,
   GetAll1Params,
   NotificationPreferences,
+  PreferencesSettingsRequest,
   PrivacySettings,
   UploadAvatarBody,
   UploadCvBody
@@ -52,14 +55,14 @@ export const getById1 = (
     id: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
-      
-      
+
+
       return customInstance<ApiResponseCandidateResponse>(
       {url: `/api/candidates/${id}`, method: 'GET', signal
     },
       options);
     }
-  
+
 
 
 
@@ -81,7 +84,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getById1>>> = ({ signal }) => getById1(id, requestOptions, signal);
 
-      
+
 
       
 
@@ -170,7 +173,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
           return  update1(id,data,requestOptions)
         }
 
-        
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -231,7 +234,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type Delete1MutationResult = NonNullable<Awaited<ReturnType<typeof delete1>>>
-    
+
     export type Delete1MutationError = unknown
 
     export const useDelete1 = <TError = unknown,
@@ -301,6 +304,63 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getUpdatePrivacyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+export const updatePreferences = (
+    preferencesSettingsRequest: PreferencesSettingsRequest,
+ options?: SecondParameter<typeof customInstance>,) => {
+
+
+      return customInstance<ApiResponsePreferencesSettings>(
+      {url: `/api/candidates/settings/preferences`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: preferencesSettingsRequest
+    },
+      options);
+    }
+
+
+
+export const getUpdatePreferencesMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: PreferencesSettingsRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: PreferencesSettingsRequest}, TContext> => {
+
+const mutationKey = ['updatePreferences'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePreferences>>, {data: PreferencesSettingsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePreferences(data,requestOptions)
+        }
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updatePreferences>>>
+    export type UpdatePreferencesMutationBody = PreferencesSettingsRequest
+    export type UpdatePreferencesMutationError = unknown
+
+    export const useUpdatePreferences = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: PreferencesSettingsRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updatePreferences>>,
+        TError,
+        {data: PreferencesSettingsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdatePreferencesMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -1218,6 +1278,92 @@ export function useListCvs<TData = Awaited<ReturnType<typeof listCvs>>, TError =
 
 
 
+export const refreshCvUrl = (
+    cvId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseMapStringString>(
+      {url: `/api/candidates/cvs/${cvId}/url`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getRefreshCvUrlQueryKey = (cvId?: string,) => {
+    return [
+    `/api/candidates/cvs/${cvId}/url`
+    ] as const;
+    }
+
+    
+export const getRefreshCvUrlQueryOptions = <TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getRefreshCvUrlQueryKey(cvId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof refreshCvUrl>>> = ({ signal }) => refreshCvUrl(cvId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(cvId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type RefreshCvUrlQueryResult = NonNullable<Awaited<ReturnType<typeof refreshCvUrl>>>
+export type RefreshCvUrlQueryError = unknown
+
+
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof refreshCvUrl>>,
+          TError,
+          Awaited<ReturnType<typeof refreshCvUrl>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof refreshCvUrl>>,
+          TError,
+          Awaited<ReturnType<typeof refreshCvUrl>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useRefreshCvUrl<TData = Awaited<ReturnType<typeof refreshCvUrl>>, TError = unknown>(
+ cvId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof refreshCvUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getRefreshCvUrlQueryOptions(cvId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
 export const getCvAnalysis = (
     cvId: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
@@ -1359,4 +1505,3 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    

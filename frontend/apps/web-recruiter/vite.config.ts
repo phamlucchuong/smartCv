@@ -6,6 +6,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [TanStackRouterVite(), react(), tailwindcss()],
+  define: {
+    'import.meta.env.VITE_MOCK_AUTH': JSON.stringify(process.env.MOCK_AUTH || 'false'),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

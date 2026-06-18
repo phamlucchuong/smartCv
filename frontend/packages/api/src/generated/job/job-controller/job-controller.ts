@@ -33,6 +33,7 @@ import type {
   GetJobsByIdsParams,
   GetMyJobsParams,
   JobCreateRequest,
+  JobRejectRequest,
   JobUpdateRequest,
   SearchJobsParams
 } from '.././model';
@@ -388,24 +389,24 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const publishJob = (
+    export const withdrawJob = (
     id: string,
  options?: SecondParameter<typeof customInstance>,) => {
       
       
       return customInstance<ApiResponseJobResponse>(
-      {url: `/api/jobs/${id}/publish`, method: 'PATCH'
+      {url: `/api/jobs/${id}/withdraw`, method: 'PATCH'
     },
       options);
     }
   
 
 
-export const getPublishJobMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof publishJob>>, TError,{id: string}, TContext> => {
+export const getWithdrawJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof withdrawJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof withdrawJob>>, TError,{id: string}, TContext> => {
 
-const mutationKey = ['publishJob'];
+const mutationKey = ['withdrawJob'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -415,10 +416,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publishJob>>, {id: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof withdrawJob>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  publishJob(id,requestOptions)
+          return  withdrawJob(id,requestOptions)
         }
 
         
@@ -426,41 +427,41 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PublishJobMutationResult = NonNullable<Awaited<ReturnType<typeof publishJob>>>
+    export type WithdrawJobMutationResult = NonNullable<Awaited<ReturnType<typeof withdrawJob>>>
     
-    export type PublishJobMutationError = unknown
+    export type WithdrawJobMutationError = unknown
 
-    export const usePublishJob = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+    export const useWithdrawJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof withdrawJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof publishJob>>,
+        Awaited<ReturnType<typeof withdrawJob>>,
         TError,
         {id: string},
         TContext
       > => {
 
-      const mutationOptions = getPublishJobMutationOptions(options);
+      const mutationOptions = getWithdrawJobMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const closeJob = (
+    export const submitJob = (
     id: string,
  options?: SecondParameter<typeof customInstance>,) => {
       
       
       return customInstance<ApiResponseJobResponse>(
-      {url: `/api/jobs/${id}/close`, method: 'PATCH'
+      {url: `/api/jobs/${id}/submit`, method: 'PATCH'
     },
       options);
     }
   
 
 
-export const getCloseJobMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof closeJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof closeJob>>, TError,{id: string}, TContext> => {
+export const getSubmitJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitJob>>, TError,{id: string}, TContext> => {
 
-const mutationKey = ['closeJob'];
+const mutationKey = ['submitJob'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -470,10 +471,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof closeJob>>, {id: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitJob>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  closeJob(id,requestOptions)
+          return  submitJob(id,requestOptions)
         }
 
         
@@ -481,20 +482,243 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type CloseJobMutationResult = NonNullable<Awaited<ReturnType<typeof closeJob>>>
+    export type SubmitJobMutationResult = NonNullable<Awaited<ReturnType<typeof submitJob>>>
     
-    export type CloseJobMutationError = unknown
+    export type SubmitJobMutationError = unknown
 
-    export const useCloseJob = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof closeJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+    export const useSubmitJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof closeJob>>,
+        Awaited<ReturnType<typeof submitJob>>,
         TError,
         {id: string},
         TContext
       > => {
 
-      const mutationOptions = getCloseJobMutationOptions(options);
+      const mutationOptions = getSubmitJobMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const deactivateJob = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ApiResponseJobResponse>(
+      {url: `/api/jobs/${id}/deactivate`, method: 'PATCH'
+    },
+      options);
+    }
+  
+
+
+export const getDeactivateJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deactivateJob>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deactivateJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateJob>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deactivateJob(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeactivateJobMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateJob>>>
+    
+    export type DeactivateJobMutationError = unknown
+
+    export const useDeactivateJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateJob>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeactivateJobMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const activateJob = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ApiResponseJobResponse>(
+      {url: `/api/jobs/${id}/activate`, method: 'PATCH'
+    },
+      options);
+    }
+  
+
+
+export const getActivateJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof activateJob>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['activateJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activateJob>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  activateJob(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActivateJobMutationResult = NonNullable<Awaited<ReturnType<typeof activateJob>>>
+    
+    export type ActivateJobMutationError = unknown
+
+    export const useActivateJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof activateJob>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getActivateJobMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const rejectJob = (
+    id: string,
+    jobRejectRequest: JobRejectRequest,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ApiResponseJobResponse>(
+      {url: `/api/jobs/admin/${id}/reject`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: jobRejectRequest
+    },
+      options);
+    }
+  
+
+
+export const getRejectJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectJob>>, TError,{id: string;data: JobRejectRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectJob>>, TError,{id: string;data: JobRejectRequest}, TContext> => {
+
+const mutationKey = ['rejectJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectJob>>, {id: string;data: JobRejectRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rejectJob(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectJobMutationResult = NonNullable<Awaited<ReturnType<typeof rejectJob>>>
+    export type RejectJobMutationBody = JobRejectRequest
+    export type RejectJobMutationError = unknown
+
+    export const useRejectJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectJob>>, TError,{id: string;data: JobRejectRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rejectJob>>,
+        TError,
+        {id: string;data: JobRejectRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getRejectJobMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const approveJob = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ApiResponseJobResponse>(
+      {url: `/api/jobs/admin/${id}/approve`, method: 'PATCH'
+    },
+      options);
+    }
+  
+
+
+export const getApproveJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveJob>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['approveJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveJob>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  approveJob(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveJobMutationResult = NonNullable<Awaited<ReturnType<typeof approveJob>>>
+    
+    export type ApproveJobMutationError = unknown
+
+    export const useApproveJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveJob>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof approveJob>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getApproveJobMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -747,6 +971,92 @@ export function useGetMyJobs<TData = Awaited<ReturnType<typeof getMyJobs>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetMyJobsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getMyJobById = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseJobResponse>(
+      {url: `/api/jobs/my/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetMyJobByIdQueryKey = (id?: string,) => {
+    return [
+    `/api/jobs/my/${id}`
+    ] as const;
+    }
+
+    
+export const getGetMyJobByIdQueryOptions = <TData = Awaited<ReturnType<typeof getMyJobById>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyJobById>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyJobByIdQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyJobById>>> = ({ signal }) => getMyJobById(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyJobById>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMyJobByIdQueryResult = NonNullable<Awaited<ReturnType<typeof getMyJobById>>>
+export type GetMyJobByIdQueryError = unknown
+
+
+export function useGetMyJobById<TData = Awaited<ReturnType<typeof getMyJobById>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyJobById>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyJobById>>,
+          TError,
+          Awaited<ReturnType<typeof getMyJobById>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyJobById<TData = Awaited<ReturnType<typeof getMyJobById>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyJobById>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyJobById>>,
+          TError,
+          Awaited<ReturnType<typeof getMyJobById>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyJobById<TData = Awaited<ReturnType<typeof getMyJobById>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyJobById>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetMyJobById<TData = Awaited<ReturnType<typeof getMyJobById>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyJobById>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMyJobByIdQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

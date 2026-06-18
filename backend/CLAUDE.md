@@ -136,6 +136,10 @@ Docker image builds are currently commented out in CI workflows.
 
 Swagger UI available at `http://localhost:{port}/{context-path}/swagger-ui.html` for Java services (e.g., `http://localhost:8081/user/swagger-ui.html`). Postman collections are in `/postman/`.
 
+## Important
+
+- **`@PreAuthorize` 403 debug**: `hasRole('RECRUITER')` checks for authority `ROLE_RECRUITER` in the SecurityContext. The gateway forwards the JWT `scope` claim as `X-User-Scope`; `InternalAuthFilter` splits it by space into `SimpleGrantedAuthority` objects. If `X-User-Scope` is blank (empty `roles` in user's MongoDB document, or Mongock migration didn't run), every protected endpoint returns 403. Check `[Auth] scope=` log in job_service to diagnose.
+
 
 ## Plan
 

@@ -20,4 +20,8 @@ export interface JobCreateRequest {
   requirements?: string[];
   benefits?: string[];
   deadline?: string;
+  qualifiedThreshold?: number;
+  rejectThreshold?: number;
+  autoRejectEnabled?: boolean;
+  requiredTest?: string;
 }

@@ -5,9 +5,11 @@
  * OpenAPI spec version: v0
  */
 import type { NotificationPreferences } from './notificationPreferences';
+import type { PreferencesSettings } from './preferencesSettings';
 import type { PrivacySettings } from './privacySettings';
 
 export interface CandidateSettings {
   notifications?: NotificationPreferences;
+  preferences?: PreferencesSettings;
   privacy?: PrivacySettings;
 }
