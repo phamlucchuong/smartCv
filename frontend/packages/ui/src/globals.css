@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
+@source "./**/*.{tsx,ts}";
 
 @theme inline {
   --color-border: var(--border);
