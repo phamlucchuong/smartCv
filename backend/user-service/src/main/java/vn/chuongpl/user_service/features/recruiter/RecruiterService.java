@@ -25,6 +25,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class RecruiterService {
+    public static final int FREE_TIER_JOB_POST_QUOTA = 10;
+
     RecruiterRepository recruiterRepository;
     UserRepository userRepository;
     RecruiterMapper recruiterMapper;
@@ -34,6 +36,9 @@ public class RecruiterService {
         if (recruiterRepository.findByUserIdAndDeletedFalse(request.getUserId()).isPresent()) throw new AppException(ErrorCode.RECRUITER_EXISTED);
 
         Recruiter recruiter = recruiterMapper.toRecruiter(request);
+        if (request.getQuotaJobPost() == null) {
+            recruiter.setQuotaJobPost(FREE_TIER_JOB_POST_QUOTA);
+        }
         recruiter.setCreatedAt(LocalDateTime.now());
         recruiter.setUpdatedAt(LocalDateTime.now());
         recruiter.setDeleted(false);
@@ -59,6 +64,7 @@ public class RecruiterService {
         Recruiter recruiter = Recruiter.builder()
                 .userId(userId)
                 .companyName(companyName)
+                .quotaJobPost(FREE_TIER_JOB_POST_QUOTA)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .deleted(false)
@@ -130,6 +136,9 @@ public class RecruiterService {
     }
 
     public RecruiterResponse getMe(String userId) {
+        if (recruiterRepository.findByUserIdAndDeletedFalse(userId).isEmpty()) {
+            createBasicProfile(userId);
+        }
         return getByUserId(userId);
     }
 

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Sparkles, Building2, User, Mail, Lock, Phone, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
-import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from "@smart-cv/api";
+import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp, RecruiterApi } from "@smart-cv/api";
 import { useAuthStore } from "../store/useAuthStore";
 import {
   buildRecruiterRegistrationPayload,
@@ -162,6 +162,15 @@ function RecruiterSignup() {
       const { accessToken, refreshToken } = extractAuthTokens(result);
       ensureRecruiterRole(accessToken);
       signIn(accessToken, refreshToken);
+
+      const userId = useAuthStore.getState().userId;
+      if (userId) {
+        try {
+          await RecruiterApi.create({ userId, companyName: companyName.trim() || undefined });
+        } catch {
+          // profile auto-created on first getMe if this fails
+        }
+      }
 
       toast.success("Xác minh tài khoản thành công!");
       setOtpOpen(false);

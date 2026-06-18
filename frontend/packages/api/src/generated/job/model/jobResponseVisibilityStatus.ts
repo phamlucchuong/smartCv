@@ -5,13 +5,12 @@
  * OpenAPI spec version: v0
  */
 
-export type JobResponseStatus = typeof JobResponseStatus[keyof typeof JobResponseStatus];
+export type JobResponseVisibilityStatus = typeof JobResponseVisibilityStatus[keyof typeof JobResponseVisibilityStatus];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const JobResponseStatus = {
-  DRAFT: 'DRAFT',
+export const JobResponseVisibilityStatus = {
+  INACTIVE: 'INACTIVE',
   ACTIVE: 'ACTIVE',
-  CLOSED: 'CLOSED',
   EXPIRED: 'EXPIRED',
 } as const;
