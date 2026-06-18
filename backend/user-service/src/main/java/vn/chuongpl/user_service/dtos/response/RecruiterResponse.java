@@ -24,6 +24,7 @@ public class RecruiterResponse {
     String companyName;
     String companyWebsite;
     String companyAddress;
+    String companyCity;
     String companyDescription;
     String companyPhone;
     String companySize;
@@ -48,8 +49,9 @@ public class RecruiterResponse {
     String contactEmail;
     String contactPhone;
 
-    // ── Status & quota ────────────────────────────────────────────────────────
+    // ── Status & approval ─────────────────────────────────────────────────────
     RecruiterStatus status;
+    String rejectionNote;
     int quotaJobPost;
     int quotaCvViews;
 

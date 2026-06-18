@@ -41,9 +41,13 @@ public class S3Service {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final long MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+    private static final long MAX_LICENSE_SIZE = 10 * 1024 * 1024;
     private static final String ALLOWED_CONTENT_TYPE = "application/pdf";
     private static final java.util.Set<String> ALLOWED_IMAGE_TYPES = java.util.Set.of(
             "image/jpeg", "image/jpg", "image/png", "image/webp"
+    );
+    private static final java.util.Set<String> ALLOWED_LICENSE_TYPES = java.util.Set.of(
+            "application/pdf", "image/jpeg", "image/jpg", "image/png"
     );
 
     public String uploadAvatar(MultipartFile file, String userId) {
@@ -133,6 +137,33 @@ public class S3Service {
                 .getObjectRequest(r -> r.bucket(bucket).key(key).build())
                 .build();
         return s3Presigner.presignGetObject(presignRequest).url().toString();
+    }
+
+    public String uploadBusinessLicense(MultipartFile file, String userId) {
+        if (file == null || file.isEmpty()) throw new AppException(ErrorCode.FILE_REQUIRED);
+        if (file.getSize() > MAX_LICENSE_SIZE) throw new AppException(ErrorCode.FILE_TOO_LARGE);
+        if (!ALLOWED_LICENSE_TYPES.contains(file.getContentType())) throw new AppException(ErrorCode.INVALID_FILE_TYPE);
+
+        String key = "recruiters/" + userId + "/business-license";
+
+        try {
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .contentType(file.getContentType())
+                            .build(),
+                    RequestBody.fromBytes(file.getBytes())
+            );
+        } catch (Exception e) {
+            log.error("S3 business-license upload failed: {}", e.getMessage());
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+
+        if (!endpointUrl.isBlank()) {
+            return generatePresignedUrl(key);
+        }
+        return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
     }
 
     private void validateFile(MultipartFile file) {

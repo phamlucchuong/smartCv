@@ -24,6 +24,8 @@ import vn.chuongpl.job_service.enums.JobModerationStatus;
 import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.exception.AppException;
 import vn.chuongpl.job_service.integration.elasticsearch.JobIndexService;
+import vn.chuongpl.job_service.integration.userservice.RecruiterStatusDto;
+import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -42,16 +44,12 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class JobServiceTest {
 
-    @Mock
-    JobRepository jobRepository;
-    @Mock
-    JobIndexService jobIndexService;
-    @Mock
-    JobMapper jobMapper;
-    @Mock
-    RabbitTemplate rabbitTemplate;
-    @Mock
-    ObjectProvider<JobIndexService> jobIndexServiceProvider;
+    @Mock JobRepository jobRepository;
+    @Mock JobIndexService jobIndexService;
+    @Mock JobMapper jobMapper;
+    @Mock RabbitTemplate rabbitTemplate;
+    @Mock ObjectProvider<JobIndexService> jobIndexServiceProvider;
+    @Mock UserServiceClient userServiceClient;
 
     @InjectMocks
     JobService jobService;
@@ -89,6 +87,7 @@ class JobServiceTest {
         Job savedJob = Job.builder().id("job-1").build();
         JobResponse expected = JobResponse.builder().id("job-1").build();
 
+        when(userServiceClient.getRecruiterStatus("recruiter-1")).thenReturn(new RecruiterStatusDto("APPROVED"));
         when(jobMapper.toJob(request)).thenReturn(mappedJob);
         when(jobRepository.existsByRecruiterIdAndNormalizedTitleAndDeletedFalse("recruiter-1", "backend engineer"))
                 .thenReturn(false);
@@ -112,6 +111,7 @@ class JobServiceTest {
         JobCreateRequest request = new JobCreateRequest();
         Job mappedJob = Job.builder().title(" Backend Engineer ").build();
 
+        when(userServiceClient.getRecruiterStatus("recruiter-1")).thenReturn(new RecruiterStatusDto("APPROVED"));
         when(jobMapper.toJob(request)).thenReturn(mappedJob);
         when(jobRepository.existsByRecruiterIdAndNormalizedTitleAndDeletedFalse("recruiter-1", "backend engineer"))
                 .thenReturn(true);
@@ -120,6 +120,19 @@ class JobServiceTest {
 
         assertEquals(ErrorCode.JOB_TITLE_ALREADY_EXISTS, ex.getErrorCode());
         verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void createJob_shouldThrowWhenRecruiterNotApproved() {
+        JobCreateRequest request = new JobCreateRequest();
+
+        when(userServiceClient.getRecruiterStatus("recruiter-pending")).thenReturn(new RecruiterStatusDto("PENDING"));
+
+        AppException ex = assertThrows(AppException.class, () -> jobService.createJob(request, "recruiter-pending"));
+
+        assertEquals(ErrorCode.RECRUITER_NOT_APPROVED, ex.getErrorCode());
+        verify(jobMapper, never()).toJob(any());
+        verify(jobRepository, never()).save(any());
     }
 
     @Test

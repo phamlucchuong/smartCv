@@ -16,6 +16,7 @@ public class RecruiterRequest {
     String companyName;
     String companyWebsite;
     String companyAddress;
+    String companyCity;
     String companyDescription;
     String companyPhone;
 
