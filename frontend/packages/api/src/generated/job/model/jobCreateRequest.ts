@@ -9,13 +9,13 @@ import type { JobCreateRequestExperienceLevel } from './jobCreateRequestExperien
 
 export interface JobCreateRequest {
   title: string;
-  description: string;
-  company: string;
-  location: string;
+  description?: string;
+  company?: string;
+  location?: string;
   salaryMin?: number;
   salaryMax?: number;
-  jobType: JobCreateRequestJobType;
-  experienceLevel: JobCreateRequestExperienceLevel;
+  jobType?: JobCreateRequestJobType;
+  experienceLevel?: JobCreateRequestExperienceLevel;
   skills?: string[];
   requirements?: string[];
   benefits?: string[];

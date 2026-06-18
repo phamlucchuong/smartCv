@@ -55,14 +55,14 @@ export const getById1 = (
     id: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
-
-
+      
+      
       return customInstance<ApiResponseCandidateResponse>(
       {url: `/api/candidates/${id}`, method: 'GET', signal
     },
       options);
     }
-
+  
 
 
 
@@ -84,7 +84,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getById1>>> = ({ signal }) => getById1(id, requestOptions, signal);
 
-
+      
 
       
 
@@ -173,7 +173,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
           return  update1(id,data,requestOptions)
         }
 
-
+        
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -234,7 +234,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type Delete1MutationResult = NonNullable<Awaited<ReturnType<typeof delete1>>>
-
+    
     export type Delete1MutationError = unknown
 
     export const useDelete1 = <TError = unknown,
@@ -307,11 +307,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-export const updatePreferences = (
+    export const updatePreferences = (
     preferencesSettingsRequest: PreferencesSettingsRequest,
  options?: SecondParameter<typeof customInstance>,) => {
-
-
+      
+      
       return customInstance<ApiResponsePreferencesSettings>(
       {url: `/api/candidates/settings/preferences`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
@@ -319,7 +319,7 @@ export const updatePreferences = (
     },
       options);
     }
-
+  
 
 
 export const getUpdatePreferencesMutationOptions = <TError = unknown,
@@ -333,7 +333,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {...options, mutation: {...options.mutation, mutationKey}}
       : {mutation: { mutationKey, }, request: undefined};
 
-
+      
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePreferences>>, {data: PreferencesSettingsRequest}> = (props) => {
@@ -342,7 +342,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
           return  updatePreferences(data,requestOptions)
         }
 
-
+        
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -1505,3 +1505,4 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    

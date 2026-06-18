@@ -5,8 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export type GetAllJobsParams = {
-page?: number;
-size?: number;
-moderationStatus?: string;
+export type UploadBusinessLicenseBody = {
+  file: Blob;
 };

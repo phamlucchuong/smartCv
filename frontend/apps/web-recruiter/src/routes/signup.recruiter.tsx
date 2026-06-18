@@ -163,18 +163,20 @@ function RecruiterSignup() {
       ensureRecruiterRole(accessToken);
       signIn(accessToken, refreshToken);
 
+      // Profile auto-created with DRAFT status on first getMe() call.
+      // Pre-fill companyName so the setup form has it ready.
       const userId = useAuthStore.getState().userId;
-      if (userId) {
+      if (userId && companyName.trim()) {
         try {
-          await RecruiterApi.create({ userId, companyName: companyName.trim() || undefined });
+          await RecruiterApi.create({ userId, companyName: companyName.trim() });
         } catch {
-          // profile auto-created on first getMe if this fails
+          // Ignore — getMe auto-creates if this fails
         }
       }
 
       toast.success("Xác minh tài khoản thành công!");
       setOtpOpen(false);
-      navigate({ to: "/employer" });
+      navigate({ to: "/employer/setup", replace: true });
     } catch (err: unknown) {
       const error = err as ApiError;
       setOtpError(error.response?.data?.message || "Mã OTP không chính xác. Vui lòng kiểm tra lại.");

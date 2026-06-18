@@ -4,8 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { GetAllStatus } from './getAllStatus';
 
 export type GetAllParams = {
 page?: number;
 size?: number;
+status?: GetAllStatus;
 };

@@ -6,12 +6,36 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
 import { hasRecruiterRole } from "../lib/recruiterAuth";
+import { RecruiterApi } from "@smart-cv/api";
+
+const GATE_PATHS = ["/employer/setup", "/employer/pending"];
 
 export const Route = createFileRoute("/employer")({
-  beforeLoad: () => {
+  beforeLoad: ({ location }) => {
     const token = Cookies.get("smart_cv_token");
     if (!token || !hasRecruiterRole(token)) {
       throw redirect({ to: "/login" });
+    }
+    // Gate paths skip the async status check — they handle their own content
+    if (GATE_PATHS.some((p) => location.pathname.startsWith(p))) return;
+  },
+  loader: async ({ location }) => {
+    if (GATE_PATHS.some((p) => location.pathname.startsWith(p))) return null;
+
+    try {
+      const result = await RecruiterApi.getMe1();
+      const status = result?.data?.status;
+      if (status === "DRAFT") {
+        throw redirect({ to: "/employer/setup", replace: true });
+      }
+      if (status === "PENDING" || status === "REJECTED") {
+        throw redirect({ to: "/employer/pending", replace: true });
+      }
+      return result;
+    } catch (err) {
+      // Re-throw redirect errors as-is; swallow network errors (let the page render)
+      if ((err as { isRedirect?: boolean })?.isRedirect) throw err;
+      return null;
     }
   },
   component: EmployerLayoutRoute,
@@ -19,6 +43,9 @@ export const Route = createFileRoute("/employer")({
 
 function EmployerLayoutRoute() {
   const { t } = useTranslation();
+  const { data } = RecruiterApi.useGetMe1();
+  const recruiter = data?.data;
+
   const nav: NavItem[] = [
     { to: "/employer", label: t("recruiter_nav_overview"), icon: LayoutDashboard },
     { to: "/employer/verification", label: t("recruiter_nav_verification"), icon: ShieldCheck },
@@ -33,5 +60,12 @@ function EmployerLayoutRoute() {
     { to: "/employer/settings", label: t("recruiter_nav_settings"), icon: Settings },
   ];
 
-  return <DashboardLayout role="employer" nav={nav} userName="Trần Thị HR" userRole="FPT Software" />;
+  return (
+    <DashboardLayout
+      role="employer"
+      nav={nav}
+      userName={recruiter?.contactName ?? recruiter?.fullName ?? ""}
+      userRole={recruiter?.companyName ?? ""}
+    />
+  );
 }

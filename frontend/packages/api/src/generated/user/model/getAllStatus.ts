@@ -5,11 +5,11 @@
  * OpenAPI spec version: v0
  */
 
-export type RecruiterResponseStatus = typeof RecruiterResponseStatus[keyof typeof RecruiterResponseStatus];
+export type GetAllStatus = typeof GetAllStatus[keyof typeof GetAllStatus];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const RecruiterResponseStatus = {
+export const GetAllStatus = {
   DRAFT: 'DRAFT',
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',

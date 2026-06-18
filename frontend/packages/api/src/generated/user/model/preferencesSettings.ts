@@ -4,10 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { PreferenceLanguage } from './preferenceLanguage';
-import type { PreferenceTheme } from './preferenceTheme';
+import type { PreferencesSettingsLanguage } from './preferencesSettingsLanguage';
+import type { PreferencesSettingsTheme } from './preferencesSettingsTheme';
 
 export interface PreferencesSettings {
-  language?: PreferenceLanguage;
-  theme?: PreferenceTheme;
+  language?: PreferencesSettingsLanguage;
+  theme?: PreferencesSettingsTheme;
 }
