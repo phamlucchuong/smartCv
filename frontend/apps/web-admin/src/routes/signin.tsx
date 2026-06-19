@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { Button } from '@smart-cv/ui'
-import { Lock, Mail, Sparkles } from 'lucide-react'
+import { Lock, Mail, Sparkles, Eye, EyeOff } from 'lucide-react'
 import { useLoginCandidate } from '@smart-cv/api'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
@@ -28,6 +28,7 @@ function SigninPage() {
   const { t } = useTranslation()
   const loginMutation = useLoginCandidate()
   const [error, setError] = React.useState<string | null>(null)
+  const [showPassword, setShowPassword] = React.useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -75,7 +76,19 @@ function SigninPage() {
             </div>
             <div className="relative mt-1.5">
               <Lock className="size-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-              <input name="password" type="password" className="h-11 w-full rounded-md border border-input pl-9 pr-3 text-sm" defaultValue="admin123" />
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                className="h-11 w-full rounded-md border border-input pl-9 pr-10 text-sm"
+                defaultValue="admin123"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

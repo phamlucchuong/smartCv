@@ -73,11 +73,148 @@ function RejectModal({
   )
 }
 
+function JobDetailModal({
+  job,
+  onClose,
+}: {
+  job: any
+  onClose: () => void
+}) {
+  function formatSalary(min?: number, max?: number) {
+    if (min === undefined && max === undefined) return 'Thoả thuận'
+    if (min !== undefined && max !== undefined) return `${min.toLocaleString()} - ${max.toLocaleString()} VND`
+    if (min !== undefined) return `Từ ${min.toLocaleString()} VND`
+    if (max !== undefined) return `Đến ${max.toLocaleString()} VND`
+    return 'Thoả thuận'
+  }
+
+  function formatJobType(type?: string) {
+    switch (type) {
+      case 'FULL_TIME': return 'Full-time'
+      case 'PART_TIME': return 'Part-time'
+      case 'REMOTE': return 'Remote'
+      case 'CONTRACT': return 'Hợp đồng'
+      case 'INTERNSHIP': return 'Thực tập'
+      default: return 'Chưa cập nhật'
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="p-6 border-b border-border flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">{job.title || 'Không có tiêu đề'}</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Doanh nghiệp: <span className="font-semibold text-foreground">{job.company || 'Chưa cập nhật'}</span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground text-xl font-medium p-1"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-6 text-sm">
+          {/* Metadata Grid */}
+          <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-border/50">
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Địa điểm</span>
+              <span className="font-medium">{job.location || 'Chưa cập nhật'}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Mức lương</span>
+              <span className="font-medium text-success">{formatSalary(job.salaryMin, job.salaryMax)}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Loại hình công việc</span>
+              <span className="font-medium">{formatJobType(job.jobType)}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Số lượng cần tuyển</span>
+              <span className="font-medium">{job.openings ? `${job.openings} người` : 'Chưa cập nhật'}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Kinh nghiệm yêu cầu</span>
+              <span className="font-medium">{job.experienceLevel || 'Chưa cập nhật'}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Hạn nộp hồ sơ</span>
+              <span className="font-medium text-warning">
+                {job.deadline ? new Intl.DateTimeFormat('vi-VN').format(new Date(job.deadline)) : 'Chưa cập nhật'}
+              </span>
+            </div>
+          </div>
+
+          {/* Description */}
+          {job.description && (
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-primary">Mô tả công việc</h3>
+              <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{job.description}</p>
+            </div>
+          )}
+
+          {/* Requirements */}
+          {job.requirements && job.requirements.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-primary">Yêu cầu công việc</h3>
+              <ul className="list-disc pl-5 space-y-1 text-muted-foreground leading-relaxed">
+                {job.requirements.map((req: string, idx: number) => (
+                  <li key={idx}>{req}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Benefits */}
+          {job.benefits && job.benefits.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-primary">Quyền lợi</h3>
+              <ul className="list-disc pl-5 space-y-1 text-muted-foreground leading-relaxed">
+                {job.benefits.map((ben: string, idx: number) => (
+                  <li key={idx}>{ben}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Skills */}
+          {job.skills && job.skills.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-primary">Kỹ năng yêu cầu</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {job.skills.map((skill: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border flex justify-end">
+          <Button onClick={onClose}>Đóng</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function JobModerationPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<ModerationFilter>('PENDING')
   const [rejectingJobId, setRejectingJobId] = useState<string | null>(null)
+  const [selectedJobDetail, setSelectedJobDetail] = useState<any | null>(null)
 
   const { data, isLoading, isError, refetch } = useGetAdminJobs({
     moderationStatus: filter || undefined as 'DRAFT' | 'PENDING' | 'PUBLISHED' | undefined,
@@ -181,7 +318,14 @@ function JobModerationPage() {
                       <StatusBadge status={formatModerationStatus(job.moderationStatus)} />
                     </td>
                     <td className="p-3">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedJobDetail(job)}
+                        >
+                          Chi tiết
+                        </Button>
                         {job.moderationStatus === 'PENDING' && (
                           <>
                             <Button
@@ -194,6 +338,7 @@ function JobModerationPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="text-danger hover:text-danger border-danger/30 hover:bg-danger/10"
                               onClick={() => setRejectingJobId(job.id!)}
                             >
                               {t('admin_action_reject')}
@@ -221,6 +366,13 @@ function JobModerationPage() {
             setRejectingJobId(null)
             invalidate()
           }}
+        />
+      )}
+
+      {selectedJobDetail && (
+        <JobDetailModal
+          job={selectedJobDetail}
+          onClose={() => setSelectedJobDetail(null)}
         />
       )}
     </div>

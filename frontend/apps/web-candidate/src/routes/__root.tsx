@@ -37,7 +37,7 @@ function RootComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const accountPaths = ['/profile', '/cv', '/assessments', '/settings', '/applications', '/wishlists', '/job-suggestions']
   const isAccountArea = accountPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-  const hidePublicChrome = isAccountArea
+  const hidePublicChrome = isAccountArea || pathname === '/signin' || pathname === '/signup'
   const hideFooter = pathname === '/signin' || pathname === '/signup' || hidePublicChrome
   const [jobMenuOpen, setJobMenuOpen] = React.useState(false)
   const [resourceMenuOpen, setResourceMenuOpen] = React.useState(false)

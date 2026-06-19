@@ -7,7 +7,9 @@
 
 export interface AiProviderConfigRequest {
   apiKey?: string;
+  oauthToken?: string;
   model?: string;
   baseUrl?: string;
   deploymentName?: string;
+  apiVersion?: string;
 }

@@ -15,5 +15,4 @@ export interface JobSummary {
   jobType?: string;
   status?: string;
   skills?: string[];
-  openings?: number;
 }
