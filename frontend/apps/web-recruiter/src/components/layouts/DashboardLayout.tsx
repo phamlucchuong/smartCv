@@ -6,9 +6,15 @@ import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button, NotificationPopover } from "@smart-cv/ui";
 import type { LucideIcon } from "lucide-react";
+import type { NotificationItem } from "@smart-cv/ui";
 import { useRecruiterStore } from "@/store/useRecruiterStore";
 import { useTranslation } from "@smart-cv/i18n";
 import { useNotificationsStore } from "@/store/useNotificationsStore";
+import {
+  useNotificationsList,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+} from "@smart-cv/api";
 
 export interface NavItem {
   to: string;
@@ -36,13 +42,30 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
   const { i18n, t } = useTranslation();
   const theme = useRecruiterStore((s) => s.theme);
   const setTheme = useRecruiterStore((s) => s.setTheme);
-  const notifications = useNotificationsStore((s) => s.notifications);
   const filter = useNotificationsStore((s) => s.filter);
   const setFilter = useNotificationsStore((s) => s.setFilter);
-  const markAsRead = useNotificationsStore((s) => s.markAsRead);
-  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead);
-  const deleteNotification = useNotificationsStore((s) => s.deleteNotification);
-  const clearAll = useNotificationsStore((s) => s.clearAll);
+
+  const { data: notifData } = useNotificationsList({ page: 1, pageSize: 30 });
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
+
+  const notifications: NotificationItem[] = useMemo(() => {
+    const items = notifData?.data?.items ?? [];
+    return items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      message: item.body,
+      createdAt: item.createdAt,
+      read: item.isRead,
+      tone: ((): NotificationItem["tone"] => {
+        if (item.type === "RECRUITER_APPROVED" || item.type === "JOB_APPROVED") return "success";
+        if (item.type === "RECRUITER_REJECTED" || item.type === "JOB_REJECTED") return "danger";
+        return "info";
+      })(),
+    }));
+  }, [notifData]);
+
+  const unreadCount = notifData?.data?.unreadCount ?? 0;
   const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     overview: true,
@@ -82,7 +105,6 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
       items: nav.filter((item) => ["/employer/billing", "/employer/settings"].includes(item.to)),
     },
   ].filter((group) => group.items.length > 0)), [nav, role, t]);
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -212,10 +234,10 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
               unreadCount={unreadCount}
               filter={filter}
               onFilterChange={setFilter}
-              onMarkRead={markAsRead}
-              onDelete={deleteNotification}
-              onMarkAllRead={markAllAsRead}
-              onClearAll={clearAll}
+              onMarkRead={(id) => markReadMutation.mutate(id)}
+              onDelete={() => {}}
+              onMarkAllRead={() => markAllReadMutation.mutate()}
+              onClearAll={() => {}}
               locale={language === "VI" ? "vi-VN" : "en-US"}
               triggerClassName="text-foreground hover:bg-accent"
               labels={{

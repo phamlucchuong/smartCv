@@ -1,7 +1,19 @@
 import * as React from "react"
-import { Bell, Check, CheckCheck, Trash2 } from "lucide-react"
+import { Bell, Trash2, MoreHorizontal } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { Button } from "./button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./dropdown-menu"
 
 export type NotificationFilter = "all" | "unread" | "read"
 export type NotificationTone = "default" | "success" | "warning" | "danger" | "info"
@@ -149,54 +161,46 @@ export function NotificationPopover({
                 <p className="text-sm font-semibold text-foreground">{labels.title}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{summaryText}</p>
               </div>
-              <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Bell className="size-4" />
-              </span>
-            </div>
+              <div className="flex items-center gap-2">
+                <Select value={filter} onValueChange={(value) => onFilterChange(value as NotificationFilter)}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs bg-background">
+                    <SelectValue placeholder={labels.all} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{labels.all}</SelectItem>
+                    <SelectItem value="unread">{labels.unread}</SelectItem>
+                    <SelectItem value="read">{labels.read}</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {(["all", "unread", "read"] as NotificationFilter[]).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => onFilterChange(value)}
-                  className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                    filter === value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  {value === "all" && labels.all}
-                  {value === "unread" && labels.unread}
-                  {value === "read" && labels.read}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onMarkAllRead}
-                disabled={unreadCount === 0}
-                className="h-8 text-xs"
-              >
-                <CheckCheck className="mr-1.5 size-3.5" />
-                {labels.markAllRead}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onClearAll}
-                disabled={notifications.length === 0}
-                className="h-8 text-xs text-destructive hover:text-destructive"
-              >
-                <Trash2 className="mr-1.5 size-3.5" />
-                {labels.clearAll}
-              </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                      aria-label="Actions"
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem
+                      onClick={onMarkAllRead}
+                      disabled={unreadCount === 0}
+                      className="text-xs cursor-pointer"
+                    >
+                      {labels.markAllRead}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={onClearAll}
+                      disabled={notifications.length === 0}
+                      className="text-xs text-destructive focus:text-destructive cursor-pointer"
+                    >
+                      {labels.clearAll}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
 
@@ -211,14 +215,20 @@ export function NotificationPopover({
             ) : (
               <div className="divide-y divide-border">
                 {filteredNotifications.map((notification) => (
-                  <button
+                  <div
                     key={notification.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       if (!notification.read) onMarkRead(notification.id)
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (!notification.read) onMarkRead(notification.id)
+                      }
+                    }}
                     className={cn(
-                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40",
+                      "group relative flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 cursor-pointer overflow-hidden",
                       !notification.read && "bg-primary/[0.04]",
                     )}
                   >
@@ -226,11 +236,11 @@ export function NotificationPopover({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className={cn("truncate text-sm text-foreground", !notification.read && "font-semibold")}>
                             {notification.title}
                           </p>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground whitespace-normal break-words">
                             {notification.message}
                           </p>
                         </div>
@@ -238,39 +248,20 @@ export function NotificationPopover({
                           {formatTimestamp(notification.createdAt, locale)}
                         </span>
                       </div>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {!notification.read && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              onMarkRead(notification.id)
-                            }}
-                            className="h-7 px-2.5 text-[11px]"
-                          >
-                            <Check className="mr-1 size-3" />
-                            {labels.markRead}
-                          </Button>
-                        )}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onDelete(notification.id)
-                          }}
-                          className="h-7 px-2.5 text-[11px] text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="mr-1 size-3" />
-                          {labels.delete}
-                        </Button>
-                      </div>
                     </div>
-                  </button>
+
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onDelete(notification.id)
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-destructive opacity-0 translate-x-2 transition-all duration-200 ease-in-out group-hover:opacity-100 group-hover:translate-x-0"
+                      aria-label={labels.delete}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
