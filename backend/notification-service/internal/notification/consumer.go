@@ -39,6 +39,25 @@ type ApplicationEventMessage struct {
 	OccurredAt      string `json:"occurredAt"`
 }
 
+type RecruiterStatusEventMessage struct {
+	RecruiterID    string `json:"recruiterId"`
+	RecruiterEmail string `json:"recruiterEmail"`
+	ContactEmail   string `json:"contactEmail"`
+	CompanyName    string `json:"companyName"`
+	Status         string `json:"status"`
+	RejectionNote  string `json:"rejectionNote,omitempty"`
+}
+
+type JobModerationEventMessage struct {
+	JobID          string `json:"jobId"`
+	RecruiterID    string `json:"recruiterId"`
+	RecruiterEmail string `json:"recruiterEmail"`
+	Title          string `json:"title"`
+	Company        string `json:"company"`
+	EventType      string `json:"eventType"`
+	ModerationNote string `json:"moderationNote,omitempty"`
+}
+
 func (c *Consumer) Listen() error {
 	ch, err := c.conn.Channel()
 	if err != nil {
@@ -179,5 +198,135 @@ func (c *Consumer) handleApplicationEvent(msg ApplicationEventMessage) {
 	ctx := context.Background()
 	if err := c.notiSvc.SendApplicationResultEmail(ctx, msg); err != nil {
 		c.logger.Error("failed to send application result email", "applicationId", msg.ApplicationID, "error", err)
+	}
+}
+
+func (c *Consumer) ListenRecruiterEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("recruiter.notification.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queues := []struct {
+		name       string
+		routingKey string
+	}{
+		{"recruiter.approved.queue", "recruiter.approved"},
+		{"recruiter.rejected.queue", "recruiter.rejected"},
+	}
+
+	var allMsgs []<-chan amqp.Delivery
+	for _, q := range queues {
+		queue, err := ch.QueueDeclare(q.name, true, false, false, false, nil)
+		if err != nil {
+			return err
+		}
+		if err = ch.QueueBind(queue.Name, q.routingKey, "recruiter.notification.exchange", false, nil); err != nil {
+			return err
+		}
+		msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+		if err != nil {
+			return err
+		}
+		allMsgs = append(allMsgs, msgs)
+	}
+
+	for _, msgs := range allMsgs {
+		go func(deliveries <-chan amqp.Delivery) {
+			for d := range deliveries {
+				var msg RecruiterStatusEventMessage
+				if err := json.Unmarshal(d.Body, &msg); err != nil {
+					c.logger.Error("failed to unmarshal recruiter status event", "error", err)
+					continue
+				}
+				c.handleRecruiterStatusEvent(msg)
+			}
+		}(msgs)
+	}
+
+	c.logger.Info("RabbitMQ consumer listening on recruiter event queues")
+	return nil
+}
+
+func (c *Consumer) handleRecruiterStatusEvent(msg RecruiterStatusEventMessage) {
+	c.logger.Info("processing recruiter status event", "recruiterId", msg.RecruiterID, "status", msg.Status)
+	ctx := context.Background()
+	var err error
+	if msg.Status == "APPROVED" {
+		err = c.notiSvc.HandleRecruiterApproved(ctx, msg)
+	} else {
+		err = c.notiSvc.HandleRecruiterRejected(ctx, msg)
+	}
+	if err != nil {
+		c.logger.Error("failed to handle recruiter status event", "recruiterId", msg.RecruiterID, "status", msg.Status, "error", err)
+	}
+}
+
+func (c *Consumer) ListenJobModerationEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("job.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queues := []struct {
+		name       string
+		routingKey string
+	}{
+		{"job.approved.queue", "job.approved"},
+		{"job.rejected.queue", "job.rejected"},
+	}
+
+	var allMsgs []<-chan amqp.Delivery
+	for _, q := range queues {
+		queue, err := ch.QueueDeclare(q.name, true, false, false, false, nil)
+		if err != nil {
+			return err
+		}
+		if err = ch.QueueBind(queue.Name, q.routingKey, "job.exchange", false, nil); err != nil {
+			return err
+		}
+		msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+		if err != nil {
+			return err
+		}
+		allMsgs = append(allMsgs, msgs)
+	}
+
+	for _, msgs := range allMsgs {
+		go func(deliveries <-chan amqp.Delivery) {
+			for d := range deliveries {
+				var msg JobModerationEventMessage
+				if err := json.Unmarshal(d.Body, &msg); err != nil {
+					c.logger.Error("failed to unmarshal job moderation event", "error", err)
+					continue
+				}
+				c.handleJobModerationEvent(msg)
+			}
+		}(msgs)
+	}
+
+	c.logger.Info("RabbitMQ consumer listening on job moderation event queues")
+	return nil
+}
+
+func (c *Consumer) handleJobModerationEvent(msg JobModerationEventMessage) {
+	c.logger.Info("processing job moderation event", "jobId", msg.JobID, "eventType", msg.EventType)
+	ctx := context.Background()
+	var err error
+	if msg.EventType == "APPROVED" {
+		err = c.notiSvc.HandleJobApproved(ctx, msg)
+	} else {
+		err = c.notiSvc.HandleJobRejected(ctx, msg)
+	}
+	if err != nil {
+		c.logger.Error("failed to handle job moderation event", "jobId", msg.JobID, "eventType", msg.EventType, "error", err)
 	}
 }

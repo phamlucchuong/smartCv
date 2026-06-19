@@ -220,6 +220,8 @@ public class JobService {
         } else {
             removeFromIndexIfEnabled(saved.getId());
         }
+        String recruiterEmail = userServiceClient.getRecruiterEmail(saved.getRecruiterId());
+        publishModerationEvent(saved, "APPROVED", RabbitMQConfig.JOB_APPROVED_KEY, null, recruiterEmail);
         return jobMapper.toJobResponse(saved);
     }
 
@@ -236,7 +238,10 @@ public class JobService {
         job.setReviewedBy(adminId);
         job.setReviewedAt(LocalDateTime.now());
         removeFromIndexIfEnabled(job.getId());
-        return jobMapper.toJobResponse(jobRepository.save(job));
+        Job saved = jobRepository.save(job);
+        String recruiterEmail = userServiceClient.getRecruiterEmail(saved.getRecruiterId());
+        publishModerationEvent(saved, "REJECTED", RabbitMQConfig.JOB_REJECTED_KEY, request.note().trim(), recruiterEmail);
+        return jobMapper.toJobResponse(saved);
     }
 
     public JobResponse activateJob(String id, String userId, boolean isAdmin) {
@@ -476,6 +481,20 @@ public class JobService {
                 .title(job.getTitle())
                 .company(job.getCompany())
                 .eventType(eventType)
+                .occurredAt(LocalDateTime.now())
+                .build();
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
+    }
+
+    private void publishModerationEvent(Job job, String eventType, String routingKey, String moderationNote, String recruiterEmail) {
+        JobEventMessage event = JobEventMessage.builder()
+                .jobId(job.getId())
+                .recruiterId(job.getRecruiterId())
+                .recruiterEmail(recruiterEmail)
+                .title(job.getTitle())
+                .company(job.getCompany())
+                .eventType(eventType)
+                .moderationNote(moderationNote)
                 .occurredAt(LocalDateTime.now())
                 .build();
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);

@@ -34,15 +34,15 @@ func (m *minimalMockRepo) CreateNotification(_ context.Context, _ Notification) 
 func (m *minimalMockRepo) GetNotificationByID(_ context.Context, _ uuid.UUID) (*Notification, error) {
 	return nil, nil
 }
-func (m *minimalMockRepo) GetNotifications(_ context.Context, _ uuid.UUID, _ string, _, _ int) ([]Notification, int64, error) {
+func (m *minimalMockRepo) GetNotifications(_ context.Context, _ string, _ string, _, _ int) ([]Notification, int64, error) {
 	return nil, 0, nil
 }
-func (m *minimalMockRepo) MarkAsRead(_ context.Context, _ uuid.UUID) error            { return nil }
-func (m *minimalMockRepo) MarkAsReadForUser(_ context.Context, _, _ uuid.UUID) error  { return nil }
-func (m *minimalMockRepo) MarkAllAsRead(_ context.Context, _ uuid.UUID, _ string) error {
+func (m *minimalMockRepo) MarkAsRead(_ context.Context, _ uuid.UUID) error                  { return nil }
+func (m *minimalMockRepo) MarkAsReadForUser(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (m *minimalMockRepo) MarkAllAsRead(_ context.Context, _ string, _ string) error {
 	return nil
 }
-func (m *minimalMockRepo) GetUnreadCount(_ context.Context, _ uuid.UUID, _ string) (int64, error) {
+func (m *minimalMockRepo) GetUnreadCount(_ context.Context, _ string, _ string) (int64, error) {
 	return 0, nil
 }
 func (m *minimalMockRepo) DeleteOlderThanDays(_ context.Context, _ int) (int64, error) {

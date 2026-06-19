@@ -58,6 +58,40 @@ func (s *Service) SendApplicationResult(ctx context.Context, to, jobTitle, statu
 	return s.sendMultipart(to, subject, htmlBody, plainBody)
 }
 
+func (s *Service) SendRecruiterStatus(ctx context.Context, to, companyName, status, note string) error {
+	if s == nil {
+		return nil
+	}
+	if containsCRLF(to) {
+		return fmt.Errorf("invalid recipient address")
+	}
+	var subject string
+	if status == "APPROVED" {
+		subject = fmt.Sprintf("Tài khoản nhà tuyển dụng đã được phê duyệt: %s", companyName)
+	} else {
+		subject = fmt.Sprintf("Tài khoản nhà tuyển dụng chưa được phê duyệt: %s", companyName)
+	}
+	htmlBody, plainBody := renderRecruiterStatusEmail(companyName, status, note)
+	return s.sendMultipart(to, subject, htmlBody, plainBody)
+}
+
+func (s *Service) SendJobModeration(ctx context.Context, to, jobTitle, company, status, note string) error {
+	if s == nil {
+		return nil
+	}
+	if containsCRLF(to) {
+		return fmt.Errorf("invalid recipient address")
+	}
+	var subject string
+	if status == "APPROVED" {
+		subject = fmt.Sprintf("Tin tuyển dụng đã được phê duyệt: %s", jobTitle)
+	} else {
+		subject = fmt.Sprintf("Tin tuyển dụng chưa được phê duyệt: %s", jobTitle)
+	}
+	htmlBody, plainBody := renderJobModerationEmail(jobTitle, company, status, note)
+	return s.sendMultipart(to, subject, htmlBody, plainBody)
+}
+
 func (s *Service) sendMultipart(to, subject, htmlBody, plainBody string) error {
 	boundary := generateBoundary()
 

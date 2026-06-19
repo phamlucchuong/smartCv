@@ -92,7 +92,62 @@ migrate-job:
 	  --app.search.enabled=false --spring.data.elasticsearch.repositories.enabled=false"' \
 	|| [ $$? -eq 124 ]
 
-migrate-all: migrate-user migrate-job
+migrate-noti:
+	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
+	if [ -z "$$PSQL_DSN" ]; then \
+	  echo "PSQL_DSN is required in $(BACKEND)/.env"; \
+	  exit 1; \
+	fi; \
+	if command -v migrate >/dev/null 2>&1; then \
+	  migrate -source file://$$(pwd)/$(BACKEND)/notification-service/migrations -database "$$PSQL_DSN" up; \
+	else \
+	  docker run --rm --network host \
+	    -v "$$(pwd)/$(BACKEND)/notification-service/migrations:/migrations:ro" \
+	    migrate/migrate \
+	    -source file:///migrations \
+	    -database "$$PSQL_DSN" \
+	    up; \
+	fi
+
+migrate-noti-version:
+	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
+	if [ -z "$$PSQL_DSN" ]; then \
+	  echo "PSQL_DSN is required in $(BACKEND)/.env"; \
+	  exit 1; \
+	fi; \
+	if command -v migrate >/dev/null 2>&1; then \
+	  migrate -source file://$$(pwd)/$(BACKEND)/notification-service/migrations -database "$$PSQL_DSN" version; \
+	else \
+	  docker run --rm --network host \
+	    -v "$$(pwd)/$(BACKEND)/notification-service/migrations:/migrations:ro" \
+	    migrate/migrate \
+	    -source file:///migrations \
+	    -database "$$PSQL_DSN" \
+	    version; \
+	fi
+
+migrate-noti-force:
+	@if [ -z "$(VERSION)" ]; then \
+	  echo "Usage: make migrate-noti-force VERSION=<version>"; \
+	  exit 1; \
+	fi
+	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
+	if [ -z "$$PSQL_DSN" ]; then \
+	  echo "PSQL_DSN is required in $(BACKEND)/.env"; \
+	  exit 1; \
+	fi; \
+	if command -v migrate >/dev/null 2>&1; then \
+	  migrate -source file://$$(pwd)/$(BACKEND)/notification-service/migrations -database "$$PSQL_DSN" force $(VERSION); \
+	else \
+	  docker run --rm --network host \
+	    -v "$$(pwd)/$(BACKEND)/notification-service/migrations:/migrations:ro" \
+	    migrate/migrate \
+	    -source file:///migrations \
+	    -database "$$PSQL_DSN" \
+	    force $(VERSION); \
+	fi
+
+migrate-all: migrate-user migrate-job migrate-noti
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
 

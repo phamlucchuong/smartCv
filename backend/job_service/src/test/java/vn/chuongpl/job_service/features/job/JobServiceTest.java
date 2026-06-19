@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +43,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class JobServiceTest {
@@ -206,6 +208,57 @@ class JobServiceTest {
         assertEquals(JobVisibilityStatus.ACTIVE, actual.getVisibilityStatus());
         verify(jobIndexService).indexJob(job);
         verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE), eq(RabbitMQConfig.JOB_CREATED_ROUTING_KEY), any(JobEventMessage.class));
+    }
+
+    @Test
+    void approveJob_shouldPublishModerationApprovedEvent() {
+        Job job = Job.builder()
+                .id("job-1").recruiterId("recruiter-1").title("Backend Engineer").company("SmartCV")
+                .description("desc").location("HCMC")
+                .jobType(vn.chuongpl.job_service.enums.JobType.FULL_TIME)
+                .experienceLevel(vn.chuongpl.job_service.enums.ExperienceLevel.MIDDLE)
+                .deadline(LocalDate.now().plusDays(7))
+                .moderationStatus(JobModerationStatus.PENDING).visibilityStatus(JobVisibilityStatus.INACTIVE).build();
+
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+        when(jobMapper.toJobResponse(job)).thenReturn(JobResponse.builder().id("job-1").build());
+        when(jobIndexServiceProvider.getIfAvailable()).thenReturn(jobIndexService);
+        when(userServiceClient.getRecruiterEmail("recruiter-1")).thenReturn("recruiter@acme.com");
+
+        jobService.approveJob("job-1", "admin-1");
+
+        ArgumentCaptor<JobEventMessage> captor = ArgumentCaptor.forClass(JobEventMessage.class);
+        verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE), eq(RabbitMQConfig.JOB_APPROVED_KEY), captor.capture());
+        JobEventMessage event = captor.getValue();
+        assertEquals("job-1", event.getJobId());
+        assertEquals("recruiter-1", event.getRecruiterId());
+        assertEquals("recruiter@acme.com", event.getRecruiterEmail());
+        assertEquals("APPROVED", event.getEventType());
+        assertNotNull(event.getOccurredAt());
+    }
+
+    @Test
+    void rejectJob_shouldPublishModerationRejectedEventWithNote() {
+        Job job = Job.builder()
+                .id("job-1").recruiterId("recruiter-1").title("Backend Engineer").company("SmartCV")
+                .moderationStatus(JobModerationStatus.PENDING).visibilityStatus(JobVisibilityStatus.INACTIVE).build();
+        JobRejectRequest request = new JobRejectRequest("Thiếu mô tả chi tiết");
+
+        when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+        when(jobMapper.toJobResponse(job)).thenReturn(JobResponse.builder().id("job-1").build());
+        when(userServiceClient.getRecruiterEmail("recruiter-1")).thenReturn("recruiter@acme.com");
+
+        jobService.rejectJob("job-1", request, "admin-1");
+
+        ArgumentCaptor<JobEventMessage> captor = ArgumentCaptor.forClass(JobEventMessage.class);
+        verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE), eq(RabbitMQConfig.JOB_REJECTED_KEY), captor.capture());
+        JobEventMessage event = captor.getValue();
+        assertEquals("job-1", event.getJobId());
+        assertEquals("recruiter@acme.com", event.getRecruiterEmail());
+        assertEquals("REJECTED", event.getEventType());
+        assertEquals("Thiếu mô tả chi tiết", event.getModerationNote());
     }
 
     @Test

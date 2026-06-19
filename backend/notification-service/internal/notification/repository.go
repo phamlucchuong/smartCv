@@ -12,16 +12,19 @@ import (
 type Repository interface {
 	CreateNotification(ctx context.Context, n Notification) error
 	GetNotificationByID(ctx context.Context, id uuid.UUID) (*Notification, error)
-	GetNotifications(ctx context.Context, receiverID uuid.UUID, receiverType string, limit, offset int) ([]Notification, int64, error)
+	GetNotifications(ctx context.Context, receiverID string, receiverType string, limit, offset int) ([]Notification, int64, error)
 	MarkAsRead(ctx context.Context, id uuid.UUID) error
-	MarkAsReadForUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
-	MarkAllAsRead(ctx context.Context, receiverID uuid.UUID, receiverType string) error
-	GetUnreadCount(ctx context.Context, receiverID uuid.UUID, receiverType string) (int64, error)
+	MarkAsReadForUser(ctx context.Context, id uuid.UUID, userID string) error
+	MarkAllAsRead(ctx context.Context, receiverID string, receiverType string) error
+	GetUnreadCount(ctx context.Context, receiverID string, receiverType string) (int64, error)
 	DeleteOlderThanDays(ctx context.Context, olderThanDays int) (int64, error)
 
 	SaveFCMToken(ctx context.Context, token *FCMToken) error
 	GetFCMTokensByUserIDAndAudience(ctx context.Context, userID string, audience string) ([]FCMToken, error)
+	// DeleteFCMTokenByTokenAndAudience removes a token by token+audience key (used for stale-token cleanup during FCM send).
 	DeleteFCMTokenByTokenAndAudience(ctx context.Context, token string, audience string) error
+	// DeleteFCMTokenByTokenAudienceAndUser removes a token scoped to a specific user (user-facing unsubscribe).
+	DeleteFCMTokenByTokenAudienceAndUser(ctx context.Context, token string, audience string, userID string) error
 }
 
 type repository struct {
@@ -46,7 +49,7 @@ func (r *repository) GetNotificationByID(ctx context.Context, id uuid.UUID) (*No
 	return &n, nil
 }
 
-func (r *repository) GetNotifications(ctx context.Context, receiverID uuid.UUID, receiverType string, limit, offset int) ([]Notification, int64, error) {
+func (r *repository) GetNotifications(ctx context.Context, receiverID string, receiverType string, limit, offset int) ([]Notification, int64, error) {
 	var notifications []Notification
 	var total int64
 
@@ -73,7 +76,7 @@ func (r *repository) MarkAsRead(ctx context.Context, id uuid.UUID) error {
 		}).Error
 }
 
-func (r *repository) MarkAsReadForUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+func (r *repository) MarkAsReadForUser(ctx context.Context, id uuid.UUID, userID string) error {
 	now := time.Now()
 	tx := r.db.WithContext(ctx).Model(&Notification{}).
 		Where("id = ? AND user_id = ?", id, userID).
@@ -90,7 +93,7 @@ func (r *repository) MarkAsReadForUser(ctx context.Context, id uuid.UUID, userID
 	return nil
 }
 
-func (r *repository) MarkAllAsRead(ctx context.Context, receiverID uuid.UUID, receiverType string) error {
+func (r *repository) MarkAllAsRead(ctx context.Context, receiverID string, receiverType string) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).Model(&Notification{}).
 		Where("user_id = ? AND recipient_role = ? AND is_read = ?", receiverID, receiverType, false).
@@ -100,7 +103,7 @@ func (r *repository) MarkAllAsRead(ctx context.Context, receiverID uuid.UUID, re
 		}).Error
 }
 
-func (r *repository) GetUnreadCount(ctx context.Context, receiverID uuid.UUID, receiverType string) (int64, error) {
+func (r *repository) GetUnreadCount(ctx context.Context, receiverID string, receiverType string) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&Notification{}).
 		Where("user_id = ? AND recipient_role = ? AND is_read = ?", receiverID, receiverType, false).
@@ -138,4 +141,8 @@ func (r *repository) GetFCMTokensByUserIDAndAudience(ctx context.Context, userID
 
 func (r *repository) DeleteFCMTokenByTokenAndAudience(ctx context.Context, token string, audience string) error {
 	return r.db.WithContext(ctx).Where("token = ? AND audience = ?", token, audience).Delete(&FCMToken{}).Error
+}
+
+func (r *repository) DeleteFCMTokenByTokenAudienceAndUser(ctx context.Context, token string, audience string, userID string) error {
+	return r.db.WithContext(ctx).Where("token = ? AND audience = ? AND user_id = ?", token, audience, userID).Delete(&FCMToken{}).Error
 }

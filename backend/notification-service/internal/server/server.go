@@ -115,6 +115,18 @@ func (s *Server) Start(ctx context.Context) error {
 				s.log.Error("failed to start application event consumer", slog.Any("error", err))
 			}
 		}()
+
+		go func() {
+			if err := s.consumer.ListenRecruiterEvents(); err != nil {
+				s.log.Error("failed to start recruiter event consumer", slog.Any("error", err))
+			}
+		}()
+
+		go func() {
+			if err := s.consumer.ListenJobModerationEvents(); err != nil {
+				s.log.Error("failed to start job moderation event consumer", slog.Any("error", err))
+			}
+		}()
 	}
 
 	sc := echo.StartConfig{

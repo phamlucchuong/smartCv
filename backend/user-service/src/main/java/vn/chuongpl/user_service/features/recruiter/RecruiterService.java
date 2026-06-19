@@ -9,9 +9,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.chuongpl.user_service.configuration.RabbitMQConfig;
 import vn.chuongpl.user_service.dtos.PageResponse;
+import vn.chuongpl.user_service.dtos.message.RecruiterStatusEventMessage;
 import vn.chuongpl.user_service.dtos.request.QuotaDeltaRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
@@ -41,6 +44,7 @@ public class RecruiterService {
     RecruiterMapper recruiterMapper;
     S3Service s3Service;
     MongoTemplate mongoTemplate;
+    RabbitTemplate rabbitTemplate;
 
     public RecruiterResponse create(RecruiterRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -206,6 +210,24 @@ public class RecruiterService {
 
         RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+
+        String routingKey = request.getStatus() == RecruiterStatus.APPROVED
+                ? RabbitMQConfig.RECRUITER_APPROVED_KEY
+                : RabbitMQConfig.RECRUITER_REJECTED_KEY;
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.RECRUITER_EXCHANGE,
+                routingKey,
+                RecruiterStatusEventMessage.builder()
+                        .recruiterId(recruiter.getId())
+                        .recruiterEmail(user.getEmail())
+                        .contactEmail(recruiter.getContactEmail())
+                        .companyName(recruiter.getCompanyName())
+                        .status(request.getStatus())
+                        .rejectionNote(recruiter.getRejectionNote())
+                        .occurredAt(LocalDateTime.now())
+                        .build()
+        );
+
         return response;
     }
 

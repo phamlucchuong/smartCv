@@ -27,8 +27,8 @@ type ServiceInterface interface {
 	NotifyNewOrder(ctx context.Context, userID string, vendorID string, orderNo string, totalAmount int)
 	NotifyOrderPlaced(ctx context.Context, userID string, orderID string, orderNo string, totalAmount int)
 	NotifyOrderStatusUpdated(ctx context.Context, userID string, orderID string, subOrderID string, orderNo string, status string, trackingCode *string, shippingProvider *string)
-	SubscribeFCMToken(ctx context.Context, userID string, token string) error
-	UnsubscribeFCMToken(ctx context.Context, token string) error
+	SubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error
+	UnsubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error
 
 	// Persistent notification methods
 	CreateNotification(ctx context.Context, receiverID string, receiverType string, title string, body string, notifType string, data datatypes.JSON) error
@@ -44,6 +44,12 @@ type ServiceInterface interface {
 	SendOTP(ctx context.Context, target string, targetType string, ttlMinutes int) error
 	VerifyOTP(ctx context.Context, target string, targetType string, code string) (bool, error)
 	SendApplicationResultEmail(ctx context.Context, msg ApplicationEventMessage) error
+
+	// Recruiter & job approval notifications
+	HandleRecruiterApproved(ctx context.Context, msg RecruiterStatusEventMessage) error
+	HandleRecruiterRejected(ctx context.Context, msg RecruiterStatusEventMessage) error
+	HandleJobApproved(ctx context.Context, msg JobModerationEventMessage) error
+	HandleJobRejected(ctx context.Context, msg JobModerationEventMessage) error
 }
 
 // Service provides high-level notification methods.
@@ -120,14 +126,9 @@ func NewService(
 
 // CreateNotification creates a persistent notification record.
 func (s *Service) CreateNotification(ctx context.Context, receiverID string, receiverType string, title string, body string, notifType string, data datatypes.JSON) error {
-	rid, err := uuid.Parse(receiverID)
-	if err != nil {
-		return err
-	}
-
 	n := Notification{
 		ID:            uuid.New(),
-		UserID:        rid,
+		UserID:        receiverID,
 		RecipientRole: receiverType,
 		Type:          notifType,
 		Title:         title,
@@ -146,11 +147,6 @@ func (s *Service) CreateNotification(ctx context.Context, receiverID string, rec
 
 // GetNotificationsHistory returns a paginated list of notifications for a receiver.
 func (s *Service) GetNotificationsHistory(ctx context.Context, userID string, receiverType string, page, pageSize int) ([]Notification, int64, error) {
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, 0, err
-	}
-
 	if page < 1 {
 		page = 1
 	}
@@ -159,7 +155,7 @@ func (s *Service) GetNotificationsHistory(ctx context.Context, userID string, re
 	}
 	offset := (page - 1) * pageSize
 
-	return s.repo.GetNotifications(ctx, uid, receiverType, pageSize, offset)
+	return s.repo.GetNotifications(ctx, userID, receiverType, pageSize, offset)
 }
 
 // MarkAsRead marks a specific notification as read.
@@ -178,11 +174,7 @@ func (s *Service) MarkAsReadForUser(ctx context.Context, notificationID string, 
 	if err != nil {
 		return err
 	}
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return err
-	}
-	if err := s.repo.MarkAsReadForUser(ctx, nid, uid); err != nil {
+	if err := s.repo.MarkAsReadForUser(ctx, nid, userID); err != nil {
 		return err
 	}
 
@@ -197,12 +189,7 @@ func (s *Service) MarkAsReadForUser(ctx context.Context, notificationID string, 
 
 // MarkAllAsRead marks all notifications for a receiver as read.
 func (s *Service) MarkAllAsRead(ctx context.Context, receiverID string, receiverType string) error {
-	rid, err := uuid.Parse(receiverID)
-	if err != nil {
-		return err
-	}
-
-	if err := s.repo.MarkAllAsRead(ctx, rid, receiverType); err != nil {
+	if err := s.repo.MarkAllAsRead(ctx, receiverID, receiverType); err != nil {
 		return err
 	}
 
@@ -212,12 +199,7 @@ func (s *Service) MarkAllAsRead(ctx context.Context, receiverID string, receiver
 
 // GetUnreadCount returns the current count of unread notifications for a receiver.
 func (s *Service) GetUnreadCount(ctx context.Context, receiverID string, receiverType string) (int64, error) {
-	rid, err := uuid.Parse(receiverID)
-	if err != nil {
-		return 0, err
-	}
-
-	return s.repo.GetUnreadCount(ctx, rid, receiverType)
+	return s.repo.GetUnreadCount(ctx, receiverID, receiverType)
 }
 
 func (s *Service) CleanupOldNotifications(ctx context.Context, olderThanDays int) (int64, error) {
@@ -225,17 +207,126 @@ func (s *Service) CleanupOldNotifications(ctx context.Context, olderThanDays int
 }
 
 // SubscribeFCMToken saves a new FCM registration token for a user.
-func (s *Service) SubscribeFCMToken(ctx context.Context, userID string, token string) error {
-	tok := NewFCMToken(userID, token, "web-user")
+func (s *Service) SubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error {
+	if audience == "" {
+		audience = "web-user"
+	}
+	tok := NewFCMToken(userID, token, audience)
 	return s.repo.SaveFCMToken(ctx, &tok)
 }
 
-func (s *Service) UnsubscribeFCMToken(ctx context.Context, token string) error {
-	return s.repo.DeleteFCMTokenByTokenAndAudience(ctx, token, "web-user")
+// UnsubscribeFCMToken removes a specific FCM token scoped to the calling user.
+func (s *Service) UnsubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error {
+	if audience == "" {
+		audience = "web-user"
+	}
+	return s.repo.DeleteFCMTokenByTokenAudienceAndUser(ctx, token, audience, userID)
 }
 
 func (s *Service) SendApplicationResultEmail(ctx context.Context, msg ApplicationEventMessage) error {
 	return s.emailService.SendApplicationResult(ctx, msg.CandidateEmail, msg.JobTitle, msg.NewStatus, msg.RejectionReason)
+}
+
+func (s *Service) HandleRecruiterApproved(ctx context.Context, msg RecruiterStatusEventMessage) error {
+	data, _ := json.Marshal(map[string]string{"recruiterId": msg.RecruiterID, "companyName": msg.CompanyName})
+	body := fmt.Sprintf("Tài khoản nhà tuyển dụng của công ty %s đã được phê duyệt thành công. Bạn có thể bắt đầu đăng tin tuyển dụng.", msg.CompanyName)
+	if err := s.CreateNotification(ctx, msg.RecruiterID, "RECRUITER", "Tài khoản đã được phê duyệt", body, "RECRUITER_APPROVED", data); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist recruiter approved notification", "err", err)
+	}
+	to := msg.RecruiterEmail
+	if to == "" {
+		to = msg.ContactEmail
+	}
+	if to != "" && s.emailService != nil {
+		if err := s.emailService.SendRecruiterStatus(ctx, to, msg.CompanyName, "APPROVED", ""); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send recruiter approved email", "to", to, "err", err)
+		}
+	}
+	s.sendWebpushToUser(ctx, msg.RecruiterID, "/recruiter/profile", map[string]string{
+		"title": "Tài khoản đã được phê duyệt",
+		"body":  body,
+		"url":   "/recruiter/profile",
+		"type":  "RECRUITER_APPROVED",
+	}, audienceForRecipientRole("RECRUITER"))
+	s.syncFirestoreUnreadCount(msg.RecruiterID, "RECRUITER")
+	return nil
+}
+
+func (s *Service) HandleRecruiterRejected(ctx context.Context, msg RecruiterStatusEventMessage) error {
+	data, _ := json.Marshal(map[string]string{"recruiterId": msg.RecruiterID, "companyName": msg.CompanyName, "note": msg.RejectionNote})
+	body := fmt.Sprintf("Tài khoản nhà tuyển dụng của công ty %s chưa được phê duyệt.", msg.CompanyName)
+	if msg.RejectionNote != "" {
+		body += " Lý do: " + msg.RejectionNote
+	}
+	if err := s.CreateNotification(ctx, msg.RecruiterID, "RECRUITER", "Tài khoản chưa được phê duyệt", body, "RECRUITER_REJECTED", data); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist recruiter rejected notification", "err", err)
+	}
+	to := msg.RecruiterEmail
+	if to == "" {
+		to = msg.ContactEmail
+	}
+	if to != "" && s.emailService != nil {
+		if err := s.emailService.SendRecruiterStatus(ctx, to, msg.CompanyName, "REJECTED", msg.RejectionNote); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send recruiter rejected email", "to", to, "err", err)
+		}
+	}
+	s.sendWebpushToUser(ctx, msg.RecruiterID, "/recruiter/profile", map[string]string{
+		"title": "Tài khoản chưa được phê duyệt",
+		"body":  body,
+		"url":   "/recruiter/profile",
+		"type":  "RECRUITER_REJECTED",
+	}, audienceForRecipientRole("RECRUITER"))
+	s.syncFirestoreUnreadCount(msg.RecruiterID, "RECRUITER")
+	return nil
+}
+
+func (s *Service) HandleJobApproved(ctx context.Context, msg JobModerationEventMessage) error {
+	data, _ := json.Marshal(map[string]string{"jobId": msg.JobID, "title": msg.Title, "company": msg.Company})
+	body := fmt.Sprintf("Tin tuyển dụng \"%s\" tại %s đã được phê duyệt và hiển thị công khai.", msg.Title, msg.Company)
+	if err := s.CreateNotification(ctx, msg.RecruiterID, "RECRUITER", "Tin tuyển dụng đã được phê duyệt", body, "JOB_APPROVED", data); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist job approved notification", "err", err)
+	}
+	if msg.RecruiterEmail != "" && s.emailService != nil {
+		if err := s.emailService.SendJobModeration(ctx, msg.RecruiterEmail, msg.Title, msg.Company, "APPROVED", ""); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send job approved email", "to", msg.RecruiterEmail, "err", err)
+		}
+	}
+	jobURL := fmt.Sprintf("/jobs/%s", msg.JobID)
+	s.sendWebpushToUser(ctx, msg.RecruiterID, jobURL, map[string]string{
+		"title": "Tin tuyển dụng đã được phê duyệt",
+		"body":  body,
+		"url":   jobURL,
+		"type":  "JOB_APPROVED",
+		"jobId": msg.JobID,
+	}, audienceForRecipientRole("RECRUITER"))
+	s.syncFirestoreUnreadCount(msg.RecruiterID, "RECRUITER")
+	return nil
+}
+
+func (s *Service) HandleJobRejected(ctx context.Context, msg JobModerationEventMessage) error {
+	data, _ := json.Marshal(map[string]string{"jobId": msg.JobID, "title": msg.Title, "company": msg.Company, "note": msg.ModerationNote})
+	body := fmt.Sprintf("Tin tuyển dụng \"%s\" tại %s chưa được phê duyệt.", msg.Title, msg.Company)
+	if msg.ModerationNote != "" {
+		body += " Lý do: " + msg.ModerationNote
+	}
+	if err := s.CreateNotification(ctx, msg.RecruiterID, "RECRUITER", "Tin tuyển dụng chưa được phê duyệt", body, "JOB_REJECTED", data); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist job rejected notification", "err", err)
+	}
+	if msg.RecruiterEmail != "" && s.emailService != nil {
+		if err := s.emailService.SendJobModeration(ctx, msg.RecruiterEmail, msg.Title, msg.Company, "REJECTED", msg.ModerationNote); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send job rejected email", "to", msg.RecruiterEmail, "err", err)
+		}
+	}
+	jobURL := fmt.Sprintf("/jobs/%s", msg.JobID)
+	s.sendWebpushToUser(ctx, msg.RecruiterID, jobURL, map[string]string{
+		"title": "Tin tuyển dụng chưa được phê duyệt",
+		"body":  body,
+		"url":   jobURL,
+		"type":  "JOB_REJECTED",
+		"jobId": msg.JobID,
+	}, audienceForRecipientRole("RECRUITER"))
+	s.syncFirestoreUnreadCount(msg.RecruiterID, "RECRUITER")
+	return nil
 }
 
 func (s *Service) NotifyNewOrder(ctx context.Context, userID string, vendorID string, orderNo string, totalAmount int) {
@@ -447,6 +538,8 @@ func audienceForRecipientRole(role string) string {
 		return "web-vendor"
 	case "ADMIN":
 		return "web-admin"
+	case "RECRUITER":
+		return "web-recruiter"
 	default:
 		return "web-user"
 	}
@@ -454,7 +547,7 @@ func audienceForRecipientRole(role string) string {
 
 func isSupportedAudience(audience string) bool {
 	switch audience {
-	case "web-user", "web-vendor", "web-admin":
+	case "web-user", "web-vendor", "web-admin", "web-recruiter":
 		return true
 	default:
 		return false

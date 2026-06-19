@@ -52,6 +52,12 @@ public class RabbitMQConfig {
     public static final String JOB_SUGGESTIONS_EXCHANGE = "job.suggestions.exchange";
     public static final String JOB_SUGGESTIONS_ROUTING_KEY = "job.suggestions";
 
+    public static final String RECRUITER_EXCHANGE = "recruiter.notification.exchange";
+    public static final String RECRUITER_APPROVED_QUEUE = "recruiter.approved.queue";
+    public static final String RECRUITER_REJECTED_QUEUE = "recruiter.rejected.queue";
+    public static final String RECRUITER_APPROVED_KEY = "recruiter.approved";
+    public static final String RECRUITER_REJECTED_KEY = "recruiter.rejected";
+
     @Bean
     public Queue jobSuggestionsQueue() {
         return new Queue(JOB_SUGGESTIONS_QUEUE, true);
@@ -65,6 +71,31 @@ public class RabbitMQConfig {
     @Bean
     public Binding jobSuggestionsBinding() {
         return BindingBuilder.bind(jobSuggestionsQueue()).to(jobSuggestionsExchange()).with(JOB_SUGGESTIONS_ROUTING_KEY);
+    }
+
+    @Bean
+    public DirectExchange recruiterExchange() {
+        return new DirectExchange(RECRUITER_EXCHANGE);
+    }
+
+    @Bean
+    public Queue recruiterApprovedQueue() {
+        return new Queue(RECRUITER_APPROVED_QUEUE, true);
+    }
+
+    @Bean
+    public Queue recruiterRejectedQueue() {
+        return new Queue(RECRUITER_REJECTED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding recruiterApprovedBinding() {
+        return BindingBuilder.bind(recruiterApprovedQueue()).to(recruiterExchange()).with(RECRUITER_APPROVED_KEY);
+    }
+
+    @Bean
+    public Binding recruiterRejectedBinding() {
+        return BindingBuilder.bind(recruiterRejectedQueue()).to(recruiterExchange()).with(RECRUITER_REJECTED_KEY);
     }
 
     @Bean
