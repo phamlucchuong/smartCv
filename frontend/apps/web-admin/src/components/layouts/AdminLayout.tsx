@@ -1,10 +1,11 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { Bell, Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users } from 'lucide-react'
+import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
-import { Button } from '@smart-cv/ui'
+import { Button, NotificationPopover } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
+import { useNotificationsStore } from '@/store/useNotificationsStore'
 
 export function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -24,6 +25,13 @@ export function AdminLayout() {
   })
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
+  const notifications = useNotificationsStore((s) => s.notifications)
+  const filter = useNotificationsStore((s) => s.filter)
+  const setFilter = useNotificationsStore((s) => s.setFilter)
+  const markAsRead = useNotificationsStore((s) => s.markAsRead)
+  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead)
+  const deleteNotification = useNotificationsStore((s) => s.deleteNotification)
+  const clearAll = useNotificationsStore((s) => s.clearAll)
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
@@ -73,6 +81,7 @@ export function AdminLayout() {
       ],
     },
   ]), [t])
+  const unreadCount = notifications.filter((notification) => !notification.read).length
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -156,7 +165,32 @@ export function AdminLayout() {
             >
               {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
-            <button className="p-2 rounded-lg hover:bg-accent"><Bell className="size-5" /></button>
+            <NotificationPopover
+              notifications={notifications}
+              unreadCount={unreadCount}
+              filter={filter}
+              onFilterChange={setFilter}
+              onMarkRead={markAsRead}
+              onDelete={deleteNotification}
+              onMarkAllRead={markAllAsRead}
+              onClearAll={clearAll}
+              locale={language === 'VI' ? 'vi-VN' : 'en-US'}
+              triggerClassName="text-foreground hover:bg-accent"
+              labels={{
+                title: t('account_notifications'),
+                all: t('notifications_filter_all'),
+                unread: t('notifications_filter_unread'),
+                read: t('notifications_filter_read'),
+                markRead: t('notifications_mark_read'),
+                delete: t('notifications_delete'),
+                markAllRead: t('notifications_mark_all_read'),
+                clearAll: t('notifications_clear_all'),
+                empty: t('notifications_empty'),
+                noUnread: t('notifications_no_unread'),
+                unreadCount: t('notifications_unread_count', { count: unreadCount }),
+                openNotifications: t('notifications_popup_aria'),
+              }}
+            />
             <button
               onClick={() => {
                 clearAuth()
@@ -165,10 +199,10 @@ export function AdminLayout() {
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent"
             >
               <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
-                {(user?.name ?? 'A').slice(0, 1)}
+                {(user?.email ?? 'A').slice(0, 1).toUpperCase()}
               </div>
               <div className="hidden md:block text-left">
-                <div className="text-sm font-medium">{user?.name ?? 'Admin SmartCV'}</div>
+                <div className="text-sm font-medium">{user?.email ?? 'Admin SmartCV'}</div>
                 <div className="text-xs text-muted-foreground">{t('admin_account_actions')}</div>
               </div>
             </button>
