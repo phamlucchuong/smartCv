@@ -14,12 +14,22 @@ export {
   useUpdatePreferences,
   getUpdatePreferencesMutationOptions,
   updatePreferences,
+  // Admin user management
+  useGetAllUsers,
+  getAllUsers,
+  useUpdateUserStatus,
+  updateUserStatus,
+  useUpdateUserRoles,
+  updateUserRoles,
+  useDeleteUser,
+  deleteUser,
 } from './generated/user/user-controller/user-controller';
 export type {
   UpdatePreferencesMutationResult,
   UpdatePreferencesMutationBody,
   UpdatePreferencesMutationError,
 } from './generated/user/user-controller/user-controller';
+export type { GetAllUsersParams, GetAllParams } from './generated/user/model';
 
 // Job service
 export * from './generated/job/job-controller/job-controller';
@@ -38,7 +48,7 @@ export * from './job-moderation-hooks';
 export * from './user-otp-hooks';
 
 // Job-service types not re-exported by root model
-export type { JobUpdateRequest } from './generated/job/model';
+export type { JobUpdateRequest, JobResponse } from './generated/job/model';
 
 // Models (root static spec)
 export * from './generated/model';
