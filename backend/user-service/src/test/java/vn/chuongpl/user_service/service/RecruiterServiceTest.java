@@ -6,6 +6,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import vn.chuongpl.user_service.configuration.RabbitMQConfig;
+import vn.chuongpl.user_service.dtos.message.RecruiterStatusEventMessage;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
 import vn.chuongpl.user_service.enums.ErrorCode;
@@ -22,6 +25,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +34,7 @@ class RecruiterServiceTest {
     @Mock RecruiterRepository recruiterRepository;
     @Mock UserRepository userRepository;
     @Mock RecruiterMapper recruiterMapper;
+    @Mock RabbitTemplate rabbitTemplate;
 
     @InjectMocks
     RecruiterService recruiterService;
@@ -84,6 +89,7 @@ class RecruiterServiceTest {
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         User user = User.builder().id("u1").build();
         when(userRepository.findById("u1")).thenReturn(Optional.of(user));
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
 
         recruiterService.submitForApproval("u1");
 
@@ -100,6 +106,7 @@ class RecruiterServiceTest {
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         User user = User.builder().id("u1").build();
         when(userRepository.findById("u1")).thenReturn(Optional.of(user));
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
 
         recruiterService.submitForApproval("u1");
 
@@ -148,11 +155,62 @@ class RecruiterServiceTest {
     // ── updateStatus ─────────────────────────────────────────────────────────
 
     @Test
+    void updateStatus_shouldPublishApprovedEventToRabbit() {
+        Recruiter recruiter = Recruiter.builder()
+                .id("r1").userId("u1").status(RecruiterStatus.PENDING)
+                .companyName("ACME Corp").contactEmail("contact@acme.com").build();
+        User user = User.builder().id("u1").email("admin@acme.com").build();
+        when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
+        when(userRepository.findById("u1")).thenReturn(Optional.of(user));
+        when(recruiterRepository.save(any())).thenReturn(recruiter);
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
+
+        recruiterService.updateStatus("r1", RecruiterStatusRequest.builder().status(RecruiterStatus.APPROVED).build());
+
+        ArgumentCaptor<RecruiterStatusEventMessage> captor = ArgumentCaptor.forClass(RecruiterStatusEventMessage.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq(RabbitMQConfig.RECRUITER_EXCHANGE),
+                eq(RabbitMQConfig.RECRUITER_APPROVED_KEY),
+                captor.capture());
+        RecruiterStatusEventMessage event = captor.getValue();
+        assertEquals("r1", event.getRecruiterId());
+        assertEquals("admin@acme.com", event.getRecruiterEmail());
+        assertEquals("ACME Corp", event.getCompanyName());
+        assertEquals(RecruiterStatus.APPROVED, event.getStatus());
+        assertNull(event.getRejectionNote());
+    }
+
+    @Test
+    void updateStatus_shouldPublishRejectedEventWithNoteToRabbit() {
+        Recruiter recruiter = Recruiter.builder()
+                .id("r2").userId("u2").status(RecruiterStatus.PENDING).companyName("Beta Ltd").build();
+        User user = User.builder().id("u2").email("owner@beta.com").build();
+        when(recruiterRepository.findByIdAndDeletedFalse("r2")).thenReturn(Optional.of(recruiter));
+        when(userRepository.findById("u2")).thenReturn(Optional.of(user));
+        when(recruiterRepository.save(any())).thenReturn(recruiter);
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
+
+        recruiterService.updateStatus("r2", RecruiterStatusRequest.builder()
+                .status(RecruiterStatus.REJECTED).rejectionNote("Missing license").build());
+
+        ArgumentCaptor<RecruiterStatusEventMessage> captor = ArgumentCaptor.forClass(RecruiterStatusEventMessage.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq(RabbitMQConfig.RECRUITER_EXCHANGE),
+                eq(RabbitMQConfig.RECRUITER_REJECTED_KEY),
+                captor.capture());
+        RecruiterStatusEventMessage event = captor.getValue();
+        assertEquals("r2", event.getRecruiterId());
+        assertEquals(RecruiterStatus.REJECTED, event.getStatus());
+        assertEquals("Missing license", event.getRejectionNote());
+    }
+
+    @Test
     void updateStatus_shouldStoreRejectionNoteWhenRejected() {
         Recruiter recruiter = Recruiter.builder().id("r1").userId("u1").status(RecruiterStatus.PENDING).build();
         when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(User.builder().id("u1").build()));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
 
         RecruiterStatusRequest req = RecruiterStatusRequest.builder()
                 .status(RecruiterStatus.REJECTED)
@@ -174,6 +232,7 @@ class RecruiterServiceTest {
         when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(User.builder().id("u1").build()));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
 
         RecruiterStatusRequest req = RecruiterStatusRequest.builder()
                 .status(RecruiterStatus.APPROVED)
@@ -208,6 +267,7 @@ class RecruiterServiceTest {
         when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(User.builder().id("u1").build()));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
 
         assertDoesNotThrow(() -> recruiterService.update("r1", new RecruiterRequest(), "admin", true));
     }

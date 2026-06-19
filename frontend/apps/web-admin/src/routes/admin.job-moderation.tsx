@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@smart-cv/ui'
+import { Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import {
@@ -10,7 +10,9 @@ import {
   useRejectJob,
   getGetAdminJobsQueryKey,
 } from '@smart-cv/api'
+import type { JobResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
+import { Search, MoreHorizontal } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/job-moderation')({ component: JobModerationPage })
 
@@ -77,7 +79,7 @@ function JobDetailModal({
   job,
   onClose,
 }: {
-  job: any
+  job: JobResponse
   onClose: () => void
 }) {
   function formatSalary(min?: number, max?: number) {
@@ -213,15 +215,28 @@ function JobModerationPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<ModerationFilter>('PENDING')
+  const [page, setPage] = useState(1)
+  const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [rejectingJobId, setRejectingJobId] = useState<string | null>(null)
-  const [selectedJobDetail, setSelectedJobDetail] = useState<any | null>(null)
+  const [selectedJobDetail, setSelectedJobDetail] = useState<JobResponse | null>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1)
+      setDebouncedKeyword(keyword)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [keyword])
 
   const { data, isLoading, isError, refetch } = useGetAdminJobs({
     moderationStatus: filter || undefined as 'DRAFT' | 'PENDING' | 'PUBLISHED' | undefined,
-    page: 1,
-    size: 20,
+    keyword: debouncedKeyword || undefined,
+    page,
+    size: 10,
   })
   const jobs = data?.data?.items ?? []
+  const totalPages = data?.data?.totalPages ?? 1
 
   const approveMutation = useApproveJob()
 
@@ -257,11 +272,20 @@ function JobModerationPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('admin_job_moderation_title')}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold flex-1">{t('admin_job_moderation_title')}</h1>
+        <div className="relative min-w-48 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Tìm theo tên việc, công ty..."
+            className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+          />
+        </div>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as ModerationFilter)}
+          onChange={(e) => { setPage(1); setFilter(e.target.value as ModerationFilter) }}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="">{t('admin_filter_all_status')}</option>
@@ -318,43 +342,59 @@ function JobModerationPage() {
                       <StatusBadge status={formatModerationStatus(job.moderationStatus)} />
                     </td>
                     <td className="p-3">
-                      <div className="flex gap-2 items-center">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedJobDetail(job)}
-                        >
-                          Chi tiết
-                        </Button>
-                        {job.moderationStatus === 'PENDING' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(job.id!)}
-                              disabled={approveMutation.isPending}
-                            >
-                              {t('admin_action_approve')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-danger hover:text-danger border-danger/30 hover:bg-danger/10"
-                              onClick={() => setRejectingJobId(job.id!)}
-                            >
-                              {t('admin_action_reject')}
-                            </Button>
-                          </>
-                        )}
-                        {job.moderationStatus !== 'PENDING' && (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0 cursor-pointer">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 bg-card border border-border">
+                          <DropdownMenuItem
+                            onClick={() => setSelectedJobDetail(job)}
+                            className="cursor-pointer"
+                          >
+                            Chi tiết
+                          </DropdownMenuItem>
+                          {job.moderationStatus === 'PENDING' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(job.id!)}
+                                disabled={approveMutation.isPending}
+                                className="cursor-pointer"
+                              >
+                                {t('admin_action_approve')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setRejectingJobId(job.id!)}
+                                className="cursor-pointer text-danger focus:text-danger"
+                              >
+                                {t('admin_action_reject')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{t('admin_page_of', { page, total: totalPages })}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              {t('admin_pagination_prev')}
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              {t('admin_pagination_next')}
+            </Button>
+          </div>
         </div>
       )}
 

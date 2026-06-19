@@ -15,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,5 +55,37 @@ class UserServiceClientTest {
 
         assertEquals("super-secret", entityCaptor.getValue().getHeaders().getFirst("X-Gateway-Secret"));
         assertEquals("APPROVED", status.status());
+    }
+
+    @Test
+    void getRecruiterEmail_shouldReturnEmailFromRecruiterEndpoint() {
+        ReflectionTestUtils.setField(userServiceClient, "userServiceUrl", "http://localhost:8081");
+        ReflectionTestUtils.setField(userServiceClient, "internalSecret", "super-secret");
+
+        when(restTemplate.exchange(
+                eq("http://localhost:8081/user/api/internal/recruiters/by-user/user-1"),
+                eq(HttpMethod.GET),
+                org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(),
+                eq(Map.class)
+        )).thenReturn(ResponseEntity.ok(Map.of(
+                "data", Map.of("email", "owner@company.com")
+        )));
+
+        String email = userServiceClient.getRecruiterEmail("user-1");
+
+        assertEquals("owner@company.com", email);
+    }
+
+    @Test
+    void getRecruiterEmail_shouldReturnNullWhenCallFails() {
+        ReflectionTestUtils.setField(userServiceClient, "userServiceUrl", "http://localhost:8081");
+        ReflectionTestUtils.setField(userServiceClient, "internalSecret", "secret");
+
+        when(restTemplate.exchange(any(String.class), any(), any(), eq(Map.class)))
+                .thenThrow(new RuntimeException("connection refused"));
+
+        String email = userServiceClient.getRecruiterEmail("user-1");
+
+        org.junit.jupiter.api.Assertions.assertNull(email);
     }
 }

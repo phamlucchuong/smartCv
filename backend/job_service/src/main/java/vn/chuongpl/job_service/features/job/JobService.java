@@ -10,6 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.job_service.config.RabbitMQConfig;
 import vn.chuongpl.job_service.dtos.PageResponse;
@@ -27,6 +30,7 @@ import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -34,6 +38,7 @@ import java.util.List;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class JobService {
     JobRepository jobRepository;
+    MongoTemplate mongoTemplate;
     ObjectProvider<JobIndexService> jobIndexServiceProvider;
     JobMapper jobMapper;
     RabbitTemplate rabbitTemplate;
@@ -88,22 +93,46 @@ public class JobService {
         return toPageResponse(jobs);
     }
 
-    public PageResponse<JobResponse> getAllJobs(String moderationStatus, int page, int size) {
+    public PageResponse<JobResponse> getAllJobs(String moderationStatus, String keyword, int page, int size) {
         expireOverduePublishedJobs();
         Pageable pageable = buildPageable(page, size, "createdAt", "desc");
-        Page<Job> jobs;
-        if (moderationStatus != null && !moderationStatus.isBlank()) {
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasStatus = moderationStatus != null && !moderationStatus.isBlank();
+        if (!hasKeyword && !hasStatus) {
+            return toPageResponse(jobRepository.findByDeletedFalse(pageable));
+        }
+        List<Criteria> parts = new ArrayList<>();
+        parts.add(Criteria.where("deleted").is(false));
+        if (hasStatus) {
             JobModerationStatus status;
             try {
                 status = JobModerationStatus.valueOf(moderationStatus.toUpperCase());
             } catch (IllegalArgumentException e) {
                 throw new AppException(ErrorCode.JOB_STATUS_INVALID);
             }
-            jobs = jobRepository.findByModerationStatusAndDeletedFalse(status, pageable);
-        } else {
-            jobs = jobRepository.findByDeletedFalse(pageable);
+            parts.add(Criteria.where("moderation_status").is(status));
         }
-        return toPageResponse(jobs);
+        if (hasKeyword) {
+            parts.add(new Criteria().orOperator(
+                Criteria.where("title").regex(keyword, "i"),
+                Criteria.where("company").regex(keyword, "i")
+            ));
+        }
+        Criteria criteria = parts.size() == 1 ? parts.get(0)
+                : new Criteria().andOperator(parts.toArray(new Criteria[0]));
+        Query query = Query.query(criteria).with(pageable);
+        Query countQuery = Query.query(criteria);
+        List<Job> items = mongoTemplate.find(query, Job.class);
+        long total = mongoTemplate.count(countQuery, Job.class);
+        int safeSize = size > 0 ? size : defaultPageSize;
+        int totalPages = safeSize > 0 ? (int) Math.ceil((double) total / safeSize) : 1;
+        return PageResponse.<JobResponse>builder()
+                .items(items.stream().map(jobMapper::toJobResponse).toList())
+                .total(total)
+                .page(page > 0 ? page : 1)
+                .pageSize(safeSize)
+                .totalPages(totalPages)
+                .build();
     }
 
     public JobResponse updateJob(String id, JobUpdateRequest request, String userId, boolean isAdmin) {
@@ -191,6 +220,8 @@ public class JobService {
         } else {
             removeFromIndexIfEnabled(saved.getId());
         }
+        String recruiterEmail = userServiceClient.getRecruiterEmail(saved.getRecruiterId());
+        publishModerationEvent(saved, "APPROVED", RabbitMQConfig.JOB_APPROVED_KEY, null, recruiterEmail);
         return jobMapper.toJobResponse(saved);
     }
 
@@ -207,7 +238,10 @@ public class JobService {
         job.setReviewedBy(adminId);
         job.setReviewedAt(LocalDateTime.now());
         removeFromIndexIfEnabled(job.getId());
-        return jobMapper.toJobResponse(jobRepository.save(job));
+        Job saved = jobRepository.save(job);
+        String recruiterEmail = userServiceClient.getRecruiterEmail(saved.getRecruiterId());
+        publishModerationEvent(saved, "REJECTED", RabbitMQConfig.JOB_REJECTED_KEY, request.note().trim(), recruiterEmail);
+        return jobMapper.toJobResponse(saved);
     }
 
     public JobResponse activateJob(String id, String userId, boolean isAdmin) {
@@ -447,6 +481,20 @@ public class JobService {
                 .title(job.getTitle())
                 .company(job.getCompany())
                 .eventType(eventType)
+                .occurredAt(LocalDateTime.now())
+                .build();
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
+    }
+
+    private void publishModerationEvent(Job job, String eventType, String routingKey, String moderationNote, String recruiterEmail) {
+        JobEventMessage event = JobEventMessage.builder()
+                .jobId(job.getId())
+                .recruiterId(job.getRecruiterId())
+                .recruiterEmail(recruiterEmail)
+                .title(job.getTitle())
+                .company(job.getCompany())
+                .eventType(eventType)
+                .moderationNote(moderationNote)
                 .occurredAt(LocalDateTime.now())
                 .build();
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);

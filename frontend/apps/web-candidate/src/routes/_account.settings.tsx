@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { Bell, Globe2, Moon, Settings, Shield, Sun, TriangleAlert } from 'lucide-react'
+import { Bell, Settings, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useGetSettings, useUpdateNotifications, useUpdatePrivacy,
@@ -19,17 +19,11 @@ export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,
 })
 
-type SectionKey = 'account' | 'notifications' | 'privacy' | 'preferences' | 'danger'
+type SectionKey = 'account' | 'notifications_privacy'
 
 function SettingsPage() {
   const { t } = useTranslation()
-  const {
-    language: lang,
-    theme,
-    setLanguage,
-    setTheme,
-    isLoading: preferencesLoading,
-  } = useCandidatePreferences()
+  const { language: lang } = useCandidatePreferences()
   const navigate = useNavigate()
   const { isAuthenticated, userId, signOut } = useAuthStore()
   const settingsQueryKey = React.useMemo(
@@ -248,10 +242,7 @@ function SettingsPage() {
 
   const menuItems: Array<{ key: SectionKey; label: string; icon: React.ReactNode }> = [
     { key: 'account', label: 'Account', icon: <Settings className="h-4 w-4" /> },
-    { key: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" /> },
-    { key: 'privacy', label: 'Privacy', icon: <Shield className="h-4 w-4" /> },
-    { key: 'preferences', label: 'Preferences', icon: <Globe2 className="h-4 w-4" /> },
-    { key: 'danger', label: 'Danger Zone', icon: <TriangleAlert className="h-4 w-4" /> },
+    { key: 'notifications_privacy', label: 'Notification & Privacy', icon: <Bell className="h-4 w-4" /> },
   ]
 
   const handlePasswordUpdate = () => {
@@ -327,102 +318,41 @@ function SettingsPage() {
                   {lang === 'VI' ? 'Cập nhật số điện thoại' : 'Update Phone'}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeSection === 'notifications' && (
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="mb-4 text-xl font-semibold text-foreground">Notification Preferences</h2>
-              <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={notifications.jobRecommendations} onToggle={() => handleNotifToggle('jobRecommendations')} />
-              <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={notifications.applicationUpdates} onToggle={() => handleNotifToggle('applicationUpdates')} />
-              <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={notifications.newMessages} onToggle={() => handleNotifToggle('newMessages')} />
-              <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={notifications.promotionalEmails} onToggle={() => handleNotifToggle('promotionalEmails')} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeSection === 'privacy' && (
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="mb-4 text-xl font-semibold text-foreground">Privacy Settings</h2>
-              <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => handlePrivacyToggle('publicProfile')} />
-              <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => handlePrivacyToggle('showSalaryExpectation')} />
-              <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => setPrivacy((p) => ({ ...p, activityStatus: !p.activityStatus }))} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeSection === 'preferences' && (
-          <Card>
-            <CardContent className="space-y-6 p-6">
-              <h2 className="text-xl font-semibold text-foreground">Language & Appearance</h2>
-              <div className="space-y-3">
-                <h3 className="font-semibold text-foreground">Language</h3>
-                <div className="inline-flex rounded-lg border border-border bg-muted/50 p-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={lang === 'EN' ? 'default' : 'ghost'}
-                    disabled={preferencesLoading}
-                    onClick={() => setLanguage('EN')}
-                  >
-                    EN
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={lang === 'VI' ? 'default' : 'ghost'}
-                    disabled={preferencesLoading}
-                    onClick={() => setLanguage('VI')}
-                  >
-                    VI
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h3 className="font-semibold text-foreground">Appearance</h3>
-                <div className="inline-flex rounded-lg border border-border bg-muted/50 p-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={theme === 'light' ? 'default' : 'ghost'}
-                    disabled={preferencesLoading}
-                    onClick={() => setTheme('light')}
-                    className="gap-2"
-                  >
-                    <Sun className="h-4 w-4" />
-                    Light
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={theme === 'dark' ? 'default' : 'ghost'}
-                    disabled={preferencesLoading}
-                    onClick={() => setTheme('dark')}
-                    className="gap-2"
-                  >
-                    <Moon className="h-4 w-4" />
-                    Dark
-                  </Button>
+              <div className="pt-6 border-t border-border space-y-4">
+                <h3 className="font-semibold text-destructive flex items-center gap-2">
+                  <TriangleAlert className="h-5 w-5 text-destructive" /> Danger Zone
+                </h3>
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                  <h4 className="font-semibold text-foreground">Delete Account</h4>
+                  <p className="mt-2 text-sm text-muted-foreground">This action is permanent and cannot be undone.</p>
+                  <Button variant="destructive" className="mt-3" onClick={() => setOpenDeleteDialog(true)}>Delete Account</Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {activeSection === 'danger' && (
-          <Card>
-            <CardContent className="space-y-4 p-6">
-              <h2 className="text-xl font-semibold text-destructive">Danger Zone</h2>
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-                <h3 className="font-semibold text-foreground">Delete Account</h3>
-                <p className="mt-2 text-sm text-muted-foreground">This action is permanent and cannot be undone.</p>
-                <Button variant="destructive" className="mt-3" onClick={() => setOpenDeleteDialog(true)}>Delete Account</Button>
-              </div>
-            </CardContent>
-          </Card>
+        {activeSection === 'notifications_privacy' && (
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="mb-4 text-xl font-semibold text-foreground">Notification Preferences</h2>
+                <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={notifications.jobRecommendations} onToggle={() => handleNotifToggle('jobRecommendations')} />
+                <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={notifications.applicationUpdates} onToggle={() => handleNotifToggle('applicationUpdates')} />
+                <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={notifications.newMessages} onToggle={() => handleNotifToggle('newMessages')} />
+                <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={notifications.promotionalEmails} onToggle={() => handleNotifToggle('promotionalEmails')} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="mb-4 text-xl font-semibold text-foreground">Privacy Settings</h2>
+                <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => handlePrivacyToggle('publicProfile')} />
+                <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => handlePrivacyToggle('showSalaryExpectation')} />
+                <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => setPrivacy((p) => ({ ...p, activityStatus: !p.activityStatus }))} />
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
 

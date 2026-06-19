@@ -7,6 +7,7 @@ export type AdminJobsParams = {
   moderationStatus?: 'DRAFT' | 'PENDING' | 'PUBLISHED';
   page?: number;
   size?: number;
+  keyword?: string;
 };
 
 export const getAdminJobs = (

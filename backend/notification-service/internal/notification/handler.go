@@ -56,7 +56,7 @@ func (h *Handler) ListNotifications(c *echo.Context) error {
 	for i, n := range notifs {
 		items[i] = NotificationResponse{
 			ID:            n.ID.String(),
-			ReceiverID:    n.UserID.String(),
+			ReceiverID:    n.UserID,
 			RecipientRole: n.RecipientRole,
 			Type:          n.Type,
 			Title:         n.Title,
@@ -125,6 +125,8 @@ func mapAudienceToRole(audience string) string {
 		return "VENDOR"
 	case "web-admin":
 		return "ADMIN"
+	case "web-recruiter":
+		return "RECRUITER"
 	default:
 		return "USER"
 	}
@@ -146,7 +148,11 @@ func (h *Handler) SubscribeFCMToken(c *echo.Context) error {
 		return pkg.JSONError(c, http.StatusBadRequest, pkg.CodeBadRequest, "missing token")
 	}
 
-	if err := h.notifSvc.SubscribeFCMToken(c.Request().Context(), userID, req.Token); err != nil {
+	audience := req.Audience
+	if audience == "" {
+		audience = "web-user"
+	}
+	if err := h.notifSvc.SubscribeFCMToken(c.Request().Context(), userID, req.Token, audience); err != nil {
 		h.logger.Error("failed to save fcm token", "userID", userID, "err", err)
 		return pkg.JSONError(c, http.StatusInternalServerError, pkg.CodeInternalError, "failed to save token")
 	}
@@ -168,6 +174,15 @@ func (h *Handler) UnsubscribeFCMToken(c *echo.Context) error {
 
 	if req.Token == "" {
 		return pkg.JSONError(c, http.StatusBadRequest, pkg.CodeBadRequest, "missing token")
+	}
+
+	audience := req.Audience
+	if audience == "" {
+		audience = "web-user"
+	}
+	if err := h.notifSvc.UnsubscribeFCMToken(c.Request().Context(), userID, req.Token, audience); err != nil {
+		h.logger.Error("failed to remove fcm token", "userID", userID, "err", err)
+		return pkg.JSONError(c, http.StatusInternalServerError, pkg.CodeInternalError, "failed to remove token")
 	}
 
 	return pkg.JSONOK(c, nil)

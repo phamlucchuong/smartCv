@@ -10,4 +10,5 @@ export type GetAllParams = {
 page?: number;
 size?: number;
 status?: GetAllStatus;
+keyword?: string;
 };

@@ -62,7 +62,8 @@ export function getPrefixedUrl(url: string | undefined): string | undefined {
     url.startsWith('/api/recruiters') ||
     url.startsWith('/api/candidates') ||
     url.startsWith('/api/companies') ||
-    url.startsWith('/api/wishlists')
+    url.startsWith('/api/wishlists') ||
+    url.startsWith('/api/packages')
   ) {
     return `/user${url}`;
   }

@@ -1,11 +1,12 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users } from 'lucide-react'
+import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, LogOut, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
-import { Button, NotificationPopover } from '@smart-cv/ui'
+import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { useNotificationsStore } from '@/store/useNotificationsStore'
+import { useGetMe } from '@smart-cv/api'
 
 export function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -24,6 +25,11 @@ export function AdminLayout() {
     platform: true,
   })
   const user = useAuthStore((s) => s.user)
+  const { data: meData } = useGetMe({ query: { enabled: !!user } })
+  const me = meData?.data
+  const displayName = me?.fullName || user?.email || 'Admin'
+  const displayRole = 'Administrator'
+
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const notifications = useNotificationsStore((s) => s.notifications)
   const filter = useNotificationsStore((s) => s.filter)
@@ -191,21 +197,34 @@ export function AdminLayout() {
                 openNotifications: t('notifications_popup_aria'),
               }}
             />
-            <button
-              onClick={() => {
-                clearAuth()
-                navigate({ to: '/signin' })
-              }}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent"
-            >
-              <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
-                {(user?.email ?? 'A').slice(0, 1).toUpperCase()}
-              </div>
-              <div className="hidden md:block text-left">
-                <div className="text-sm font-medium">{user?.email ?? 'Admin SmartCV'}</div>
-                <div className="text-xs text-muted-foreground">{t('admin_account_actions')}</div>
-              </div>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-accent cursor-pointer text-left leading-tight"
+                >
+                  <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold animate-in fade-in zoom-in duration-200 shrink-0">
+                    {displayName.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium">{displayName}</div>
+                    <div className="text-xs text-muted-foreground">{displayRole}</div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onClick={() => {
+                    clearAuth()
+                    navigate({ to: '/signin' })
+                  }}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {t('account_sign_out')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

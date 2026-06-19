@@ -32,7 +32,13 @@
       "Bash(pnpm -F web-admin add js-cookie jwt-decode)",
       "Bash(pnpm -F web-admin add -D @types/js-cookie)",
       "Bash(./mvnw compile *)",
-      "Bash(mvn compile *)"
+      "Bash(mvn compile *)",
+      "Bash(mvn clean *)",
+      "Bash(mvn test *)",
+      "Bash(grep -v '^$')",
+      "Bash(./mvnw test *)",
+      "Bash(go build *)",
+      "Bash(go test *)"
     ]
   }
 }
