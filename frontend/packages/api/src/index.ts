@@ -10,6 +10,16 @@ export * from './generated/user/wishlist-controller/wishlist-controller';
 export * from './generated/user/company-controller/company-controller';
 export * as RecruiterApi from './generated/user/recruiter-controller/recruiter-controller';
 export { getMe as getRecruiterLoginUser } from './generated/user/user-controller/user-controller';
+export {
+  useUpdatePreferences,
+  getUpdatePreferencesMutationOptions,
+  updatePreferences,
+} from './generated/user/user-controller/user-controller';
+export type {
+  UpdatePreferencesMutationResult,
+  UpdatePreferencesMutationBody,
+  UpdatePreferencesMutationError,
+} from './generated/user/user-controller/user-controller';
 
 // Job service
 export * from './generated/job/job-controller/job-controller';

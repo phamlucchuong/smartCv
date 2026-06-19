@@ -307,7 +307,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const updatePreferences = (
+    export const updatePreferences1 = (
     preferencesSettingsRequest: PreferencesSettingsRequest,
  options?: SecondParameter<typeof customInstance>,) => {
       
@@ -322,11 +322,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   
 
 
-export const getUpdatePreferencesMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: PreferencesSettingsRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: PreferencesSettingsRequest}, TContext> => {
+export const getUpdatePreferences1MutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences1>>, TError,{data: PreferencesSettingsRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePreferences1>>, TError,{data: PreferencesSettingsRequest}, TContext> => {
 
-const mutationKey = ['updatePreferences'];
+const mutationKey = ['updatePreferences1'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -336,10 +336,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePreferences>>, {data: PreferencesSettingsRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePreferences1>>, {data: PreferencesSettingsRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  updatePreferences(data,requestOptions)
+          return  updatePreferences1(data,requestOptions)
         }
 
         
@@ -347,20 +347,20 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type UpdatePreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updatePreferences>>>
-    export type UpdatePreferencesMutationBody = PreferencesSettingsRequest
-    export type UpdatePreferencesMutationError = unknown
+    export type UpdatePreferences1MutationResult = NonNullable<Awaited<ReturnType<typeof updatePreferences1>>>
+    export type UpdatePreferences1MutationBody = PreferencesSettingsRequest
+    export type UpdatePreferences1MutationError = unknown
 
-    export const useUpdatePreferences = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: PreferencesSettingsRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+    export const useUpdatePreferences1 = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences1>>, TError,{data: PreferencesSettingsRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof updatePreferences>>,
+        Awaited<ReturnType<typeof updatePreferences1>>,
         TError,
         {data: PreferencesSettingsRequest},
         TContext
       > => {
 
-      const mutationOptions = getUpdatePreferencesMutationOptions(options);
+      const mutationOptions = getUpdatePreferences1MutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

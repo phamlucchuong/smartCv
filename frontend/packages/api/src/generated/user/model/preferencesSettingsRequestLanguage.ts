@@ -10,6 +10,6 @@ export type PreferencesSettingsRequestLanguage = typeof PreferencesSettingsReque
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PreferencesSettingsRequestLanguage = {
-  EN: 'EN',
   VI: 'VI',
+  EN: 'EN',
 } as const;

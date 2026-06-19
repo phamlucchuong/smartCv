@@ -35,7 +35,7 @@ public class S3Config {
         if (accessKey.isBlank() || secretKey.isBlank()) {
             log.warn("[S3Config] AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is empty — presigned URLs will be malformed. Run via 'make run-user' from backend/ or set these env vars in your IDE run config.");
         } else {
-            log.info("[S3Config] AWS credentials loaded: key={}*** region={} bucket-env-check={}",
+            log.debug("[S3Config] AWS credentials loaded: key={}*** region={} bucket-env-check={}",
                     accessKey.substring(0, Math.min(4, accessKey.length())), region, endpointUrl.isBlank() ? "AWS" : "MinIO");
         }
     }

@@ -23,7 +23,10 @@
       "Bash(chmod +x mvnw)",
       "Bash(rtk pnpm *)",
       "Bash(rtk grep *)",
-      "Bash(rtk tsc *)"
+      "Bash(rtk tsc *)",
+      "Bash(rtk ls *)",
+      "Bash(xargs ls -la)",
+      "Skill(code-review)"
     ]
   }
 }

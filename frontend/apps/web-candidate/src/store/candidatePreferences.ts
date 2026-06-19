@@ -11,8 +11,8 @@ import { toast } from 'sonner'
 import { useAuthStore } from './useAuthStore'
 import { type Language, type Theme, usePreferencesStore } from './usePreferencesStore'
 
-type BackendLanguage = UserModels.PreferenceLanguage
-type BackendTheme = UserModels.PreferenceTheme
+type BackendLanguage = UserModels.PreferencesSettingsLanguage
+type BackendTheme = UserModels.PreferencesSettingsTheme
 
 export type CandidatePreferencesStatus =
   | 'anonymous-local'
