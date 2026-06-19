@@ -23,10 +23,10 @@ public class UserServiceClient {
     private String internalSecret;
 
     public RecruiterStatusDto getRecruiterStatus(String userId) {
-        String url = userServiceUrl + "/user/api/recruiters/user/" + userId;
+        String url = userServiceUrl + "/user/api/internal/recruiters/by-user/" + userId;
         try {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("X-Internal-Secret", internalSecret);
+            headers.set("X-Gateway-Secret", internalSecret);
             org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
             ResponseEntity<Map> response = restTemplate.exchange(
                     url, org.springframework.http.HttpMethod.GET, entity, Map.class);
