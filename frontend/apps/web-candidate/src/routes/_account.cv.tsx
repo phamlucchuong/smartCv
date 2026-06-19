@@ -470,14 +470,14 @@ function MyCVPage() {
                   </div>
 
                   {/* AI Review Card */}
-                  <div className="card-surface ai-gradient space-y-4 border-[var(--ai)]/25 p-5 shadow-sm">
+                  <div className="card-surface space-y-4 border-purple-100 dark:border-purple-900/30 bg-gradient-to-br from-purple-50/40 via-white to-indigo-50/30 dark:from-purple-950/10 dark:via-slate-900/50 dark:to-indigo-950/10 p-5 shadow-sm">
                     <div className="flex items-center gap-2 text-sm font-bold text-[var(--ai)]">
                       <Sparkles className="h-4.5 w-4.5 animate-pulse" />
                       {lang === 'VI' ? 'AI đánh giá chất lượng CV' : 'AI Resume Insights'}
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/40 text-sm">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between rounded-lg border border-slate-300/70 dark:border-border/40 bg-white/85 dark:bg-background/50 p-3 text-sm shadow-sm">
                         <span className="text-muted-foreground">{lang === 'VI' ? 'Trạng thái phân tích' : 'Analysis Status'}</span>
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold border ${cvStatusStyle[statusStr] ?? cvStatusStyle['PENDING']}`}>
                           {lang === 'VI' ? cvStatusLabelVI[statusStr] ?? statusStr : cvStatusLabelEN[statusStr] ?? statusStr}
