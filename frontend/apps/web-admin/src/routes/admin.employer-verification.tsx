@@ -7,13 +7,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from '@smart-cv/ui'
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import { RecruiterApi } from '@smart-cv/api'
 import type { RecruiterResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
-import { ExternalLink, Search, Eye } from 'lucide-react'
+import { ExternalLink, Search, Eye, MoreHorizontal } from 'lucide-react'
 
 type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -153,39 +157,44 @@ function EmployerVerificationPage() {
                     <StatusBadge status={r.status ?? 'PENDING'} />
                   </td>
                   <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedRecruiter(r)}
-                        className="flex items-center gap-1"
-                      >
-                        <Eye className="size-3.5" />
-                        Xem hồ sơ
-                      </Button>
-                      {r.status === 'PENDING' && r.id && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(r.id!)}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            {t('admin_action_approve')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setRejectTarget(r.id!)
-                              setRejectionNote('')
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            {t('admin_action_reject')}
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 p-0 cursor-pointer">
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 bg-card border border-border">
+                        <DropdownMenuItem
+                          onClick={() => setSelectedRecruiter(r)}
+                          className="cursor-pointer"
+                        >
+                          <Eye className="mr-2 size-4" />
+                          Xem hồ sơ
+                        </DropdownMenuItem>
+                        {r.status === 'PENDING' && r.id && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => handleApprove(r.id!)}
+                              disabled={updateStatusMutation.isPending}
+                              className="cursor-pointer"
+                            >
+                              {t('admin_action_approve')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setRejectTarget(r.id!)
+                                setRejectionNote('')
+                              }}
+                              disabled={updateStatusMutation.isPending}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              {t('admin_action_reject')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}

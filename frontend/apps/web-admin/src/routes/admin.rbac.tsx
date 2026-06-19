@@ -1,14 +1,47 @@
 import { createFileRoute } from '@tanstack/react-router'
+import {
+  useCreatePermission,
+  useCreateRole,
+  useDeleteRole,
+  useGetAllPermission,
+  useGetAllRole,
+  useUpdateRole,
+  type UserRoleResponse,
+} from '@smart-cv/api'
 import { Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { cn } from '@/lib/utils'
 import { useTranslation } from '@smart-cv/i18n'
-import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch } from '@smart-cv/ui'
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@smart-cv/ui'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/admin/rbac')({ component: AdminRbacPage })
 
-type PermAction = 'create' | 'read' | 'update' | 'delete' | 'upload' | 'download' | 'export' | 'approve' | 'verify' | 'refund'
+type PermAction =
+  | 'create'
+  | 'read'
+  | 'update'
+  | 'delete'
+  | 'upload'
+  | 'download'
+  | 'export'
+  | 'approve'
+  | 'verify'
+  | 'refund'
 
 interface ResourceDef {
   key: string
@@ -25,122 +58,126 @@ interface Role {
 }
 
 const CRUD_ACTIONS: PermAction[] = ['create', 'read', 'update', 'delete']
-const EXTRA_ACTIONS: PermAction[] = ['verify', 'approve', 'upload', 'download', 'export', 'refund']
-const ALL_ACTIONS: PermAction[] = [...CRUD_ACTIONS, ...EXTRA_ACTIONS]
+const ALL_ACTIONS: PermAction[] = [
+  'create',
+  'read',
+  'update',
+  'delete',
+  'verify',
+  'approve',
+  'upload',
+  'download',
+  'export',
+  'refund',
+]
+const SYSTEM_ROLE_IDS = new Set(['ADMIN', 'RECRUITER', 'CANDIDATE'])
 
 const RESOURCES: ResourceDef[] = [
-  { key: 'users', labelKey: 'admin_res_users', actions: [...CRUD_ACTIONS] },
+  { key: 'user', labelKey: 'admin_res_users', actions: [...CRUD_ACTIONS] },
   { key: 'employer_verification', labelKey: 'admin_res_employer_verification', actions: [...CRUD_ACTIONS, 'verify'] },
-  { key: 'jobs', labelKey: 'admin_res_jobs', actions: [...CRUD_ACTIONS, 'approve'] },
-  { key: 'cvs', labelKey: 'admin_res_cvs', actions: [...CRUD_ACTIONS, 'upload', 'download', 'export'] },
-  { key: 'packages', labelKey: 'admin_res_packages', actions: [...CRUD_ACTIONS] },
-  { key: 'payments', labelKey: 'admin_res_payments', actions: [...CRUD_ACTIONS, 'refund', 'export'] },
+  { key: 'job', labelKey: 'admin_res_jobs', actions: [...CRUD_ACTIONS, 'approve'] },
+  { key: 'cv', labelKey: 'admin_res_cvs', actions: [...CRUD_ACTIONS, 'upload', 'download', 'export'] },
+  { key: 'package', labelKey: 'admin_res_packages', actions: [...CRUD_ACTIONS] },
+  { key: 'payment', labelKey: 'admin_res_payments', actions: [...CRUD_ACTIONS, 'refund', 'export'] },
   { key: 'ai_config', labelKey: 'admin_res_ai_config', actions: [...CRUD_ACTIONS] },
-  { key: 'system_settings', labelKey: 'admin_res_system_settings', actions: [...CRUD_ACTIONS] },
-  { key: 'audit_logs', labelKey: 'admin_res_audit_logs', actions: [...CRUD_ACTIONS, 'export'] },
+  { key: 'system_setting', labelKey: 'admin_res_system_settings', actions: [...CRUD_ACTIONS] },
+  { key: 'audit_log', labelKey: 'admin_res_audit_logs', actions: [...CRUD_ACTIONS, 'export'] },
 ]
 
 function cloneRole(role: Role): Role {
   return {
     ...role,
-    permissions: Object.fromEntries(Object.entries(role.permissions).map(([k, v]) => [k, [...v]])),
+    permissions: Object.fromEntries(Object.entries(role.permissions).map(([key, value]) => [key, [...value]])),
   }
 }
 
 function defaultPermissions(fillAll: boolean) {
-  return Object.fromEntries(RESOURCES.map((resource) => [resource.key, fillAll ? [...resource.actions] : []])) as Role['permissions']
+  return Object.fromEntries(
+    RESOURCES.map((resource) => [resource.key, fillAll ? [...resource.actions] : []]),
+  ) as Role['permissions']
 }
 
-function initialRoles(t: (key: string) => string): Role[] {
-  return [
-    {
-      id: 'admin',
-      name: 'Admin',
-      description: t('admin_rbac_role_admin_desc'),
-      system: true,
-      permissions: defaultPermissions(true),
-    },
-    {
-      id: 'recruiter',
-      name: 'Recruiter',
-      description: t('admin_rbac_role_recruiter_desc'),
-      system: true,
-      permissions: {
-        users: [],
-        employer_verification: ['read'],
-        jobs: ['create', 'read', 'update'],
-        cvs: ['read', 'download'],
-        packages: ['read'],
-        payments: ['read'],
-        ai_config: [],
-        system_settings: [],
-        audit_logs: [],
-      },
-    },
-    {
-      id: 'candidate',
-      name: 'Candidate',
-      description: t('admin_rbac_role_candidate_desc'),
-      system: true,
-      permissions: {
-        users: ['read', 'update'],
-        employer_verification: [],
-        jobs: ['read'],
-        cvs: ['create', 'read', 'update', 'upload', 'download'],
-        packages: ['read'],
-        payments: ['read'],
-        ai_config: [],
-        system_settings: [],
-        audit_logs: [],
-      },
-    },
-    {
-      id: 'moderator',
-      name: 'Moderator',
-      description: t('admin_rbac_role_moderator_desc'),
-      system: false,
-      permissions: {
-        users: ['read'],
-        employer_verification: ['read', 'verify'],
-        jobs: ['read', 'approve'],
-        cvs: ['read'],
-        packages: ['read'],
-        payments: ['read'],
-        ai_config: [],
-        system_settings: [],
-        audit_logs: ['read'],
-      },
-    },
-  ]
+function getPermissionName(resourceKey: string, action: PermAction) {
+  return `${resourceKey}.${action}`
 }
 
-function AdminRbacPage() {
-  const { t } = useTranslation()
-  const [roles, setRoles] = useState<Role[]>(() => initialRoles(t))
-  const [selectedRoleId, setSelectedRoleId] = useState('admin')
-  const [originalRole, setOriginalRole] = useState<Role>(() => cloneRole(initialRoles(t)[0]))
-  const [draftRole, setDraftRole] = useState<Role>(() => cloneRole(initialRoles(t)[0]))
-  const [createOpen, setCreateOpen] = useState(false)
-  const [newRoleName, setNewRoleName] = useState('')
-  const [newRoleDescription, setNewRoleDescription] = useState('')
+function formatRoleName(name: string) {
+  return name
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
 
-  const selectedRole = useMemo(
-    () => roles.find((role) => role.id === selectedRoleId) ?? null,
-    [roles, selectedRoleId],
-  )
+function mapRole(role: UserRoleResponse): Role {
+  const permissions = defaultPermissions(false)
 
-  const selectRole = (role: Role) => {
-    setSelectedRoleId(role.id)
-    setOriginalRole(cloneRole(role))
-    setDraftRole(cloneRole(role))
+  for (const permission of role.permissionResponseSet ?? []) {
+    const [resourceKey, actionName] = (permission.name ?? '').split('.')
+    if (!resourceKey || !actionName) continue
+    const action = actionName as PermAction
+    if (!ALL_ACTIONS.includes(action) || !(resourceKey in permissions)) continue
+    permissions[resourceKey] = [...permissions[resourceKey], action]
   }
+
+  return {
+    id: role.name ?? '',
+    name: role.name ?? '',
+    description: role.description ?? '',
+    system: SYSTEM_ROLE_IDS.has(role.name ?? ''),
+    permissions,
+  }
+}
+
+function toRoleRequest(role: Role) {
+  return {
+    name: role.name.trim(),
+    description: role.description.trim(),
+    permissions: RESOURCES.flatMap((resource) =>
+      (role.permissions[resource.key] ?? []).map((action) => getPermissionName(resource.key, action)),
+    ),
+  }
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null) {
+    const maybeResponse = error as { response?: { data?: { message?: string } } }
+    return maybeResponse.response?.data?.message ?? fallback
+  }
+  return fallback
+}
+
+function RoleEditor({
+  role,
+  permissions,
+  refetchRoles,
+  refetchPermissions,
+}: {
+  role: Role
+  permissions: Array<{ name?: string }>
+  refetchRoles: () => Promise<unknown>
+  refetchPermissions: () => Promise<unknown>
+}) {
+  const { t } = useTranslation()
+  const [originalRole, setOriginalRole] = useState<Role>(() => cloneRole(role))
+  const [draftRole, setDraftRole] = useState<Role>(() => cloneRole(role))
+
+  const createPermissionMutation = useCreatePermission()
+  const updateRoleMutation = useUpdateRole()
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(draftRole) !== JSON.stringify(originalRole)
+  }, [draftRole, originalRole])
+  const isSaving = createPermissionMutation.isPending || updateRoleMutation.isPending
 
   const updatePerm = (resourceKey: string, action: PermAction, checked: boolean) => {
     setDraftRole((prev) => {
-      if (prev.system && prev.id === 'admin') return prev
+      if (prev.system && prev.id === 'ADMIN') return prev
+
       const current = new Set(prev.permissions[resourceKey] ?? [])
       if (checked) current.add(action)
       else current.delete(action)
+
       return {
         ...prev,
         permissions: {
@@ -151,183 +188,262 @@ function AdminRbacPage() {
     })
   }
 
-  const saveRole = () => {
-    setRoles((prev) => prev.map((role) => (role.id === draftRole.id ? cloneRole(draftRole) : role)))
-    setOriginalRole(cloneRole(draftRole))
-    toast.success(t('admin_rbac_saved_toast'))
+  const ensurePermissionsExist = async (permissionNames: string[]) => {
+    const existingPermissionNames = new Set(permissions.map((permission) => permission.name ?? ''))
+    const missingPermissions = permissionNames.filter((name) => !existingPermissionNames.has(name))
+
+    if (!missingPermissions.length) return
+
+    await Promise.all(
+      missingPermissions.map((name) =>
+        createPermissionMutation.mutateAsync({
+          data: {
+            name,
+            description: name.replace('.', ' '),
+          },
+        }),
+      ),
+    )
+  }
+
+  const saveRole = async () => {
+    const request = toRoleRequest(draftRole)
+    try {
+      await ensurePermissionsExist(request.permissions)
+      const response = await updateRoleMutation.mutateAsync({
+        name: draftRole.id,
+        data: request,
+      })
+      const nextRole = mapRole(response.data!)
+      setOriginalRole(cloneRole(nextRole))
+      setDraftRole(cloneRole(nextRole))
+      await Promise.all([refetchRoles(), refetchPermissions()])
+      toast.success(t('admin_rbac_saved_toast'))
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Lưu vai trò thất bại'))
+    }
   }
 
   const resetRole = () => {
     setDraftRole(cloneRole(originalRole))
   }
 
-  const deleteRole = (roleId: string) => {
-    const nextRoles = roles.filter((role) => role.id !== roleId)
-    setRoles(nextRoles)
-    const fallback = nextRoles[0]
-    if (!fallback) return
-    selectRole(fallback)
+  return (
+    <div className="min-w-0 space-y-4">
+      <div className="card-surface p-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label htmlFor="role-name">{t('admin_rbac_role_name')}</Label>
+            <Input
+              id="role-name"
+              className="mt-1.5"
+              value={draftRole.name}
+              disabled
+            />
+          </div>
+          <div>
+            <Label htmlFor="role-desc">{t('admin_rbac_role_desc')}</Label>
+            <Input
+              id="role-desc"
+              className="mt-1.5"
+              value={draftRole.description}
+              onChange={(event) => setDraftRole({ ...draftRole, description: event.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="card-surface overflow-x-auto bg-card">
+        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/40">
+              <th className="w-[180px] p-3 font-medium text-muted-foreground text-xs">
+                {t('admin_rbac_col_resource') || 'Tài nguyên'}
+              </th>
+              {ALL_ACTIONS.map((action) => (
+                <th key={action} className="p-3 text-center font-medium text-muted-foreground">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">
+                    {t(`admin_rbac_perm_${action}`)}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {RESOURCES.map((resource) => (
+              <tr key={resource.key} className="transition-colors hover:bg-muted/10">
+                <td className="p-4 font-medium text-foreground">
+                  {t(resource.labelKey)}
+                </td>
+                {ALL_ACTIONS.map((action) => {
+                  const supported = resource.actions.includes(action)
+                  const checked = Boolean(draftRole.permissions[resource.key]?.includes(action))
+                  const disabled = (draftRole.system && draftRole.id === 'ADMIN') || isSaving
+                  const switchId = `${resource.key}-${action}`
+
+                  return (
+                    <td key={action} className="p-4 text-center">
+                      {supported ? (
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            id={switchId}
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={(event) => updatePerm(resource.key, action, event.target.checked)}
+                            className="size-4 cursor-pointer rounded border-input text-primary focus:ring-primary/20 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/30">-</span>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {isDirty && (
+        <div className="card-surface animate-in fade-in slide-in-from-bottom-2 sticky bottom-4 z-30 flex items-center justify-between rounded-xl border border-primary/20 bg-card/90 p-4 shadow-2xl backdrop-blur-md duration-300">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {t('admin_rbac_unsaved_changes') || 'Bạn có thay đổi chưa lưu cho vai trò này'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={resetRole}>
+              {t('admin_rbac_cancel')}
+            </Button>
+            <Button size="sm" disabled={isSaving} onClick={() => void saveRole()}>
+              {t('admin_rbac_save')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdminRbacPage() {
+  const { t } = useTranslation()
+  const [selectedRoleId, setSelectedRoleId] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newRoleName, setNewRoleName] = useState('')
+  const [newRoleDescription, setNewRoleDescription] = useState('')
+
+  const { data: rolesData, isLoading: isRolesLoading, refetch: refetchRoles } = useGetAllRole()
+  const { data: permissionsData, isLoading: isPermissionsLoading, refetch: refetchPermissions } = useGetAllPermission()
+  const createRoleMutation = useCreateRole()
+  const deleteRoleMutation = useDeleteRole()
+
+  const roles = useMemo(() => (rolesData?.data ?? []).map(mapRole), [rolesData])
+  const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? roles[0] ?? null
+  const selectedValue = selectedRole?.id ?? ''
+  const isLoading = isRolesLoading || isPermissionsLoading
+  const isDeleting = deleteRoleMutation.isPending
+
+  const deleteRole = async (roleId: string) => {
+    try {
+      await deleteRoleMutation.mutateAsync({ name: roleId })
+      if (selectedRoleId === roleId) {
+        setSelectedRoleId('')
+      }
+      await refetchRoles()
+      toast.success('Đã xóa vai trò')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Xóa vai trò thất bại'))
+    }
   }
 
-  const createRole = () => {
-    const trimmed = newRoleName.trim()
-    if (!trimmed) return
-    const id = `${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
-    const role: Role = {
-      id,
-      name: trimmed,
-      description: newRoleDescription.trim(),
-      system: false,
-      permissions: defaultPermissions(false),
+  const createRole = async () => {
+    const trimmedName = newRoleName.trim()
+    if (!trimmedName) return
+
+    try {
+      const response = await createRoleMutation.mutateAsync({
+        data: {
+          name: trimmedName,
+          description: newRoleDescription.trim(),
+          permissions: [],
+        },
+      })
+      const nextRole = mapRole(response.data!)
+      await refetchRoles()
+      setSelectedRoleId(nextRole.id)
+      setCreateOpen(false)
+      setNewRoleName('')
+      setNewRoleDescription('')
+      toast.success('Đã tạo vai trò mới')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Tạo vai trò thất bại'))
     }
-    const nextRoles = [...roles, role]
-    setRoles(nextRoles)
-    selectRole(role)
-    setCreateOpen(false)
-    setNewRoleName('')
-    setNewRoleDescription('')
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{t('admin_rbac_title')}</h1>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          {t('admin_rbac_create_role')}
-        </Button>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-        <div className="card-surface p-3">
-          <div className="mb-2 px-2 text-sm font-semibold">{t('admin_rbac_roles')}</div>
-          <div className="space-y-1">
-            {roles.map((role) => {
-              const active = role.id === selectedRoleId
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => selectRole(role)}
-                  className={cn(
-                    'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left',
-                    active
-                      ? 'border-primary/20 bg-primary/10 text-primary'
-                      : 'border-transparent hover:bg-accent',
-                  )}
-                >
-                  <div>
-                    <div className="font-medium">{role.name}</div>
-                    {role.system && (
-                      <span className="mt-1 inline-flex rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {t('admin_rbac_role_system_badge')}
-                      </span>
-                    )}
-                  </div>
-                  {!role.system && (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        deleteRole(role.id)
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          deleteRole(role.id)
-                        }
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+      <div className="flex flex-col justify-between gap-4 card-surface bg-card p-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3">
+          <span className="whitespace-nowrap text-sm font-semibold text-muted-foreground">{t('admin_rbac_roles')}:</span>
+          <Select
+            value={selectedValue}
+            onValueChange={(value) => {
+              setSelectedRoleId(value)
+            }}
+            disabled={isLoading || !roles.length}
+          >
+            <SelectTrigger className="w-[220px] bg-background">
+              <SelectValue placeholder={t('admin_rbac_roles')} />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id}>
+                  {formatRoleName(role.name)} {role.system ? `(${t('admin_rbac_role_system_badge')})` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {!selectedRole ? (
-          <div className="card-surface p-6 text-sm text-muted-foreground">{t('admin_rbac_empty')}</div>
-        ) : (
-          <div className="space-y-4">
-            <div className="card-surface p-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="role-name">{t('admin_rbac_role_name')}</Label>
-                  <Input
-                    id="role-name"
-                    className="mt-1.5"
-                    value={draftRole.name}
-                    disabled={draftRole.system}
-                    onChange={(event) => setDraftRole({ ...draftRole, name: event.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="role-desc">{t('admin_rbac_role_desc')}</Label>
-                  <Input
-                    id="role-desc"
-                    className="mt-1.5"
-                    value={draftRole.description}
-                    onChange={(event) => setDraftRole({ ...draftRole, description: event.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="card-surface overflow-x-auto">
-              <table className="w-full min-w-[980px] text-sm">
-                <thead className="bg-muted/50 text-left">
-                  <tr>
-                    <th className="sticky left-0 z-10 bg-muted/50 p-3">{t('admin_rbac_col_resource')}</th>
-                    {ALL_ACTIONS.map((action) => (
-                      <th key={action} className="p-3">
-                        {t(`admin_rbac_perm_${action}`)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {RESOURCES.map((resource) => (
-                    <tr key={resource.key} className="border-t border-border">
-                      <td className="sticky left-0 z-10 bg-card p-3 font-medium">{t(resource.labelKey)}</td>
-                      {ALL_ACTIONS.map((action) => {
-                        const supported = resource.actions.includes(action)
-                        if (!supported) {
-                          return (
-                            <td key={`${resource.key}-${action}`} className="p-3 text-center text-muted-foreground">
-                              —
-                            </td>
-                          )
-                        }
-                        const checked = Boolean(draftRole.permissions[resource.key]?.includes(action))
-                        const disabled = draftRole.system && draftRole.id === 'admin'
-                        return (
-                          <td key={`${resource.key}-${action}`} className="p-3 text-center">
-                            <Switch
-                              checked={checked}
-                              disabled={disabled}
-                              onCheckedChange={(nextChecked) => updatePerm(resource.key, action, nextChecked)}
-                            />
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={saveRole}>{t('admin_rbac_save')}</Button>
-              <Button variant="outline" onClick={resetRole}>{t('admin_rbac_cancel')}</Button>
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {!selectedRole?.system && (
+            <Button
+              variant="destructive"
+              disabled={!selectedRole || isDeleting}
+              onClick={() => selectedRole && void deleteRole(selectedRole.id)}
+            >
+              <Trash2 className="mr-2 size-4" />
+              {t('admin_rbac_delete_role')}
+            </Button>
+          )}
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            {t('admin_rbac_create_role')}
+          </Button>
+        </div>
       </div>
+
+      {isLoading ? (
+        <div className="card-surface flex justify-center p-6">
+          <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      ) : !selectedRole ? (
+        <div className="card-surface p-6 text-sm text-muted-foreground">{t('admin_rbac_empty')}</div>
+      ) : (
+        <RoleEditor
+          key={selectedRole.id}
+          role={selectedRole}
+          permissions={permissionsData?.data ?? []}
+          refetchRoles={refetchRoles}
+          refetchPermissions={refetchPermissions}
+        />
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -359,7 +475,10 @@ function AdminRbacPage() {
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               {t('admin_rbac_cancel')}
             </Button>
-            <Button onClick={createRole} disabled={!newRoleName.trim()}>
+            <Button
+              onClick={() => void createRole()}
+              disabled={!newRoleName.trim() || createRoleMutation.isPending}
+            >
               {t('admin_rbac_create_role')}
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@smart-cv/ui'
+import { Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import {
@@ -12,7 +12,7 @@ import {
 } from '@smart-cv/api'
 import type { JobResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
-import { Search } from 'lucide-react'
+import { Search, MoreHorizontal } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/job-moderation')({ component: JobModerationPage })
 
@@ -342,37 +342,39 @@ function JobModerationPage() {
                       <StatusBadge status={formatModerationStatus(job.moderationStatus)} />
                     </td>
                     <td className="p-3">
-                      <div className="flex gap-2 items-center">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedJobDetail(job)}
-                        >
-                          Chi tiết
-                        </Button>
-                        {job.moderationStatus === 'PENDING' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(job.id!)}
-                              disabled={approveMutation.isPending}
-                            >
-                              {t('admin_action_approve')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-danger hover:text-danger border-danger/30 hover:bg-danger/10"
-                              onClick={() => setRejectingJobId(job.id!)}
-                            >
-                              {t('admin_action_reject')}
-                            </Button>
-                          </>
-                        )}
-                        {job.moderationStatus !== 'PENDING' && (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0 cursor-pointer">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 bg-card border border-border">
+                          <DropdownMenuItem
+                            onClick={() => setSelectedJobDetail(job)}
+                            className="cursor-pointer"
+                          >
+                            Chi tiết
+                          </DropdownMenuItem>
+                          {job.moderationStatus === 'PENDING' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(job.id!)}
+                                disabled={approveMutation.isPending}
+                                className="cursor-pointer"
+                              >
+                                {t('admin_action_approve')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setRejectingJobId(job.id!)}
+                                className="cursor-pointer text-danger focus:text-danger"
+                              >
+                                {t('admin_action_reject')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
