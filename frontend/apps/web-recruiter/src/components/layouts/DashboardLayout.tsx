@@ -1,13 +1,14 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  Bell, Search, Sparkles, Sun, Moon, ChevronDown,
+  Search, Sparkles, Sun, Moon, ChevronDown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "@smart-cv/ui";
+import { Button, NotificationPopover } from "@smart-cv/ui";
 import type { LucideIcon } from "lucide-react";
 import { useRecruiterStore } from "@/store/useRecruiterStore";
 import { useTranslation } from "@smart-cv/i18n";
+import { useNotificationsStore } from "@/store/useNotificationsStore";
 
 export interface NavItem {
   to: string;
@@ -35,6 +36,13 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
   const { i18n, t } = useTranslation();
   const theme = useRecruiterStore((s) => s.theme);
   const setTheme = useRecruiterStore((s) => s.setTheme);
+  const notifications = useNotificationsStore((s) => s.notifications);
+  const filter = useNotificationsStore((s) => s.filter);
+  const setFilter = useNotificationsStore((s) => s.setFilter);
+  const markAsRead = useNotificationsStore((s) => s.markAsRead);
+  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead);
+  const deleteNotification = useNotificationsStore((s) => s.deleteNotification);
+  const clearAll = useNotificationsStore((s) => s.clearAll);
   const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     overview: true,
@@ -71,9 +79,10 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
     {
       key: "account",
       label: t("recruiter_sidebar_group_account"),
-      items: nav.filter((item) => ["/employer/billing", "/employer/notifications", "/employer/settings"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/billing", "/employer/settings"].includes(item.to)),
     },
   ].filter((group) => group.items.length > 0)), [nav, role, t]);
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -198,10 +207,32 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
               {theme === "dark" ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
 
-            <button className="relative rounded-lg p-2 hover:bg-accent">
-              <Bell className="size-5" />
-              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger" />
-            </button>
+            <NotificationPopover
+              notifications={notifications}
+              unreadCount={unreadCount}
+              filter={filter}
+              onFilterChange={setFilter}
+              onMarkRead={markAsRead}
+              onDelete={deleteNotification}
+              onMarkAllRead={markAllAsRead}
+              onClearAll={clearAll}
+              locale={language === "VI" ? "vi-VN" : "en-US"}
+              triggerClassName="text-foreground hover:bg-accent"
+              labels={{
+                title: t("recruiter_nav_notifications"),
+                all: t("notifications_filter_all"),
+                unread: t("notifications_filter_unread"),
+                read: t("notifications_filter_read"),
+                markRead: t("notifications_mark_read"),
+                delete: t("notifications_delete"),
+                markAllRead: t("notifications_mark_all_read"),
+                clearAll: t("notifications_clear_all"),
+                empty: t("notifications_empty"),
+                noUnread: t("notifications_no_unread"),
+                unreadCount: t("notifications_unread_count", { count: unreadCount }),
+                openNotifications: t("notifications_popup_aria"),
+              }}
+            />
 
             <button
               onClick={() => navigate({ to: "/employer/profile" })}
