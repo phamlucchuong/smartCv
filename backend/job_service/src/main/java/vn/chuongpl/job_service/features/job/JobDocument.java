@@ -46,6 +46,8 @@ public class JobDocument {
     String visibilityStatus;
     @Field(type = FieldType.Date, format = {}, pattern = "uuuu-MM-dd")
     LocalDate deadline;
+    @Field(type = FieldType.Integer)
+    Integer openings;
     @Field(type = FieldType.Date, format = {}, pattern = "uuuu-MM-dd'T'HH:mm:ss")
     LocalDateTime createdAt;
 }

@@ -53,6 +53,7 @@ public class Job {
     String reviewedBy;
     LocalDateTime reviewedAt;
     LocalDate deadline;
+    Integer openings;
     Integer qualifiedThreshold;
     Integer rejectThreshold;
     Boolean autoRejectEnabled;
