@@ -6,6 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.user_service.dtos.PageResponse;
@@ -23,6 +26,8 @@ import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -35,6 +40,7 @@ public class RecruiterService {
     UserRepository userRepository;
     RecruiterMapper recruiterMapper;
     S3Service s3Service;
+    MongoTemplate mongoTemplate;
 
     public RecruiterResponse create(RecruiterRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -96,23 +102,53 @@ public class RecruiterService {
         return recruiterMapper.toRecruiterResponse(recruiter, user);
     }
 
-    public PageResponse<RecruiterResponse> getAll(int page, int size, RecruiterStatus status) {
+    public PageResponse<RecruiterResponse> getAll(int page, int size, RecruiterStatus status, String keyword) {
         int pageCurrent = page > 0 ? page - 1 : 0;
         int safeSize = size > 0 ? size : 10;
         Pageable pageable = PageRequest.of(pageCurrent, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Recruiter> recruiters = status != null
-                ? recruiterRepository.findAllByStatusAndDeletedFalse(status, pageable)
-                : recruiterRepository.findAllByDeletedFalse(pageable);
+
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        if (!hasKeyword) {
+            Page<Recruiter> recruiters = status != null
+                    ? recruiterRepository.findAllByStatusAndDeletedFalse(status, pageable)
+                    : recruiterRepository.findAllByDeletedFalse(pageable);
+            return PageResponse.<RecruiterResponse>builder()
+                    .items(recruiters.getContent().stream().map(recruiter -> {
+                        User user = userRepository.findById(recruiter.getUserId()).orElse(null);
+                        return recruiterMapper.toRecruiterResponse(recruiter, user);
+                    }).toList())
+                    .total(recruiters.getTotalElements())
+                    .page(pageCurrent + 1)
+                    .pageSize(safeSize)
+                    .totalPages(recruiters.getTotalPages())
+                    .build();
+        }
+
+        List<Criteria> parts = new ArrayList<>();
+        parts.add(Criteria.where("deleted").is(false));
+        if (status != null) {
+            parts.add(Criteria.where("status").is(status));
+        }
+        parts.add(new Criteria().orOperator(
+                Criteria.where("companyName").regex(keyword, "i"),
+                Criteria.where("contactName").regex(keyword, "i")
+        ));
+        Criteria criteria = new Criteria().andOperator(parts.toArray(new Criteria[0]));
+        Query query = Query.query(criteria).with(pageable);
+        Query countQuery = Query.query(criteria);
+        List<Recruiter> items = mongoTemplate.find(query, Recruiter.class);
+        long total = mongoTemplate.count(countQuery, Recruiter.class);
+        int totalPages = safeSize > 0 ? (int) Math.ceil((double) total / safeSize) : 1;
 
         return PageResponse.<RecruiterResponse>builder()
-                .items(recruiters.getContent().stream().map(recruiter -> {
+                .items(items.stream().map(recruiter -> {
                     User user = userRepository.findById(recruiter.getUserId()).orElse(null);
                     return recruiterMapper.toRecruiterResponse(recruiter, user);
                 }).toList())
-                .total(recruiters.getTotalElements())
+                .total(total)
                 .page(pageCurrent + 1)
                 .pageSize(safeSize)
-                .totalPages(recruiters.getTotalPages())
+                .totalPages(totalPages)
                 .build();
     }
 

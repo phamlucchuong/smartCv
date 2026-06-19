@@ -64,8 +64,9 @@ public class RecruiterController {
     public ApiResponse<PageResponse<RecruiterResponse>> getAll(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) RecruiterStatus status) {
-        return ApiResponse.<PageResponse<RecruiterResponse>>builder().data(recruiterService.getAll(page, size, status)).build();
+            @RequestParam(required = false) RecruiterStatus status,
+            @RequestParam(required = false) String keyword) {
+        return ApiResponse.<PageResponse<RecruiterResponse>>builder().data(recruiterService.getAll(page, size, status, keyword)).build();
     }
 
     @PutMapping("/{id}")

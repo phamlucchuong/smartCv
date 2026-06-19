@@ -5,6 +5,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.*;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.user_service.dtos.PageResponse;
@@ -31,6 +34,7 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     RoleService roleService;
+    MongoTemplate mongoTemplate;
 
     @NonFinal
     @Value("${app.user-default-page-size:10}")
@@ -136,18 +140,51 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    public PageResponse<UserResponse> getAllUsers(int page, int size) {
+    public PageResponse<UserResponse> getAllUsers(int page, int size, String keyword, String role) {
         int pageCurrent = page > 0 ? page - 1 : 0;
         int safeSize = size > 0 ? size : defaultPageSize;
         Pageable pageable = PageRequest.of(pageCurrent, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<User> users = userRepository.findAll(pageable);
+
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasRole = role != null && !role.isBlank();
+
+        if (!hasKeyword && !hasRole) {
+            Page<User> users = userRepository.findAll(pageable);
+            return PageResponse.<UserResponse>builder()
+                    .items(users.getContent().stream().map(userMapper::toUserResponse).toList())
+                    .total(users.getTotalElements())
+                    .page(pageCurrent + 1)
+                    .pageSize(safeSize)
+                    .totalPages(users.getTotalPages())
+                    .build();
+        }
+
+        List<Criteria> parts = new ArrayList<>();
+        if (hasKeyword) {
+            parts.add(new Criteria().orOperator(
+                    Criteria.where("email").regex(keyword, "i"),
+                    Criteria.where("fullName").regex(keyword, "i")
+            ));
+        }
+        if (hasRole) {
+            parts.add(Criteria.where("roles.id").is(role.toUpperCase()));
+        }
+        Criteria criteria = parts.size() == 1
+                ? parts.get(0)
+                : new Criteria().andOperator(parts.toArray(new Criteria[0]));
+
+        Query query = Query.query(criteria).with(pageable);
+        Query countQuery = Query.query(criteria);
+        List<User> items = mongoTemplate.find(query, User.class);
+        long total = mongoTemplate.count(countQuery, User.class);
+        int totalPages = safeSize > 0 ? (int) Math.ceil((double) total / safeSize) : 1;
 
         return PageResponse.<UserResponse>builder()
-                .items(users.getContent().stream().map(userMapper::toUserResponse).toList())
-                .total(users.getTotalElements())
+                .items(items.stream().map(userMapper::toUserResponse).toList())
+                .total(total)
                 .page(pageCurrent + 1)
                 .pageSize(safeSize)
-                .totalPages(users.getTotalPages())
+                .totalPages(totalPages)
                 .build();
     }
 
