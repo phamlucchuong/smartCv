@@ -81,6 +81,7 @@ class UserServiceTest {
         UserResponse response = UserResponse.builder().id("u1").roles(Set.of("ADMIN")).build();
 
         when(userRepository.findByIdAndDeletedFalse("u1")).thenReturn(Optional.of(user));
+        when(roleService.findById("admin")).thenReturn(Optional.empty());
         when(roleService.findById("ADMIN")).thenReturn(Optional.of(adminRole));
         when(userRepository.save(user)).thenReturn(user);
         when(userMapper.toUserResponse(user)).thenReturn(response);
@@ -89,6 +90,7 @@ class UserServiceTest {
 
         assertEquals(Set.of("ADMIN"), actual.getRoles());
         assertEquals(1, user.getRoles().size());
+        verify(roleService).findById("admin");
         verify(roleService).findById("ADMIN");
     }
 

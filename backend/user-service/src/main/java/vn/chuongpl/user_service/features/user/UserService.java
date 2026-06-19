@@ -131,7 +131,8 @@ public class UserService {
 
         Set<Role> roles = new HashSet<>();
         for (String roleName : request.getRoles()) {
-            Role role = roleService.findById(roleName.toUpperCase())
+            Role role = roleService.findById(roleName)
+                    .or(() -> roleService.findById(roleName.toUpperCase()))
                     .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
             roles.add(role);
         }
