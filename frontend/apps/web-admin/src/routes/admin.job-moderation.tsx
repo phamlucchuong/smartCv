@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@smart-cv/ui'
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
@@ -12,6 +12,7 @@ import {
 } from '@smart-cv/api'
 import type { JobResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
+import { Search } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/job-moderation')({ component: JobModerationPage })
 
@@ -214,15 +215,28 @@ function JobModerationPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<ModerationFilter>('PENDING')
+  const [page, setPage] = useState(1)
+  const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [rejectingJobId, setRejectingJobId] = useState<string | null>(null)
   const [selectedJobDetail, setSelectedJobDetail] = useState<JobResponse | null>(null)
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1)
+      setDebouncedKeyword(keyword)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [keyword])
+
   const { data, isLoading, isError, refetch } = useGetAdminJobs({
     moderationStatus: filter || undefined as 'DRAFT' | 'PENDING' | 'PUBLISHED' | undefined,
-    page: 1,
-    size: 20,
+    keyword: debouncedKeyword || undefined,
+    page,
+    size: 10,
   })
   const jobs = data?.data?.items ?? []
+  const totalPages = data?.data?.totalPages ?? 1
 
   const approveMutation = useApproveJob()
 
@@ -258,11 +272,20 @@ function JobModerationPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('admin_job_moderation_title')}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold flex-1">{t('admin_job_moderation_title')}</h1>
+        <div className="relative min-w-48 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Tìm theo tên việc, công ty..."
+            className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+          />
+        </div>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as ModerationFilter)}
+          onChange={(e) => { setPage(1); setFilter(e.target.value as ModerationFilter) }}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="">{t('admin_filter_all_status')}</option>
@@ -356,6 +379,20 @@ function JobModerationPage() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{t('admin_page_of', { page, total: totalPages })}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              {t('admin_pagination_prev')}
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              {t('admin_pagination_next')}
+            </Button>
+          </div>
         </div>
       )}
 

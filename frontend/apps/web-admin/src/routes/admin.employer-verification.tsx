@@ -11,8 +11,9 @@ import {
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import { RecruiterApi } from '@smart-cv/api'
+import type { RecruiterResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
-import { ExternalLink, Search } from 'lucide-react'
+import { ExternalLink, Search, Eye } from 'lucide-react'
 
 type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -26,6 +27,12 @@ function EmployerVerificationPage() {
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [rejectTarget, setRejectTarget] = useState<string | null>(null)
   const [rejectionNote, setRejectionNote] = useState('')
+  const [selectedRecruiter, setSelectedRecruiter] = useState<RecruiterResponse | null>(null)
+
+  const handleViewLicense = (url: string) => {
+    if (!url) return
+    window.open(url, '_blank')
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -132,14 +139,12 @@ function EmployerVerificationPage() {
                   </td>
                   <td className="p-3">
                     {r.businessLicenseUrl ? (
-                      <a
-                        href={r.businessLicenseUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary hover:underline text-xs"
+                      <button
+                        onClick={() => handleViewLicense(r.businessLicenseUrl!)}
+                        className="flex items-center gap-1 text-primary hover:underline text-xs cursor-pointer bg-transparent border-0 p-0 font-medium"
                       >
                         Xem <ExternalLink className="size-3" />
-                      </a>
+                      </button>
                     ) : (
                       <span className="text-muted-foreground text-xs">Chưa tải lên</span>
                     )}
@@ -148,28 +153,39 @@ function EmployerVerificationPage() {
                     <StatusBadge status={r.status ?? 'PENDING'} />
                   </td>
                   <td className="p-3">
-                    {r.status === 'PENDING' && r.id && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleApprove(r.id!)}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          {t('admin_action_approve')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setRejectTarget(r.id!)
-                            setRejectionNote('')
-                          }}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          {t('admin_action_reject')}
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedRecruiter(r)}
+                        className="flex items-center gap-1"
+                      >
+                        <Eye className="size-3.5" />
+                        Xem hồ sơ
+                      </Button>
+                      {r.status === 'PENDING' && r.id && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(r.id!)}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            {t('admin_action_approve')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setRejectTarget(r.id!)
+                              setRejectionNote('')
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            {t('admin_action_reject')}
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -221,6 +237,103 @@ function EmployerVerificationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!selectedRecruiter} onOpenChange={(open) => !open && setSelectedRecruiter(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-6">
+              <span>Thông tin nhà tuyển dụng</span>
+              {selectedRecruiter && <StatusBadge status={selectedRecruiter.status ?? 'PENDING'} />}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedRecruiter && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <DetailField label="Tên công ty" value={selectedRecruiter.companyName} />
+                <DetailField label="Mã số thuế" value={selectedRecruiter.taxCode} />
+                <DetailField label="Email liên hệ" value={selectedRecruiter.contactEmail} />
+                <DetailField label="Số điện thoại" value={selectedRecruiter.contactPhone} />
+                <DetailField label="Quy mô công ty" value={selectedRecruiter.companySize} />
+                <DetailField label="Lĩnh vực hoạt động" value={selectedRecruiter.industry} />
+                <DetailField label="Người đại diện" value={selectedRecruiter.contactName ?? selectedRecruiter.fullName} />
+                <DetailField label="Website" value={selectedRecruiter.companyWebsite} isLink />
+                <DetailField label="Ngày đăng ký" value={selectedRecruiter.createdAt ? new Date(selectedRecruiter.createdAt).toLocaleDateString('vi-VN') : undefined} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Giấy phép kinh doanh</label>
+                {selectedRecruiter.businessLicenseUrl ? (
+                  <div className="rounded-xl border border-border bg-muted/20 p-4 flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium">Tài liệu giấy phép kinh doanh</span>
+                    <button
+                      onClick={() => handleViewLicense(selectedRecruiter.businessLicenseUrl!)}
+                      className="flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-0 p-0 font-medium"
+                    >
+                      Xem chi tiết <ExternalLink className="size-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground italic">Chưa tải lên giấy phép kinh doanh</div>
+                )}
+              </div>
+
+              {selectedRecruiter.status === 'REJECTED' && selectedRecruiter.rejectionNote && (
+                <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 space-y-1">
+                  <div className="text-sm font-semibold text-destructive">Lý do từ chối trước đó</div>
+                  <div className="text-sm text-foreground/80">{selectedRecruiter.rejectionNote}</div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setSelectedRecruiter(null)}>
+              Đóng
+            </Button>
+            {selectedRecruiter?.status === 'PENDING' && (
+              <>
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setRejectTarget(selectedRecruiter.id!)
+                    setRejectionNote('')
+                    setSelectedRecruiter(null)
+                  }}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  Từ chối
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleApprove(selectedRecruiter.id!)
+                    setSelectedRecruiter(null)
+                  }}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  Phê duyệt
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function DetailField({ label, value, isLink }: { label: string; value?: string | null; isLink?: boolean }) {
+  return (
+    <div className="space-y-1">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="text-sm font-medium text-foreground truncate">
+        {isLink && value ? (
+          <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+            {value} <ExternalLink className="size-3 inline" />
+          </a>
+        ) : (
+          value ?? <span className="text-muted-foreground italic font-normal">—</span>
+        )}
+      </div>
     </div>
   )
 }

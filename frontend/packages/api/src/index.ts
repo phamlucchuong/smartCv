@@ -49,6 +49,7 @@ export * from './user-otp-hooks';
 
 // Job-service types not re-exported by root model
 export type { JobUpdateRequest, JobResponse } from './generated/job/model';
+export type { RecruiterResponse } from './generated/user/model';
 
 // Models (root static spec)
 export * from './generated/model';
