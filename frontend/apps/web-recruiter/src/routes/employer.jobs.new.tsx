@@ -96,6 +96,7 @@ function NewJob() {
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [isNegotiable, setIsNegotiable] = useState(false);
+  const [openings, setOpenings] = useState("");
   const [errors, setErrors] = useState<CreateJobFormErrors & { deadline?: string }>({});
 
   const [qualifiedThreshold, setQualifiedThreshold] = useState(70);
@@ -125,6 +126,7 @@ function NewJob() {
     requirementsText,
     benefitsText,
     deadline,
+    openings,
     qualifiedThreshold,
     rejectThreshold,
     autoRejectEnabled,
@@ -345,6 +347,13 @@ function NewJob() {
               }}
               error={errors.deadline}
             />
+            <TextField
+              label="Số lượng tuyển dụng"
+              type="number"
+              min={1}
+              value={openings}
+              onChange={setOpenings}
+            />
             <div className="md:col-span-2 flex items-center gap-2 py-2">
               <input
                 type="checkbox"
@@ -543,6 +552,7 @@ function NewJob() {
               <div className="mt-4 space-y-2 text-sm">
                 <div><strong>Kinh nghiệm:</strong> {getExperienceLabel(experienceLevel)}</div>
                 <div><strong>Hạn nộp:</strong> {deadline || "Không giới hạn"}</div>
+                <div><strong>Số lượng tuyển:</strong> {openings ? `${openings} người` : "Không giới hạn"}</div>
               </div>
             </div>
           </div>
@@ -587,18 +597,21 @@ function TextField({
   onChange,
   error,
   type = "text",
+  min,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
   type?: "text" | "number";
+  min?: number;
 }) {
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
       <input
         type={type}
+        min={min}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="mt-1.5 w-full h-10 rounded-md border border-input px-3 text-sm bg-background"

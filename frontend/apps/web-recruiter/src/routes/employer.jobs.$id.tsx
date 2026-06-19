@@ -66,6 +66,7 @@ type FormFields = {
   requirementsText: string;
   benefitsText: string;
   skills: string[];
+  openings: string;
   qualifiedThreshold: number;
   rejectThreshold: number;
   autoRejectEnabled: boolean;
@@ -157,6 +158,7 @@ function initFormFromJob(job: NonNullable<JobData>): FormFields {
     requirementsText: (job.requirements ?? []).join("\n"),
     benefitsText: (job.benefits ?? []).join("\n"),
     skills: job.skills ?? [],
+    openings: job.openings != null ? String(job.openings) : "",
     qualifiedThreshold: job.qualifiedThreshold ?? 70,
     rejectThreshold: job.rejectThreshold ?? 50,
     autoRejectEnabled: job.autoRejectEnabled ?? false,
@@ -192,8 +194,7 @@ function EditJobForm({
 
   const updateJobMutation = useUpdateJob();
   const submitJobMutation = useSubmitJob();
-  const isSubmitting =
-    updateJobMutation.isPending || submitJobMutation.isPending;
+  const isSubmitting = updateJobMutation.isPending || submitJobMutation.isPending;
 
   const tomorrow = getTomorrowDateInputValue();
   const isReadOnly = job.moderationStatus === "PENDING" ||
@@ -213,6 +214,7 @@ function EditJobForm({
     requirementsText: form.requirementsText,
     benefitsText: form.benefitsText,
     deadline: form.deadline,
+    openings: form.openings,
     qualifiedThreshold: form.qualifiedThreshold,
     rejectThreshold: form.rejectThreshold,
     autoRejectEnabled: form.autoRejectEnabled,
@@ -285,18 +287,17 @@ function EditJobForm({
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitForReview = async () => {
+    if (quotaRemaining === 0) {
+      toast.error("Bạn đã hết quota đăng tin.");
+      navigate({ to: "/employer/billing" });
+      return;
+    }
     try {
       await updateJobMutation.mutateAsync({
         id,
         data: buildCreateJobPayload(formValues) as unknown as JobUpdateRequest,
       });
-      if (quotaRemaining === 0) {
-        await invalidateJobs();
-        toast.error("Bạn đã hết quota đăng tin. Tin đã được lưu dưới dạng nháp.");
-        navigate({ to: "/employer/billing" });
-        return;
-      }
       await submitJobMutation.mutateAsync({ id });
       await invalidateJobs();
       toast.success("Đã gửi tin để duyệt");
@@ -304,27 +305,8 @@ function EditJobForm({
     } catch (err: unknown) {
       const e = err as ApiError;
       const message = e.response?.data?.message ?? "";
-      if (e.response?.data?.code === 2005) {
-        setErrors((current) => ({ ...current, title: "Tên tin tuyển dụng này đã tồn tại" }));
-        setStep(0);
-        return;
-      }
-      if (
-        e.response?.data?.code === 2003 &&
-        (message.toLowerCase().includes("deadline") ||
-          message.toLowerCase().includes("hạn"))
-      ) {
-        setErrors((current) => ({
-          ...current,
-          deadline: "Hạn nộp phải sau ngày hôm nay để gửi duyệt",
-        }));
-        setStep(0);
-        toast.error(message || "Gửi duyệt thất bại");
-        return;
-      }
       if (e.response?.data?.code === 6005) {
-        await invalidateJobs();
-        toast.error("Bạn đã hết quota đăng tin. Tin đã được lưu dưới dạng nháp.");
+        toast.error("Bạn đã hết quota đăng tin.");
         navigate({ to: "/employer/billing" });
         return;
       }
@@ -393,6 +375,14 @@ function EditJobForm({
                 clearError("deadline");
               }}
               error={errors.deadline}
+              disabled={isReadOnly}
+            />
+            <TextField
+              label="Số lượng tuyển dụng"
+              type="number"
+              min={1}
+              value={form.openings}
+              onChange={(v) => setField("openings", v)}
               disabled={isReadOnly}
             />
             <div className="md:col-span-2 flex items-center gap-2 py-2">
@@ -651,6 +641,10 @@ function EditJobForm({
                   <strong>Hạn nộp:</strong>{" "}
                   {form.deadline || "Không giới hạn"}
                 </div>
+                <div>
+                  <strong>Số lượng tuyển:</strong>{" "}
+                  {form.openings ? `${form.openings} người` : "Không giới hạn"}
+                </div>
               </div>
             </div>
           </div>
@@ -692,19 +686,16 @@ function EditJobForm({
               onClick={handleSave}
               disabled={isSubmitting}
             >
-              {updateJobMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+              {updateJobMutation.isPending && !submitJobMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           )}
           {step < STEPS.length - 1 ? (
             <Button onClick={handleNextStep}>Tiếp theo</Button>
-          ) : (
-            !isReadOnly &&
-            job.moderationStatus === "DRAFT" && (
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Đang xử lý..." : "Gửi duyệt"}
-              </Button>
-            )
-          )}
+          ) : !isReadOnly && job.moderationStatus === "DRAFT" ? (
+            <Button onClick={handleSubmitForReview} disabled={isSubmitting}>
+              {submitJobMutation.isPending ? "Đang xử lý..." : "Gửi duyệt"}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -718,6 +709,7 @@ function TextField({
   error,
   type = "text",
   disabled,
+  min,
 }: {
   label: string;
   value: string;
@@ -725,12 +717,14 @@ function TextField({
   error?: string;
   type?: "text" | "number";
   disabled?: boolean;
+  min?: number;
 }) {
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
       <input
         type={type}
+        min={min}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

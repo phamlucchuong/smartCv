@@ -12,6 +12,7 @@ export type CreateJobFormValues = {
   requirementsText: string
   benefitsText: string
   deadline: string
+  openings: string
   qualifiedThreshold: number
   rejectThreshold: number
   autoRejectEnabled: boolean
@@ -27,14 +28,15 @@ export type CreateJobPayload = {
   description: string
   company: string
   location: string
-  jobType: 'FULL_TIME' | 'PART_TIME' | 'REMOTE' | 'CONTRACT' | 'INTERNSHIP'
-  experienceLevel: 'INTERN' | 'JUNIOR' | 'MIDDLE' | 'SENIOR' | 'LEAD'
+  jobType?: 'FULL_TIME' | 'PART_TIME' | 'REMOTE' | 'CONTRACT' | 'INTERNSHIP'
+  experienceLevel?: 'INTERN' | 'JUNIOR' | 'MIDDLE' | 'SENIOR' | 'LEAD'
   salaryMin?: number
   salaryMax?: number
   skills: string[]
   requirements: string[]
   benefits: string[]
   deadline?: string
+  openings?: number
   qualifiedThreshold: number
   rejectThreshold: number
   autoRejectEnabled: boolean
@@ -87,14 +89,19 @@ export function buildCreateJobPayload(values: CreateJobFormValues): CreateJobPay
     description: values.description.trim(),
     company: values.companyName.trim(),
     location: values.location.trim(),
-    jobType: values.jobType as CreateJobPayload['jobType'],
-    experienceLevel: values.experienceLevel as CreateJobPayload['experienceLevel'],
+    ...(values.jobType.trim()
+      ? { jobType: values.jobType as NonNullable<CreateJobPayload['jobType']> }
+      : {}),
+    ...(values.experienceLevel.trim()
+      ? { experienceLevel: values.experienceLevel as NonNullable<CreateJobPayload['experienceLevel']> }
+      : {}),
     salaryMin: values.isNegotiable ? undefined : toOptionalNumber(values.salaryMin),
     salaryMax: values.isNegotiable ? undefined : toOptionalNumber(values.salaryMax),
     skills: values.skills,
     requirements: splitMultiline(values.requirementsText),
     benefits: splitMultiline(values.benefitsText),
     deadline: values.deadline || undefined,
+    openings: (() => { const n = toOptionalNumber(values.openings); return n != null && n > 0 ? n : undefined; })(),
     qualifiedThreshold: values.qualifiedThreshold,
     rejectThreshold: values.rejectThreshold,
     autoRejectEnabled: values.autoRejectEnabled,

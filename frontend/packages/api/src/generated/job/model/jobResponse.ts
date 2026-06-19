@@ -29,6 +29,7 @@ export interface JobResponse {
   reviewedBy?: string;
   reviewedAt?: string;
   deadline?: string;
+  openings?: number;
   qualifiedThreshold?: number;
   rejectThreshold?: number;
   autoRejectEnabled?: boolean;

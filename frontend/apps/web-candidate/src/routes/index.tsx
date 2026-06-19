@@ -19,6 +19,7 @@ import {
   Search,
   Sparkles,
   TrendingUp,
+  Users,
 } from 'lucide-react'
 import {
   useGetFeaturedJobs,
@@ -257,6 +258,9 @@ function IndexComponent() {
                   )}
                   {job.location && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                  )}
+                  {job.openings != null && job.openings > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><Users className="h-3.5 w-3.5" />{job.openings} vị trí</span>
                   )}
                 </div>
 

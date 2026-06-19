@@ -38,6 +38,7 @@ public class JobResponse implements Serializable {
     String reviewedBy;
     LocalDateTime reviewedAt;
     LocalDate deadline;
+    Integer openings;
     Integer qualifiedThreshold;
     Integer rejectThreshold;
     Boolean autoRejectEnabled;

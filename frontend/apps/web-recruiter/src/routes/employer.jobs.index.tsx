@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@smart-cv/ui";
 import {
   useGetMyJobs,
-  useSubmitJob,
   useWithdrawJob,
   useActivateJob,
   useDeactivateJob,
@@ -71,8 +70,17 @@ type ApiError = { response?: { data?: { message?: string } } };
 function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => void }) {
   const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const submitMutation = useSubmitJob();
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
   const withdrawMutation = useWithdrawJob();
   const activateMutation = useActivateJob();
   const deactivateMutation = useDeactivateJob();
@@ -98,7 +106,7 @@ function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => voi
   const isPublishedInactive = job.moderationStatus === "PUBLISHED" && job.visibilityStatus === "INACTIVE";
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setOpen((o) => !o)}>
         <MoreVertical className="size-4" />
       </Button>
@@ -113,14 +121,6 @@ function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => voi
               }}
             >
               Chỉnh sửa
-            </button>
-          )}
-          {isDraft && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-primary"
-              onClick={() => run(() => submitMutation.mutateAsync({ id: job.id! }))}
-            >
-              Gửi duyệt
             </button>
           )}
           {isPendingModeration && (

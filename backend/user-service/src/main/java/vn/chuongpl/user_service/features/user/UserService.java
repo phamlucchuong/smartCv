@@ -17,6 +17,8 @@ import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.exception.AppException;
 import vn.chuongpl.user_service.features.role.Role;
 import vn.chuongpl.user_service.features.role.RoleService;
+import vn.chuongpl.user_service.features.user.settings.PreferencesSettings;
+import vn.chuongpl.user_service.features.user.settings.PreferencesSettingsRequest;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -93,6 +95,30 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    public PreferencesSettings updatePreferences(String userId, PreferencesSettingsRequest request) {
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        PreferencesSettings preferences = ensurePreferences(user);
+        if (request != null) {
+            if (request.getLanguage() != null) {
+                preferences.setLanguage(request.getLanguage());
+            }
+            if (request.getTheme() != null) {
+                preferences.setTheme(request.getTheme());
+            }
+        }
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        return preferences;
+    }
+
+    private PreferencesSettings ensurePreferences(User user) {
+        if (user.getPreferences() == null) {
+            user.setPreferences(new PreferencesSettings());
+        }
+        return user.getPreferences();
     }
 
     public UserResponse updateUserRoles(String userId, UpdateRolesRequest request) {
