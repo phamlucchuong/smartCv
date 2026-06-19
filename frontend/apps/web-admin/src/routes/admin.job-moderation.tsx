@@ -10,6 +10,7 @@ import {
   useRejectJob,
   getGetAdminJobsQueryKey,
 } from '@smart-cv/api'
+import type { JobResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/admin/job-moderation')({ component: JobModerationPage })
@@ -77,7 +78,7 @@ function JobDetailModal({
   job,
   onClose,
 }: {
-  job: any
+  job: JobResponse
   onClose: () => void
 }) {
   function formatSalary(min?: number, max?: number) {
@@ -214,7 +215,7 @@ function JobModerationPage() {
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<ModerationFilter>('PENDING')
   const [rejectingJobId, setRejectingJobId] = useState<string | null>(null)
-  const [selectedJobDetail, setSelectedJobDetail] = useState<any | null>(null)
+  const [selectedJobDetail, setSelectedJobDetail] = useState<JobResponse | null>(null)
 
   const { data, isLoading, isError, refetch } = useGetAdminJobs({
     moderationStatus: filter || undefined as 'DRAFT' | 'PENDING' | 'PUBLISHED' | undefined,

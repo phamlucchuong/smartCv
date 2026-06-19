@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Button,
   Dialog,
@@ -12,7 +12,7 @@ import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import { RecruiterApi } from '@smart-cv/api'
 import { toast } from 'sonner'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Search } from 'lucide-react'
 
 type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -21,11 +21,28 @@ export const Route = createFileRoute('/admin/employer-verification')({ component
 function EmployerVerificationPage() {
   const { t } = useTranslation()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING')
+  const [page, setPage] = useState(1)
+  const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [rejectTarget, setRejectTarget] = useState<string | null>(null)
   const [rejectionNote, setRejectionNote] = useState('')
 
-  const { data, isLoading, refetch } = RecruiterApi.useGetAll({ status: statusFilter, size: 50 })
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1)
+      setDebouncedKeyword(keyword)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [keyword])
+
+  const { data, isLoading, refetch } = RecruiterApi.useGetAll({
+    status: statusFilter,
+    page,
+    size: 10,
+    keyword: debouncedKeyword || undefined,
+  })
   const recruiters = data?.data?.items ?? []
+  const totalPages = data?.data?.totalPages ?? 1
 
   const updateStatusMutation = RecruiterApi.useUpdateStatus({
     mutation: {
@@ -57,13 +74,13 @@ function EmployerVerificationPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t('admin_employer_verification_title')}</h1>
         <div className="flex gap-1 rounded-lg bg-muted p-1">
           {STATUS_TABS.map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setPage(1); setStatusFilter(s) }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 statusFilter === s
                   ? 'bg-background shadow text-foreground'
@@ -74,6 +91,16 @@ function EmployerVerificationPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <input
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder={t('admin_search_recruiters_placeholder')}
+          className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+        />
       </div>
 
       <div className="card-surface overflow-x-auto">
@@ -150,6 +177,20 @@ function EmployerVerificationPage() {
           </table>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{t('admin_page_of', { page, total: totalPages })}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              {t('admin_pagination_prev')}
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              {t('admin_pagination_next')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
         <DialogContent>
