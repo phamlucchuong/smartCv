@@ -7,14 +7,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.user_service.dtos.PageResponse;
 import vn.chuongpl.user_service.dtos.request.QuotaDeltaRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
 import vn.chuongpl.user_service.dtos.response.RecruiterProfileResponse;
+import vn.chuongpl.user_service.dtos.response.RecruiterPublicResponse;
 import vn.chuongpl.user_service.dtos.response.RecruiterResponse;
 import vn.chuongpl.user_service.enums.ErrorCode;
+import vn.chuongpl.user_service.enums.RecruiterStatus;
 import vn.chuongpl.user_service.exception.AppException;
+import vn.chuongpl.user_service.features.candidate.S3Service;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
@@ -30,6 +34,7 @@ public class RecruiterService {
     RecruiterRepository recruiterRepository;
     UserRepository userRepository;
     RecruiterMapper recruiterMapper;
+    S3Service s3Service;
 
     public RecruiterResponse create(RecruiterRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -64,6 +69,7 @@ public class RecruiterService {
         Recruiter recruiter = Recruiter.builder()
                 .userId(userId)
                 .companyName(companyName)
+                .status(RecruiterStatus.DRAFT)
                 .quotaJobPost(FREE_TIER_JOB_POST_QUOTA)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -72,23 +78,31 @@ public class RecruiterService {
         recruiterRepository.save(recruiter);
     }
 
-    public RecruiterResponse getById(String id) {
+    public RecruiterPublicResponse getById(String id) {
         Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return recruiterMapper.toRecruiterResponse(recruiter, user);
+        return recruiterMapper.toRecruiterPublicResponse(recruiter, user);
     }
 
-    public RecruiterResponse getByUserId(String userId) {
+    public RecruiterPublicResponse getByUserId(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        return recruiterMapper.toRecruiterPublicResponse(recruiter, user);
+    }
+
+    public RecruiterResponse getByUserIdFull(String userId) {
         Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         return recruiterMapper.toRecruiterResponse(recruiter, user);
     }
 
-    public PageResponse<RecruiterResponse> getAll(int page, int size) {
+    public PageResponse<RecruiterResponse> getAll(int page, int size, RecruiterStatus status) {
         int pageCurrent = page > 0 ? page - 1 : 0;
         int safeSize = size > 0 ? size : 10;
         Pageable pageable = PageRequest.of(pageCurrent, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Recruiter> recruiters = recruiterRepository.findAllByDeletedFalse(pageable);
+        Page<Recruiter> recruiters = status != null
+                ? recruiterRepository.findAllByStatusAndDeletedFalse(status, pageable)
+                : recruiterRepository.findAllByDeletedFalse(pageable);
 
         return PageResponse.<RecruiterResponse>builder()
                 .items(recruiters.getContent().stream().map(recruiter -> {
@@ -106,6 +120,9 @@ public class RecruiterService {
         Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         if (!isAdmin && !recruiter.getUserId().equals(currentUserId)) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        if (!isAdmin && recruiter.getStatus() == RecruiterStatus.PENDING) {
+            throw new AppException(ErrorCode.RECRUITER_PROFILE_LOCKED);
         }
 
         User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -128,6 +145,11 @@ public class RecruiterService {
         User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         recruiter.setStatus(request.getStatus());
+        if (request.getStatus() == RecruiterStatus.REJECTED) {
+            recruiter.setRejectionNote(request.getRejectionNote());
+        } else {
+            recruiter.setRejectionNote(null);
+        }
         if (request.getQuotaJobPost() != null) recruiter.setQuotaJobPost(request.getQuotaJobPost());
         if (request.getQuotaCvViews() != null) recruiter.setQuotaCvViews(request.getQuotaCvViews());
         recruiter.setUpdatedAt(LocalDateTime.now());
@@ -135,11 +157,41 @@ public class RecruiterService {
         return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
     }
 
+    public RecruiterResponse submitForApproval(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+
+        if (recruiter.getStatus() != RecruiterStatus.DRAFT && recruiter.getStatus() != RecruiterStatus.REJECTED) {
+            throw new AppException(ErrorCode.RECRUITER_INVALID_STATUS_TRANSITION);
+        }
+
+        validateProfileComplete(recruiter);
+
+        recruiter.setStatus(RecruiterStatus.PENDING);
+        recruiter.setRejectionNote(null);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+    }
+
+    public RecruiterResponse uploadBusinessLicense(String userId, MultipartFile file) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+
+        String url = s3Service.uploadBusinessLicense(file, userId);
+        recruiter.setBusinessLicenseUrl(url);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+    }
+
     public RecruiterResponse getMe(String userId) {
         if (recruiterRepository.findByUserIdAndDeletedFalse(userId).isEmpty()) {
             createBasicProfile(userId);
         }
-        return getByUserId(userId);
+        return getByUserIdFull(userId);
     }
 
     public RecruiterProfileResponse getProfile(String userId) {
@@ -200,5 +252,18 @@ public class RecruiterService {
         recruiter.setDeletedAt(LocalDateTime.now());
         recruiter.setUpdatedAt(LocalDateTime.now());
         recruiterRepository.save(recruiter);
+    }
+
+    private void validateProfileComplete(Recruiter r) {
+        if (isBlank(r.getCompanyName()) || isBlank(r.getTaxCode()) ||
+                isBlank(r.getCompanyAddress()) || isBlank(r.getCompanyCity()) ||
+                isBlank(r.getIndustry()) || isBlank(r.getCompanyType()) ||
+                isBlank(r.getCompanySize()) || isBlank(r.getBusinessLicenseUrl())) {
+            throw new AppException(ErrorCode.RECRUITER_PROFILE_INCOMPLETE);
+        }
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 }

@@ -25,11 +25,13 @@ import type {
 
 import type {
   ApiResponsePageResponseRecruiterResponse,
+  ApiResponseRecruiterPublicResponse,
   ApiResponseRecruiterResponse,
   ApiResponseVoid,
   GetAllParams,
   RecruiterRequest,
-  RecruiterStatusRequest
+  RecruiterStatusRequest,
+  UploadBusinessLicenseBody
 } from '.././model';
 
 import { customInstance } from '../../../axios-instance';
@@ -45,7 +47,7 @@ export const getById = (
 ) => {
       
       
-      return customInstance<ApiResponseRecruiterResponse>(
+      return customInstance<ApiResponseRecruiterPublicResponse>(
       {url: `/api/recruiters/${id}`, method: 'GET', signal
     },
       options);
@@ -383,6 +385,122 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const submitForApproval = (
+    
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseRecruiterResponse>(
+      {url: `/api/recruiters/me/submit`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getSubmitForApprovalMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitForApproval>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitForApproval>>, TError,void, TContext> => {
+
+const mutationKey = ['submitForApproval'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitForApproval>>, void> = () => {
+          
+
+          return  submitForApproval(requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitForApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof submitForApproval>>>
+    
+    export type SubmitForApprovalMutationError = unknown
+
+    export const useSubmitForApproval = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitForApproval>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof submitForApproval>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getSubmitForApprovalMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const uploadBusinessLicense = (
+    uploadBusinessLicenseBody: UploadBusinessLicenseBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      const formData = new FormData();
+formData.append(`file`, uploadBusinessLicenseBody.file)
+
+      return customInstance<ApiResponseRecruiterResponse>(
+      {url: `/api/recruiters/me/business-license`, method: 'POST',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      options);
+    }
+  
+
+
+export const getUploadBusinessLicenseMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadBusinessLicense>>, TError,{data: UploadBusinessLicenseBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadBusinessLicense>>, TError,{data: UploadBusinessLicenseBody}, TContext> => {
+
+const mutationKey = ['uploadBusinessLicense'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadBusinessLicense>>, {data: UploadBusinessLicenseBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadBusinessLicense(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadBusinessLicenseMutationResult = NonNullable<Awaited<ReturnType<typeof uploadBusinessLicense>>>
+    export type UploadBusinessLicenseMutationBody = UploadBusinessLicenseBody
+    export type UploadBusinessLicenseMutationError = unknown
+
+    export const useUploadBusinessLicense = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadBusinessLicense>>, TError,{data: UploadBusinessLicenseBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof uploadBusinessLicense>>,
+        TError,
+        {data: UploadBusinessLicenseBody},
+        TContext
+      > => {
+
+      const mutationOptions = getUploadBusinessLicenseMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const updateStatus = (
     id: string,
     recruiterStatusRequest: RecruiterStatusRequest,
@@ -447,7 +565,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
       
       
-      return customInstance<ApiResponseRecruiterResponse>(
+      return customInstance<ApiResponseRecruiterPublicResponse>(
       {url: `/api/recruiters/user/${userId}`, method: 'GET', signal
     },
       options);

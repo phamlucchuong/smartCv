@@ -16,8 +16,10 @@ import { Route as EmployerIndexRouteImport } from './routes/employer.index'
 import { Route as PublicIndexRouteImport } from './routes/_public.index'
 import { Route as SignupRecruiterRouteImport } from './routes/signup.recruiter'
 import { Route as EmployerVerificationRouteImport } from './routes/employer.verification'
+import { Route as EmployerSetupRouteImport } from './routes/employer.setup'
 import { Route as EmployerSettingsRouteImport } from './routes/employer.settings'
 import { Route as EmployerProfileRouteImport } from './routes/employer.profile'
+import { Route as EmployerPendingRouteImport } from './routes/employer.pending'
 import { Route as EmployerNotificationsRouteImport } from './routes/employer.notifications'
 import { Route as EmployerCvSearchRouteImport } from './routes/employer.cv-search'
 import { Route as EmployerBillingRouteImport } from './routes/employer.billing'
@@ -68,6 +70,11 @@ const EmployerVerificationRoute = EmployerVerificationRouteImport.update({
   path: '/verification',
   getParentRoute: () => EmployerRoute,
 } as any)
+const EmployerSetupRoute = EmployerSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => EmployerRoute,
+} as any)
 const EmployerSettingsRoute = EmployerSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -76,6 +83,11 @@ const EmployerSettingsRoute = EmployerSettingsRouteImport.update({
 const EmployerProfileRoute = EmployerProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => EmployerRoute,
+} as any)
+const EmployerPendingRoute = EmployerPendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
   getParentRoute: () => EmployerRoute,
 } as any)
 const EmployerNotificationsRoute = EmployerNotificationsRouteImport.update({
@@ -167,8 +179,10 @@ export interface FileRoutesByFullPath {
   '/employer/billing': typeof EmployerBillingRoute
   '/employer/cv-search': typeof EmployerCvSearchRoute
   '/employer/notifications': typeof EmployerNotificationsRoute
+  '/employer/pending': typeof EmployerPendingRoute
   '/employer/profile': typeof EmployerProfileRoute
   '/employer/settings': typeof EmployerSettingsRoute
+  '/employer/setup': typeof EmployerSetupRoute
   '/employer/verification': typeof EmployerVerificationRoute
   '/signup/recruiter': typeof SignupRecruiterRoute
   '/employer/': typeof EmployerIndexRoute
@@ -190,8 +204,10 @@ export interface FileRoutesByTo {
   '/employer/billing': typeof EmployerBillingRoute
   '/employer/cv-search': typeof EmployerCvSearchRoute
   '/employer/notifications': typeof EmployerNotificationsRoute
+  '/employer/pending': typeof EmployerPendingRoute
   '/employer/profile': typeof EmployerProfileRoute
   '/employer/settings': typeof EmployerSettingsRoute
+  '/employer/setup': typeof EmployerSetupRoute
   '/employer/verification': typeof EmployerVerificationRoute
   '/signup/recruiter': typeof SignupRecruiterRoute
   '/': typeof PublicIndexRoute
@@ -217,8 +233,10 @@ export interface FileRoutesById {
   '/employer/billing': typeof EmployerBillingRoute
   '/employer/cv-search': typeof EmployerCvSearchRoute
   '/employer/notifications': typeof EmployerNotificationsRoute
+  '/employer/pending': typeof EmployerPendingRoute
   '/employer/profile': typeof EmployerProfileRoute
   '/employer/settings': typeof EmployerSettingsRoute
+  '/employer/setup': typeof EmployerSetupRoute
   '/employer/verification': typeof EmployerVerificationRoute
   '/signup/recruiter': typeof SignupRecruiterRoute
   '/_public/': typeof PublicIndexRoute
@@ -245,8 +263,10 @@ export interface FileRouteTypes {
     | '/employer/billing'
     | '/employer/cv-search'
     | '/employer/notifications'
+    | '/employer/pending'
     | '/employer/profile'
     | '/employer/settings'
+    | '/employer/setup'
     | '/employer/verification'
     | '/signup/recruiter'
     | '/employer/'
@@ -268,8 +288,10 @@ export interface FileRouteTypes {
     | '/employer/billing'
     | '/employer/cv-search'
     | '/employer/notifications'
+    | '/employer/pending'
     | '/employer/profile'
     | '/employer/settings'
+    | '/employer/setup'
     | '/employer/verification'
     | '/signup/recruiter'
     | '/'
@@ -294,8 +316,10 @@ export interface FileRouteTypes {
     | '/employer/billing'
     | '/employer/cv-search'
     | '/employer/notifications'
+    | '/employer/pending'
     | '/employer/profile'
     | '/employer/settings'
+    | '/employer/setup'
     | '/employer/verification'
     | '/signup/recruiter'
     | '/_public/'
@@ -366,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployerVerificationRouteImport
       parentRoute: typeof EmployerRoute
     }
+    '/employer/setup': {
+      id: '/employer/setup'
+      path: '/setup'
+      fullPath: '/employer/setup'
+      preLoaderRoute: typeof EmployerSetupRouteImport
+      parentRoute: typeof EmployerRoute
+    }
     '/employer/settings': {
       id: '/employer/settings'
       path: '/settings'
@@ -378,6 +409,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/employer/profile'
       preLoaderRoute: typeof EmployerProfileRouteImport
+      parentRoute: typeof EmployerRoute
+    }
+    '/employer/pending': {
+      id: '/employer/pending'
+      path: '/pending'
+      fullPath: '/employer/pending'
+      preLoaderRoute: typeof EmployerPendingRouteImport
       parentRoute: typeof EmployerRoute
     }
     '/employer/notifications': {
@@ -527,8 +565,10 @@ interface EmployerRouteChildren {
   EmployerBillingRoute: typeof EmployerBillingRoute
   EmployerCvSearchRoute: typeof EmployerCvSearchRoute
   EmployerNotificationsRoute: typeof EmployerNotificationsRoute
+  EmployerPendingRoute: typeof EmployerPendingRoute
   EmployerProfileRoute: typeof EmployerProfileRoute
   EmployerSettingsRoute: typeof EmployerSettingsRoute
+  EmployerSetupRoute: typeof EmployerSetupRoute
   EmployerVerificationRoute: typeof EmployerVerificationRoute
   EmployerIndexRoute: typeof EmployerIndexRoute
   EmployerJobsIdRoute: typeof EmployerJobsIdRoute
@@ -543,8 +583,10 @@ const EmployerRouteChildren: EmployerRouteChildren = {
   EmployerBillingRoute: EmployerBillingRoute,
   EmployerCvSearchRoute: EmployerCvSearchRoute,
   EmployerNotificationsRoute: EmployerNotificationsRoute,
+  EmployerPendingRoute: EmployerPendingRoute,
   EmployerProfileRoute: EmployerProfileRoute,
   EmployerSettingsRoute: EmployerSettingsRoute,
+  EmployerSetupRoute: EmployerSetupRoute,
   EmployerVerificationRoute: EmployerVerificationRoute,
   EmployerIndexRoute: EmployerIndexRoute,
   EmployerJobsIdRoute: EmployerJobsIdRoute,

@@ -292,6 +292,25 @@ public class CandidateService {
         candidateRepository.save(candidate);
     }
 
+    public vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings updatePreferences(
+            String userId, vn.chuongpl.user_service.features.candidate.settings.PreferencesSettingsRequest request) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        vn.chuongpl.user_service.features.candidate.settings.CandidateSettings settings = ensureSettings(candidate);
+        if (request != null) {
+            vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings prefs =
+                    settings.getPreferences() != null
+                            ? settings.getPreferences()
+                            : new vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings();
+            if (request.getLanguage() != null) prefs.setLanguage(request.getLanguage());
+            if (request.getTheme() != null) prefs.setTheme(request.getTheme());
+            settings.setPreferences(prefs);
+        }
+        candidate.setUpdatedAt(java.time.LocalDateTime.now());
+        candidateRepository.save(candidate);
+        return settings.getPreferences();
+    }
+
     private CandidateSettings ensureSettings(Candidate candidate) {
         if (candidate.getSettings() == null) {
             candidate.setSettings(new CandidateSettings());
@@ -302,6 +321,9 @@ public class CandidateService {
         }
         if (settings.getPrivacy() == null) {
             settings.setPrivacy(new PrivacySettings());
+        }
+        if (settings.getPreferences() == null) {
+            settings.setPreferences(new vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings());
         }
         return settings;
     }

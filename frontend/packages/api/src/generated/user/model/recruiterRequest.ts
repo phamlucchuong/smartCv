@@ -11,6 +11,7 @@ export interface RecruiterRequest {
   companyName?: string;
   companyWebsite?: string;
   companyAddress?: string;
+  companyCity?: string;
   companyDescription?: string;
   companyPhone?: string;
   companySize?: string;

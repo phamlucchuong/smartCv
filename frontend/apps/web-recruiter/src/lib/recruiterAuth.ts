@@ -12,12 +12,29 @@ interface AuthEnvelope {
 }
 
 interface RecruiterSignupValues {
-  companyName: string
   fullname: string
   email: string
   phone: string
   password?: string
 }
+
+interface RecruiterProfileSeed {
+  fullname?: string | null
+  fullName?: string | null
+  email?: string | null
+  phone?: string | null
+}
+
+interface RecruiterRecordLike {
+  status?: string | null
+}
+
+export type RecruiterAccessState =
+  | 'missing'
+  | 'draft'
+  | 'pending'
+  | 'rejected'
+  | 'approved'
 
 export function extractAuthTokens(result: AuthEnvelope) {
   const accessToken = result.data?.token
@@ -48,12 +65,45 @@ export function ensureRecruiterRole(accessToken: string) {
 
 export function buildRecruiterRegistrationPayload(values: RecruiterSignupValues) {
   return {
-    companyName: values.companyName.trim(),
     fullname: values.fullname.trim(),
     email: values.email.trim(),
     password: values.password ?? '',
     phone: values.phone.trim(),
     preferredVerification: 'EMAIL' as const,
     role: 'RECRUITER',
+  }
+}
+
+export function buildRecruiterProfilePayload(values: RecruiterProfileSeed) {
+  const fullName = (values.fullName ?? values.fullname ?? '').trim()
+  const email = (values.email ?? '').trim()
+  const phone = (values.phone ?? '').trim()
+
+  return {
+    fullName,
+    email,
+    phone,
+    contactName: fullName,
+    contactEmail: email,
+    contactPhone: phone,
+    status: 'DRAFT' as const,
+  }
+}
+
+export function getRecruiterAccessState(recruiter?: RecruiterRecordLike | null): RecruiterAccessState {
+  if (!recruiter) {
+    return 'missing'
+  }
+
+  switch (recruiter.status) {
+    case 'APPROVED':
+      return 'approved'
+    case 'PENDING':
+      return 'pending'
+    case 'REJECTED':
+      return 'rejected'
+    case 'DRAFT':
+    default:
+      return 'draft'
   }
 }

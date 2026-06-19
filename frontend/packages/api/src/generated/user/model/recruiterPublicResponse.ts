@@ -4,9 +4,9 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { RecruiterResponseStatus } from './recruiterResponseStatus';
+import type { RecruiterPublicResponseStatus } from './recruiterPublicResponseStatus';
 
-export interface RecruiterResponse {
+export interface RecruiterPublicResponse {
   id?: string;
   userId?: string;
   fullName?: string;
@@ -31,8 +31,7 @@ export interface RecruiterResponse {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
-  status?: RecruiterResponseStatus;
-  rejectionNote?: string;
+  status?: RecruiterPublicResponseStatus;
   quotaJobPost?: number;
   quotaCvViews?: number;
   createdAt?: string;

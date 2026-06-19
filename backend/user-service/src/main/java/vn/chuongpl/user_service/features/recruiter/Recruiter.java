@@ -33,6 +33,9 @@ public class Recruiter {
     @Field(name = "company_address")
     String companyAddress;
 
+    @Field(name = "company_city")
+    String companyCity;
+
     @Field(name = "company_description")
     String companyDescription;
 
@@ -92,9 +95,12 @@ public class Recruiter {
     @Field(name = "contact_phone")
     String contactPhone;
 
-    // ── Status & quota ────────────────────────────────────────────────────────
+    // ── Status & approval ─────────────────────────────────────────────────────
     @Builder.Default
-    RecruiterStatus status = RecruiterStatus.PENDING;
+    RecruiterStatus status = RecruiterStatus.DRAFT;
+
+    @Field(name = "rejection_note")
+    String rejectionNote;
 
     @Field(name = "quota_job_post")
     @Builder.Default

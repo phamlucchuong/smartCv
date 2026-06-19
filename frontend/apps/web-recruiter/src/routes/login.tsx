@@ -1,17 +1,21 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@smart-cv/ui";
 import { Sparkles, Mail, Lock, Brain, Target, Zap, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
 import { useState } from "react";
-import Cookies from "js-cookie";
-import { useLoginCandidate } from "@smart-cv/api";
-import { hasRecruiterRole } from "../lib/recruiterAuth";
+import { getRecruiterLoginUser, useLoginCandidate, RecruiterApi } from "@smart-cv/api";
+import {
+  buildRecruiterProfilePayload,
+  ensureRecruiterRole,
+  extractAuthTokens,
+  getRecruiterAccessState,
+} from "../lib/recruiterAuth";
 import { useAuthStore } from "../store/useAuthStore";
-import { ensureRecruiterRole, extractAuthTokens } from "../lib/recruiterAuth";
 
 type ApiError = {
   response?: {
+    status?: number;
     data?: {
       code?: number;
       message?: string;
@@ -20,10 +24,6 @@ type ApiError = {
 };
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: () => {
-    const token = Cookies.get("smart_cv_token");
-    if (token && hasRecruiterRole(token)) throw redirect({ to: "/employer" });
-  },
   head: () => ({ meta: [{ title: "Đăng nhập — SmartCV" }] }),
   component: Login,
 });
@@ -34,11 +34,36 @@ function Login() {
   const signIn = useAuthStore((state) => state.signIn);
   const signOut = useAuthStore((state) => state.signOut);
   
-  const [email, setEmail] = useState("hr@company.com");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   
   const loginMutation = useLoginCandidate();
+
+  const ensureRecruiterProfile = async () => {
+    try {
+      const recruiter = await RecruiterApi.getMe1();
+      if (recruiter?.data) {
+        return recruiter.data;
+      }
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      if (error.response?.status !== 404) {
+        throw err;
+      }
+    }
+
+    const currentUser = await getRecruiterLoginUser();
+    const recruiter = await RecruiterApi.create(
+      buildRecruiterProfilePayload({
+        fullName: currentUser.data?.fullName,
+        email: currentUser.data?.email ?? email.trim(),
+        phone: currentUser.data?.phone,
+      }),
+    );
+
+    return recruiter.data;
+  };
 
   const loginRecruiter = async () => {
     if (!email.trim() || !password.trim()) {
@@ -66,13 +91,49 @@ function Login() {
 
       const { accessToken, refreshToken } = extractAuthTokens(result);
       ensureRecruiterRole(accessToken);
+      // Set cookies first so RecruiterApi.getMe1() can make an authenticated request
       signIn(accessToken, refreshToken);
-      toast.success(t("recruiter_login_success"));
-      navigate({ to: "/employer" });
+
+      try {
+        const recruiter = await ensureRecruiterProfile();
+        switch (getRecruiterAccessState(recruiter)) {
+          case "approved":
+            toast.success(t("recruiter_login_success"));
+            navigate({ to: "/employer" });
+            return;
+          case "draft":
+            toast.success("Đăng nhập thành công. Hãy hoàn thiện hồ sơ doanh nghiệp.");
+            navigate({ to: "/employer/setup" });
+            return;
+          case "pending":
+            toast.info("Hồ sơ doanh nghiệp đang chờ admin phê duyệt.");
+            navigate({ to: "/employer/pending" });
+            return;
+          case "rejected":
+            toast.info("Hồ sơ doanh nghiệp đã bị từ chối. Vui lòng xem chi tiết và cập nhật lại.");
+            navigate({ to: "/employer/pending" });
+            return;
+          case "missing":
+          default:
+            signOut();
+            toast.error("Không thể khởi tạo hồ sơ nhà tuyển dụng. Vui lòng thử lại.");
+            return;
+        }
+      } catch (err: unknown) {
+        signOut();
+        const error = err as ApiError;
+        toast.error(
+          error.response?.status === 404
+            ? "Tài khoản này chưa có hồ sơ nhà tuyển dụng. Vui lòng đăng ký lại và hoàn tất hồ sơ doanh nghiệp."
+            : "Không thể kiểm tra trạng thái hồ sơ nhà tuyển dụng. Vui lòng thử lại.",
+        );
+        return;
+      }
+
     } catch (err: unknown) {
       if (err instanceof Error && err.message === "This account does not have recruiter access.") {
         signOut();
-        toast.error(err.message);
+        toast.error("Tài khoản này không có quyền nhà tuyển dụng.");
         return;
       }
 

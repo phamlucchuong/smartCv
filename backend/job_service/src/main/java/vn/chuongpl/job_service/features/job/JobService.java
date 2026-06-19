@@ -23,6 +23,7 @@ import vn.chuongpl.job_service.enums.JobModerationStatus;
 import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.exception.AppException;
 import vn.chuongpl.job_service.integration.elasticsearch.JobIndexService;
+import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,12 +37,17 @@ public class JobService {
     ObjectProvider<JobIndexService> jobIndexServiceProvider;
     JobMapper jobMapper;
     RabbitTemplate rabbitTemplate;
+    UserServiceClient userServiceClient;
 
     @NonFinal
     @Value("${app.job-default-page-size:10}")
     int defaultPageSize;
 
     public JobResponse createJob(JobCreateRequest request, String recruiterId) {
+        var recruiterStatus = userServiceClient.getRecruiterStatus(recruiterId);
+        if (!recruiterStatus.isApproved()) {
+            throw new AppException(ErrorCode.RECRUITER_NOT_APPROVED);
+        }
         Job job = jobMapper.toJob(request);
         prepareDraft(job, recruiterId);
         assertUniqueTitleForCreate(job);
