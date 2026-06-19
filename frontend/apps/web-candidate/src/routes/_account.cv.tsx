@@ -8,7 +8,6 @@ import {
   useListCvs, useSetDefaultCv, useDeleteCv, useReanalyzeCv, useAnalyzeCv,
   getListCvsQueryKey, AXIOS_INSTANCE,
 } from '@smart-cv/api'
-import type { UserModels } from '@smart-cv/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/useAuthStore'
 import { usePreferencesStore } from '../store/usePreferencesStore'
@@ -69,6 +68,7 @@ function MyCVPage() {
 
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
   const [userSelected, setUserSelected] = React.useState<string | null>(null)
+  const [cvToDelete, setCvToDelete] = React.useState<string | null>(null)
   const [zoomLevel, setZoomLevel] = React.useState<string>('Fit')
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -200,11 +200,6 @@ function MyCVPage() {
     uploadMutation.mutate(file)
   }
 
-  const reanalyzeDisabled =
-    reanalyzeMutation.isPending ||
-    cv?.analysisStatus === ('PROCESSING' as UserModels.CvItemAnalysisStatus) ||
-    cv?.analysisStatus === ('PENDING' as UserModels.CvItemAnalysisStatus)
-
   if (isLoading) {
     return <div className="p-8 text-center text-muted-foreground">{lang === 'VI' ? 'Đang tải CV...' : 'Loading CVs...'}</div>
   }
@@ -262,9 +257,36 @@ function MyCVPage() {
     </Dialog>
   )
 
+  const deleteDialog = (
+    <Dialog open={cvToDelete !== null} onOpenChange={(open) => !open && setCvToDelete(null)}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>{lang === 'VI' ? 'Xác nhận xóa CV' : 'Confirm Delete CV'}</DialogTitle>
+          <DialogDescription>
+            {lang === 'VI' ? 'Bạn có chắc chắn muốn xóa CV này không? Hành động này không thể hoàn tác.' : 'Are you sure you want to delete this CV? This action cannot be undone.'}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-3 mt-4">
+          <Button variant="outline" onClick={() => setCvToDelete(null)}>
+            {lang === 'VI' ? 'Hủy' : 'Cancel'}
+          </Button>
+          <Button variant="destructive" onClick={() => {
+            if (cvToDelete) {
+              deleteMutation.mutate({ cvId: cvToDelete })
+              setCvToDelete(null)
+            }
+          }}>
+            {lang === 'VI' ? 'Xóa' : 'Delete'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+
   return (
     <div className="space-y-6">
       {uploadDialog}
+      {deleteDialog}
 
       {cvList.length === 0 ? (
         <>
@@ -329,7 +351,7 @@ function MyCVPage() {
                       className={`w-full rounded-xl border p-3 text-left transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:bg-muted/50'}`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-900/30">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-600 dark:bg-red-950/40 text-white dark:text-red-400 text-xs font-bold border border-red-600 dark:border-red-900/30 shadow-sm">
                           {fileType}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -358,6 +380,7 @@ function MyCVPage() {
             {/* Right: Selected CV Details & Preview */}
             {cv && (() => {
               const statusStr = String(cv.analysisStatus ?? 'PENDING')
+              const isAnalyzingCurrentCv = Boolean(cv.id && analyzingCvIds.has(cv.id))
               return (
                 <div className="space-y-6">
                   <div className="card-surface p-5">
@@ -385,30 +408,34 @@ function MyCVPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={!cv.id || (cv.id != null && analyzingCvIds.has(cv.id))}
-                          onClick={() => cv.id && analyzeCvMutation.mutate({ data: { cvId: cv.id } })}
-                          className="flex items-center gap-1.5 text-xs h-9 text-[var(--ai)] border-[var(--ai)]/30 hover:bg-[var(--ai)]/5"
+                          disabled={!cv.id || analyzingCvIds.has(cv.id) || reanalyzeMutation.isPending || cv.analysisStatus === 'PROCESSING'}
+                          onClick={() => {
+                            if (!cv.id) return
+                            if (cv.analysisStatus === 'DONE') {
+                              reanalyzeMutation.mutate({ cvId: cv.id })
+                            } else {
+                              analyzeCvMutation.mutate({ data: { cvId: cv.id } })
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 text-xs h-9 ${cv.analysisStatus !== 'DONE' ? 'text-[var(--ai)] border-[var(--ai)]/30 hover:bg-[var(--ai)]/5' : ''}`}
                         >
-                          <Sparkles className={`h-3.5 w-3.5 ${cv.id != null && analyzingCvIds.has(cv.id) ? 'animate-pulse' : ''}`} />
-                          {cv.id != null && analyzingCvIds.has(cv.id)
+                          {cv.analysisStatus !== 'DONE' ? (
+                            <Sparkles className={`h-3.5 w-3.5 ${isAnalyzingCurrentCv || cv.analysisStatus === 'PROCESSING' ? 'animate-pulse' : ''}`} />
+                          ) : (
+                            <RefreshCw className={`h-3.5 w-3.5 ${reanalyzeMutation.isPending ? 'animate-spin' : ''}`} />
+                          )}
+                          {isAnalyzingCurrentCv || cv.analysisStatus === 'PROCESSING'
                             ? (lang === 'VI' ? 'Đang phân tích...' : 'Analyzing...')
-                            : (lang === 'VI' ? 'Phân tích AI' : 'AI Analyze')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={reanalyzeDisabled}
-                          onClick={() => cv.id && reanalyzeMutation.mutate({ cvId: cv.id })}
-                          className="flex items-center gap-1.5 text-xs h-9"
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 ${reanalyzeMutation.isPending ? 'animate-spin' : ''}`} />
-                          {lang === 'VI' ? 'Phân tích lại' : 'Re-analyze'}
+                            : cv.analysisStatus === 'DONE'
+                              ? (lang === 'VI' ? 'Phân tích lại' : 'Re-analyze')
+                              : (lang === 'VI' ? 'Phân tích AI' : 'AI Analyze')
+                          }
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           disabled={cv.default || deleteMutation.isPending}
-                          onClick={() => cv.id && deleteMutation.mutate({ cvId: cv.id })}
+                          onClick={() => cv.id && setCvToDelete(cv.id)}
                           className="flex items-center gap-1.5 text-xs h-9 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 dark:border-red-900/30"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

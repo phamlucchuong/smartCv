@@ -47,7 +47,7 @@ function RootComponent() {
   const [jobHighlightIndex, setJobHighlightIndex] = React.useState(0)
   const [resourceHighlightIndex, setResourceHighlightIndex] = React.useState(0)
 
-  const { isAuthenticated, email, fullName, setFullName, signOut } = useAuthStore()
+  const { isAuthenticated, email, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
   const {
     theme,
     language,
@@ -135,12 +135,13 @@ function RootComponent() {
     registerSignOutHandler(() => useAuthStore.getState().signOut())
   }, [])
 
-  // Fetch profile once to cache fullName globally
-  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && !fullName } })
+  // Fetch profile once to cache fullName and avatar globally
+  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && (!fullName || !avatarUrl) } })
   React.useEffect(() => {
     const name = profileData?.data?.fullName
     if (name) setFullName(name)
-  }, [profileData, setFullName])
+    setAvatarUrl(profileData?.data?.avatarUrl ?? null)
+  }, [profileData, setAvatarUrl, setFullName])
 
   // Derived display values for header
   const displayName = fullName ?? email?.split('@')[0] ?? 'Account'
@@ -259,8 +260,12 @@ function RootComponent() {
                 onMouseLeave={handleAccountMouseLeave}
               >
                 <div className="rounded-full bg-primary/20 border border-primary/30 flex items-center gap-2 px-3 py-1.5 cursor-pointer">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
-                    <UserRound className="h-4 w-4" />
+                  <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound className="h-4 w-4" />
+                    )}
                   </div>
                   <span className="text-sm font-medium text-foreground">{displayName}</span>
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -270,8 +275,12 @@ function RootComponent() {
                   className={`absolute right-0 top-full mt-2 min-w-[220px] rounded-xl border border-border bg-card shadow-xl z-50 transition-opacity duration-150 ${accountMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                 >
                   <div className="flex items-center gap-3 px-3 py-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                      <UserRound className="h-5 w-5" />
+                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                      ) : (
+                        <UserRound className="h-5 w-5" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">{displayName}</p>

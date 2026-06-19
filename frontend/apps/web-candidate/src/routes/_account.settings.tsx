@@ -9,6 +9,7 @@ import {
   useChangeMyPassword, useUpdateUser, useDeleteMyAccount,
   getGetSettingsQueryKey, getGetCurrentUserQueryKey,
   useGetMe2, getGetMe2QueryKey,
+  useSendUpdateOtp, useVerifyUpdateOtp,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/useAuthStore'
@@ -50,6 +51,127 @@ function SettingsPage() {
 
   const [activeSection, setActiveSection] = React.useState<SectionKey>('account')
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false)
+
+  // OTP Verification States
+  const [otpDialog, setOtpDialog] = React.useState<{
+    isOpen: boolean
+    type: 'password' | 'email' | 'phone'
+    contact: string
+    verificationType: 'EMAIL' | 'PHONE'
+    otpCode: string
+    otpSent: boolean
+  }>({
+    isOpen: false,
+    type: 'password',
+    contact: '',
+    verificationType: 'EMAIL',
+    otpCode: '',
+    otpSent: false,
+  })
+
+  const sendOtpMutation = useSendUpdateOtp()
+  const verifyOtpMutation = useVerifyUpdateOtp()
+
+  const triggerOtpVerification = (
+    type: 'password' | 'email' | 'phone',
+    contact: string,
+    verificationType: 'EMAIL' | 'PHONE'
+  ) => {
+    setOtpDialog({
+      isOpen: true,
+      type,
+      contact,
+      verificationType,
+      otpCode: '',
+      otpSent: false,
+    })
+  }
+
+  const handleSendOtp = () => {
+    sendOtpMutation.mutate(
+      {
+        data: {
+          contact: otpDialog.contact,
+          preferredVerification: otpDialog.verificationType,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(lang === 'VI' ? 'Đã gửi mã OTP thành công' : 'OTP sent successfully')
+          setOtpDialog((prev) => ({ ...prev, otpSent: true }))
+        },
+        onError: () => {
+          toast.error(lang === 'VI' ? 'Gửi OTP thất bại. Vui lòng thử lại.' : 'Failed to send OTP')
+        },
+      }
+    )
+  }
+
+  const handleVerifyAndSubmit = () => {
+    if (otpDialog.otpCode.length !== 6) {
+      toast.error(lang === 'VI' ? 'Mã OTP phải có 6 chữ số' : 'OTP code must be 6 digits')
+      return
+    }
+
+    verifyOtpMutation.mutate(
+      {
+        data: {
+          contact: otpDialog.contact,
+          verificationType: otpDialog.verificationType,
+          code: otpDialog.otpCode,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (otpDialog.type === 'password') {
+            changePasswordMutation.mutate(
+              { data: { currentPassword, newPassword } },
+              {
+                onSuccess: () => {
+                  toast.success(lang === 'VI' ? 'Mật khẩu đã được thay đổi' : 'Password updated successfully')
+                  setCurrentPassword('')
+                  setNewPassword('')
+                  setConfirmPassword('')
+                  setOtpDialog((prev) => ({ ...prev, isOpen: false }))
+                },
+                onError: () => toast.error(lang === 'VI' ? 'Mật khẩu hiện tại không đúng hoặc thay đổi thất bại' : 'Current password is incorrect or change failed'),
+              }
+            )
+          } else if (otpDialog.type === 'email') {
+            if (!userId) return
+            updateUserMutation.mutate(
+              { userId, data: { email } },
+              {
+                onSuccess: () => {
+                  toast.success(lang === 'VI' ? 'Đã cập nhật email' : 'Email updated')
+                  queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() })
+                  queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
+                  setOtpDialog((prev) => ({ ...prev, isOpen: false }))
+                },
+                onError: () => toast.error(lang === 'VI' ? 'Email đã tồn tại hoặc cập nhật thất bại' : 'Email already in use or update failed'),
+              }
+            )
+          } else if (otpDialog.type === 'phone') {
+            if (!userId) return
+            updateUserMutation.mutate(
+              { userId, data: { phone } },
+              {
+                onSuccess: () => {
+                  toast.success(lang === 'VI' ? 'Đã cập nhật số điện thoại' : 'Phone number updated')
+                  queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
+                  setOtpDialog((prev) => ({ ...prev, isOpen: false }))
+                },
+                onError: () => toast.error(lang === 'VI' ? 'Số điện thoại đã tồn tại hoặc cập nhật thất bại' : 'Phone number already in use or update failed'),
+              }
+            )
+          }
+        },
+        onError: () => {
+          toast.error(lang === 'VI' ? 'Mã OTP không chính xác hoặc đã hết hạn' : 'Invalid or expired OTP')
+        },
+      }
+    )
+  }
 
   React.useEffect(() => {
     document.title = t('page_title_settings')
@@ -135,47 +257,27 @@ function SettingsPage() {
   const handlePasswordUpdate = () => {
     if (newPassword.length < 8) { toast.error(t('account_password_too_short')); return }
     if (newPassword !== confirmPassword) { toast.error(t('account_password_mismatch')); return }
-    changePasswordMutation.mutate(
-      { data: { currentPassword, newPassword } },
-      {
-        onSuccess: () => { toast.success('Password updated'); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') },
-        onError: () => toast.error('Current password is incorrect'),
-      }
-    )
+    const contactEmail = me?.email
+    if (!contactEmail) {
+      toast.error(lang === 'VI' ? 'Tài khoản chưa có email để gửi mã OTP' : 'Account email is required to send OTP')
+      return
+    }
+    triggerOtpVerification('password', contactEmail, 'EMAIL')
   }
 
   const handleEmailUpdate = () => {
     if (!/^\S+@\S+\.\S+$/.test(email)) { toast.error(t('account_email_invalid')); return }
     if (!userId) return
-    updateUserMutation.mutate(
-      { userId, data: { email } },
-      {
-        onSuccess: () => {
-          toast.success(lang === 'VI' ? 'Đã cập nhật email' : 'Email updated')
-          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() })
-          queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
-        },
-        onError: () => toast.error(lang === 'VI' ? 'Email đã tồn tại hoặc cập nhật thất bại' : 'Email already in use or update failed'),
-      }
-    )
+    triggerOtpVerification('email', email, 'EMAIL')
   }
 
   const handlePhoneUpdate = () => {
     if (!/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(phone)) {
-      toast.error(lang === 'VI' ? 'Số điện thoại không hợp lệ (ví dụ: 0912345678)' : 'Invalid phone number (e.g. 0912345678)')
+      toast.error(lang === 'VI' ? 'Số điện thoại không hợp lệ' : 'Invalid phone number')
       return
     }
     if (!userId) return
-    updateUserMutation.mutate(
-      { userId, data: { phone } },
-      {
-        onSuccess: () => {
-          toast.success(lang === 'VI' ? 'Đã cập nhật số điện thoại' : 'Phone number updated')
-          queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
-        },
-        onError: () => toast.error(lang === 'VI' ? 'Số điện thoại đã tồn tại hoặc cập nhật thất bại' : 'Phone number already in use or update failed'),
-      }
-    )
+    triggerOtpVerification('phone', phone, 'PHONE')
   }
 
   return (
@@ -208,9 +310,9 @@ function SettingsPage() {
               </div>
               <div className="space-y-4">
                 <h3 className="font-semibold text-foreground">Change Password</h3>
-                <Input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                <Input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                <Input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <Input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="new-password" />
+                <Input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+                <Input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
                 <Button className="mt-2" onClick={handlePasswordUpdate}>Update Password</Button>
               </div>
               <div className="space-y-3">
@@ -341,6 +443,88 @@ function SettingsPage() {
               })}
             >Xác nhận</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={otpDialog.isOpen} onOpenChange={(open) => setOtpDialog((prev) => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>
+              {otpDialog.type === 'password' && (lang === 'VI' ? 'Xác nhận thay đổi mật khẩu' : 'Confirm Password Change')}
+              {otpDialog.type === 'email' && (lang === 'VI' ? 'Xác nhận thay đổi Email' : 'Confirm Email Change')}
+              {otpDialog.type === 'phone' && (lang === 'VI' ? 'Xác nhận thay đổi Số điện thoại' : 'Confirm Phone Change')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            {!otpDialog.otpSent ? (
+              <>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {lang === 'VI' 
+                    ? `Hệ thống sẽ gửi mã OTP xác thực đến thông tin liên hệ mới/hiện tại của bạn: `
+                    : `We will send a verification OTP to the following address/phone: `}
+                  <strong className="text-foreground">{otpDialog.contact}</strong>
+                </p>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="outline" onClick={() => setOtpDialog((prev) => ({ ...prev, isOpen: false }))}>
+                    {lang === 'VI' ? 'Hủy' : 'Cancel'}
+                  </Button>
+                  <Button 
+                    onClick={handleSendOtp}
+                    disabled={sendOtpMutation.isPending}
+                  >
+                    {sendOtpMutation.isPending 
+                      ? (lang === 'VI' ? 'Đang gửi...' : 'Sending...') 
+                      : (lang === 'VI' ? 'Gửi mã OTP' : 'Send OTP')}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {lang === 'VI'
+                    ? `Mã xác thực đã được gửi đến: `
+                    : `Verification code has been sent to: `}
+                  <strong className="text-foreground">{otpDialog.contact}</strong>
+                </p>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {lang === 'VI' ? 'Nhập mã OTP (6 chữ số)' : 'Enter OTP Code (6 digits)'}
+                  </label>
+                  <Input 
+                    type="text" 
+                    maxLength={6} 
+                    className="text-center tracking-[0.25em] font-mono text-lg" 
+                    value={otpDialog.otpCode} 
+                    onChange={(e) => setOtpDialog((prev) => ({ ...prev, otpCode: e.target.value.replace(/\D/g, '') }))} 
+                  />
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs" 
+                    disabled={sendOtpMutation.isPending}
+                    onClick={handleSendOtp}
+                  >
+                    {lang === 'VI' ? 'Gửi lại OTP' : 'Resend OTP'}
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setOtpDialog((prev) => ({ ...prev, isOpen: false }))}>
+                      {lang === 'VI' ? 'Hủy' : 'Cancel'}
+                    </Button>
+                    <Button 
+                      onClick={handleVerifyAndSubmit}
+                      disabled={verifyOtpMutation.isPending || changePasswordMutation.isPending || updateUserMutation.isPending}
+                    >
+                      {verifyOtpMutation.isPending 
+                        ? (lang === 'VI' ? 'Đang xác thực...' : 'Verifying...') 
+                        : (lang === 'VI' ? 'Xác nhận & Lưu' : 'Verify & Save')}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
