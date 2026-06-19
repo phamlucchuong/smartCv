@@ -5,7 +5,11 @@
  * OpenAPI spec version: v0
  */
 
-export type GetAll1Params = {
+export type GetAll3Params = {
 page?: number;
 size?: number;
+query?: string;
+industry?: string;
+companySize?: string;
+location?: string;
 };
