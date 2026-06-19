@@ -1,17 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@smart-cv/ui";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@smart-cv/ui";
 import {
   useGetMyJobs,
   useWithdrawJob,
   useActivateJob,
   useDeactivateJob,
   useDeleteJob,
+  useGetByJobId,
 } from "@smart-cv/api";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical } from "lucide-react";
+import { Plus, Search, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
 
 type JobItem = {
   id?: string;
@@ -23,6 +24,7 @@ type JobItem = {
   visibilityStatus?: string;
   moderationNote?: string;
   createdAt?: string;
+  openings?: number;
 };
 
 export const Route = createFileRoute("/employer/jobs/")({
@@ -67,20 +69,21 @@ function formatJobType(jobType?: string) {
 
 type ApiError = { response?: { data?: { message?: string } } };
 
+function ApplicantCountCell({ jobId, openings }: { jobId: string; openings?: number }) {
+  const { data, isLoading } = useGetByJobId(jobId, { page: 1, size: 1 });
+  if (isLoading) return <span className="text-muted-foreground text-xs">...</span>;
+  const count = data?.data?.total ?? 0;
+  return (
+    <span className="font-semibold text-foreground">
+      {count}/{openings ?? 0}
+    </span>
+  );
+}
+
 function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => void }) {
-  const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
   const withdrawMutation = useWithdrawJob();
   const activateMutation = useActivateJob();
   const deactivateMutation = useDeactivateJob();
@@ -88,7 +91,6 @@ function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => voi
 
   const run = async (action: () => Promise<unknown>) => {
     setIsPending(true);
-    setOpen(false);
     try {
       await action();
       onMutated();
@@ -106,72 +108,68 @@ function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => voi
   const isPublishedInactive = job.moderationStatus === "PUBLISHED" && job.visibilityStatus === "INACTIVE";
 
   return (
-    <div className="relative" ref={containerRef}>
-      <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setOpen((o) => !o)}>
-        <MoreVertical className="size-4" />
-      </Button>
-      {open && (
-        <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-border bg-popover shadow-md p-1 text-sm">
-          {(isDraft || isPublishedActive || isPublishedInactive) && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
-              onClick={() => {
-                setOpen(false);
-                navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
-              }}
-            >
-              Chỉnh sửa
-            </button>
-          )}
-          {isPendingModeration && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary"
-              onClick={() => {
-                setOpen(false);
-                navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
-              }}
-            >
-              Xem chi tiết
-            </button>
-          )}
-          {isPendingModeration && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-warning"
-              onClick={() => run(() => withdrawMutation.mutateAsync({ id: job.id! }))}
-            >
-              Rút về nháp
-            </button>
-          )}
-          {isPublishedActive && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-warning"
-              onClick={() => run(() => deactivateMutation.mutateAsync({ id: job.id! }))}
-            >
-              Tạm dừng
-            </button>
-          )}
-          {isPublishedInactive && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-success"
-              onClick={() => run(() => activateMutation.mutateAsync({ id: job.id! }))}
-            >
-              Kích hoạt lại
-            </button>
-          )}
-          {isDraft && (
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-secondary text-danger"
-              onClick={() => {
-                if (!window.confirm("Xóa tin này? Hành động không thể hoàn tác.")) return;
-                run(() => deleteMutation.mutateAsync({ id: job.id! }));
-              }}
-            >
-              Xóa
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="ghost" disabled={isPending}>
+          <MoreVertical className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {(isDraft || isPublishedActive || isPublishedInactive) && (
+          <DropdownMenuItem
+            onClick={() => {
+              navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
+            }}
+          >
+            Chỉnh sửa
+          </DropdownMenuItem>
+        )}
+        {isPendingModeration && (
+          <DropdownMenuItem
+            onClick={() => {
+              navigate({ to: "/employer/jobs/$id", params: { id: job.id! } });
+            }}
+          >
+            Xem chi tiết
+          </DropdownMenuItem>
+        )}
+        {isPendingModeration && (
+          <DropdownMenuItem
+            className="text-warning focus:text-warning"
+            onClick={() => run(() => withdrawMutation.mutateAsync({ id: job.id! }))}
+          >
+            Rút về nháp
+          </DropdownMenuItem>
+        )}
+        {isPublishedActive && (
+          <DropdownMenuItem
+            className="text-warning focus:text-warning"
+            onClick={() => run(() => deactivateMutation.mutateAsync({ id: job.id! }))}
+          >
+            Tạm dừng
+          </DropdownMenuItem>
+        )}
+        {isPublishedInactive && (
+          <DropdownMenuItem
+            className="text-success focus:text-success"
+            onClick={() => run(() => activateMutation.mutateAsync({ id: job.id! }))}
+          >
+            Kích hoạt lại
+          </DropdownMenuItem>
+        )}
+        {isDraft && (
+          <DropdownMenuItem
+            className="text-danger focus:text-danger animate-pulse"
+            onClick={() => {
+              if (!window.confirm("Xóa tin này? Hành động không thể hoàn tác.")) return;
+              run(() => deleteMutation.mutateAsync({ id: job.id! }));
+            }}
+          >
+            Xóa
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -185,16 +183,22 @@ function formatDate(date?: string) {
 }
 
 function EmployerJobsPage() {
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, refetch } = useGetMyJobs({ page: 1, size: 20 });
+  const { data, isLoading, isError, refetch } = useGetMyJobs({ page, size: 10 });
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status]);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["/api/jobs/my"], exact: false });
   const jobs = data?.data?.items ?? [];
   const total = data?.data?.total ?? 0;
+  const totalPages = Math.ceil(total / 10);
 
   const filteredJobs = (jobs as JobItem[]).filter((job) => {
     const matchesSearch = !search.trim() ||
@@ -265,44 +269,116 @@ function EmployerJobsPage() {
               Chưa có tin tuyển dụng phù hợp với bộ lọc hiện tại.
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
-                <tr>
-                  <th className="text-left py-3 px-4">Vị trí</th>
-                  <th className="text-left py-3 px-4">Trạng thái</th>
-                  <th className="text-right py-3 px-4">Ứng viên</th>
-                  <th className="text-left py-3 px-4">Loại hình</th>
-                  <th className="text-left py-3 px-4">Ngày tạo</th>
-                  <th className="text-right py-3 px-4">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredJobs.map((job) => (
-                  <tr key={job.id} className="border-t border-border hover:bg-accent/40">
-                    <td className="py-3 px-4">
-                      <Link to="/employer/jobs/$id" params={{ id: job.id! }} className="font-medium hover:text-primary">
-                        {job.title || "Untitled job"}
-                      </Link>
-                      <div className="text-xs text-muted-foreground">
-                        {job.location || "Chưa cập nhật"} • {formatJobType(job.jobType)}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 space-y-0.5">
-                      <StatusBadge status={formatJobStatus(job.moderationStatus, job.visibilityStatus)} />
-                      {job.moderationStatus === "DRAFT" && job.moderationNote && (
-                        <p className="text-xs text-danger">{job.moderationNote}</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right text-muted-foreground">-</td>
-                    <td className="py-3 px-4 text-muted-foreground">{formatJobType(job.jobType)}</td>
-                    <td className="py-3 px-4 text-muted-foreground">{formatDate(job.createdAt)}</td>
-                    <td className="py-3 px-4 text-right">
-                      <JobActionsMenu job={job} onMutated={invalidate} />
-                    </td>
+            <>
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
+                  <tr>
+                    <th className="text-left py-3 px-4">Vị trí</th>
+                    <th className="text-left py-3 px-4">Trạng thái</th>
+                    <th className="text-right py-3 px-4">Ứng viên</th>
+                    <th className="text-left py-3 px-4">Loại hình</th>
+                    <th className="text-left py-3 px-4">Ngày tạo</th>
+                    <th className="text-right py-3 px-4">Hành động</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredJobs.map((job) => (
+                    <tr key={job.id} className="border-t border-border hover:bg-accent/40">
+                      <td className="py-3 px-4">
+                        <Link to="/employer/jobs/$id" params={{ id: job.id! }} className="font-medium hover:text-primary">
+                          {job.title || "Untitled job"}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">
+                          {job.location || "Chưa cập nhật"} • {formatJobType(job.jobType)}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 space-y-0.5">
+                        <StatusBadge status={formatJobStatus(job.moderationStatus, job.visibilityStatus)} />
+                        {job.moderationStatus === "DRAFT" && job.moderationNote && (
+                          <p className="text-xs text-danger">{job.moderationNote}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right font-medium">
+                        {job.id ? <ApplicantCountCell jobId={job.id} openings={job.openings} /> : "-"}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground">{formatJobType(job.jobType)}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{formatDate(job.createdAt)}</td>
+                      <td className="py-3 px-4 text-right">
+                        <JobActionsMenu job={job} onMutated={invalidate} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 bg-muted/10 border-t border-border">
+                  <div className="flex justify-between flex-1 sm:hidden">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      Trước
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={page === totalPages}
+                    >
+                      Sau
+                    </Button>
+                  </div>
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Hiển thị <span className="font-semibold text-foreground">{Math.min((page - 1) * 10 + 1, total)}</span> đến{" "}
+                        <span className="font-semibold text-foreground">{Math.min(page * 10, total)}</span> trong số{" "}
+                        <span className="font-semibold text-foreground">{total}</span> tin tuyển dụng
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="inline-flex -space-x-px rounded-md" aria-label="Pagination">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-r-none h-8 w-8 p-0"
+                          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="size-4" />
+                        </Button>
+                        {Array.from({ length: totalPages }).map((_, index) => {
+                          const p = index + 1;
+                          return (
+                            <Button
+                              key={p}
+                              variant={p === page ? "default" : "outline"}
+                              size="sm"
+                              className="rounded-none h-8 w-8 p-0 border-x-0"
+                              onClick={() => setPage(p)}
+                            >
+                              {p}
+                            </Button>
+                          );
+                        })}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-l-none h-8 w-8 p-0"
+                          onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                          disabled={page === totalPages}
+                        >
+                          <ChevronRight className="size-4" />
+                        </Button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

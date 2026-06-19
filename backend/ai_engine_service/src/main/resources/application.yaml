@@ -6,10 +6,14 @@ server:
 spring:
   config:
     import: optional:file:../.env[.properties]
+  devtools:
+    livereload:
+      enabled: false
   application:
     name: ai_engine_service
   autoconfigure:
     exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
       - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
       - org.springframework.ai.model.azure.openai.autoconfigure.AzureOpenAiChatAutoConfiguration
       - org.springframework.ai.model.azure.openai.autoconfigure.AzureOpenAiEmbeddingAutoConfiguration
@@ -31,6 +35,7 @@ spring:
       authentication-database: admin
   main:
     banner-mode: "off"
+    log-startup-info: false
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -68,6 +73,11 @@ app:
 logging:
   level:
     root: WARN
+    org.springframework: WARN
+    org.springframework.boot: WARN
+    org.springframework.data: WARN
+    org.mongodb.driver: WARN
+    org.hibernate: WARN
     "vn.chuongpl.ai_engine_service": INFO
     "org.springframework.ai": INFO
   pattern:

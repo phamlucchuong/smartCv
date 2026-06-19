@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { Badge, Button, Card, CardContent, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
@@ -31,25 +31,34 @@ import {
   useGetFaqs,
 } from '@smart-cv/api'
 
+const JOB_TYPE_LABELS: Record<string, string> = {
+  FULL_TIME: 'Full-time',
+  PART_TIME: 'Part-time',
+  REMOTE: 'Remote',
+  CONTRACT: 'Contract',
+  INTERNSHIP: 'Internship',
+}
+
 export const Route = createFileRoute('/')({
   component: IndexComponent,
 })
 
 function IndexComponent() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [page, setPage] = React.useState(1)
   const aiMatchScore = 82
 
-  const { data: featuredJobsData } = useGetFeaturedJobs()
+  const { data: featuredJobsData, isLoading: isFeaturedJobsLoading } = useGetFeaturedJobs()
   const jobs = featuredJobsData?.data ?? []
 
-  const { data: companiesData } = useGetTopCompanies()
+  const { data: companiesData, isLoading: isCompaniesLoading } = useGetTopCompanies()
   const topCompanies = companiesData?.data ?? []
 
-  const { data: statsData } = useGetStats()
+  const { data: statsData, isLoading: isStatsLoading } = useGetStats()
   const stats = statsData?.data
 
-  const { data: categoriesData } = useGetCategories()
+  const { data: categoriesData, isLoading: isCategoriesLoading } = useGetCategories()
   const categories = categoriesData?.data ?? []
 
   const { data: testimonialsData } = useGetTestimonials()
@@ -64,6 +73,14 @@ function IndexComponent() {
   const jobsPerPage = 6
   const totalPages = Math.max(1, Math.ceil(jobs.length / jobsPerPage))
   const paginatedJobs = jobs.slice((page - 1) * jobsPerPage, page * jobsPerPage)
+
+  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const q = (fd.get('q') as string) || undefined
+    const location = (fd.get('location') as string) || undefined
+    navigate({ to: '/jobs', search: { q, location, page: 1 } })
+  }
 
   React.useEffect(() => {
     document.title = t('page_title_home')
@@ -87,8 +104,14 @@ function IndexComponent() {
               <Button size="lg" variant="outline">Đăng tuyển dụng</Button>
             </div>
             <div className="mt-8 flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> 50,000+ việc làm</div>
-              <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> 200+ doanh nghiệp</div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                {isStatsLoading ? '...' : `${(stats?.activeJobs ?? 0).toLocaleString()}+ việc làm`}
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                {isStatsLoading ? '...' : `${(stats?.activeCompanies ?? 0).toLocaleString()}+ doanh nghiệp`}
+              </div>
             </div>
           </div>
 
@@ -146,12 +169,12 @@ function IndexComponent() {
 
       <div className="mx-auto max-w-6xl space-y-12 px-4 md:px-6">
       <section className="relative -mt-4" aria-label="Job Search Engine">
-        <form className="grid gap-3 rounded-2xl card-surface p-3 md:grid-cols-[1fr_220px_150px]">
+        <form onSubmit={handleSearch} className="grid gap-3 rounded-2xl card-surface p-3 md:grid-cols-[1fr_220px_150px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder={t('search_placeholder')} className="h-11 border-input bg-background pl-9" />
+            <Input name="q" placeholder={t('search_placeholder')} className="h-11 border-input bg-background pl-9" />
           </div>
-          <Input placeholder={t('search_location')} className="h-11 border-input bg-background" />
+          <Input name="location" placeholder={t('search_location')} className="h-11 border-input bg-background" />
           <Button type="submit" className="h-11">{t('search_jobs')}</Button>
         </form>
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -166,13 +189,13 @@ function IndexComponent() {
         <Card className="card-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Open jobs</p>
-            <p className="mt-2 text-3xl font-bold">{stats?.activeJobs ?? 0}</p>
+            {isStatsLoading ? <div className="mt-2 h-9 w-20 animate-pulse rounded bg-muted/40" /> : <p className="mt-2 text-3xl font-bold">{(stats?.activeJobs ?? 0).toLocaleString()}</p>}
           </CardContent>
         </Card>
         <Card className="card-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Hiring companies</p>
-            <p className="mt-2 text-3xl font-bold">{stats?.activeCompanies ?? 0}</p>
+            {isStatsLoading ? <div className="mt-2 h-9 w-16 animate-pulse rounded bg-muted/40" /> : <p className="mt-2 text-3xl font-bold">{(stats?.activeCompanies ?? 0).toLocaleString()}</p>}
           </CardContent>
         </Card>
         <Card className="card-surface">
@@ -184,7 +207,7 @@ function IndexComponent() {
         <Card className="card-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Remote roles</p>
-            <p className="mt-2 text-3xl font-bold">{stats?.remoteJobs ?? 0}</p>
+            {isStatsLoading ? <div className="mt-2 h-9 w-16 animate-pulse rounded bg-muted/40" /> : <p className="mt-2 text-3xl font-bold">{(stats?.remoteJobs ?? 0).toLocaleString()}</p>}
           </CardContent>
         </Card>
       </section>
@@ -195,7 +218,11 @@ function IndexComponent() {
           <a href="#" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">View all categories <ChevronRight className="h-4 w-4" /></a>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {categories.length === 0 ? (
+          {isCategoriesLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border p-5 h-32 bg-muted/30" />
+            ))
+          ) : categories.length === 0 ? (
             [
               { name: 'Frontend Engineering', icon: Layers3 },
               { name: 'Backend Engineering', icon: BriefcaseBusiness },
@@ -218,7 +245,7 @@ function IndexComponent() {
               <Card key={category.name} className="elevate-card card-surface">
                 <CardContent className="space-y-3 p-5">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary"><Layers3 className="h-5 w-5" /></div>
-                  <h3 className="text-base font-semibold">{category.name}</h3>
+                  <h3 className="text-base font-semibold">{JOB_TYPE_LABELS[category.name ?? ''] ?? category.name}</h3>
                   <p className="text-sm text-muted-foreground">{category.jobCount ?? 0} open positions this week</p>
                 </CardContent>
               </Card>
@@ -234,7 +261,13 @@ function IndexComponent() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {paginatedJobs.map((job) => (
+          {isFeaturedJobsLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border p-5 h-48 bg-muted/30" />
+            ))
+          ) : paginatedJobs.length === 0 ? (
+            <p className="col-span-3 py-8 text-center text-sm text-muted-foreground">No featured jobs available right now.</p>
+          ) : paginatedJobs.map((job) => (
             <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id ?? '' }} className="block">
               <article className="elevate-card rounded-2xl card-surface p-5 h-full">
                 <div className="mb-3 flex items-start justify-between gap-4">
@@ -280,8 +313,8 @@ function IndexComponent() {
           ))}
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border bg-white/5 p-4 text-sm md:flex-row">
-          <p className="text-muted-foreground">Page {page} of {totalPages} • Showing {jobs.length === 0 ? 0 : (page - 1) * jobsPerPage + 1}-{Math.min(page * jobsPerPage, jobs.length)} of {jobs.length} jobs</p>
+        {!isFeaturedJobsLoading && jobs.length > 0 && <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border bg-white/5 p-4 text-sm md:flex-row">
+          <p className="text-muted-foreground">Page {page} of {totalPages} • Showing {(page - 1) * jobsPerPage + 1}–{Math.min(page * jobsPerPage, jobs.length)} of {jobs.length} jobs</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="border-border bg-white/5">
               <ChevronLeft className="h-4 w-4" /> Prev
@@ -301,13 +334,19 @@ function IndexComponent() {
               Next <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+        </div>}
       </section>
 
       <section id="companies" className="space-y-4" aria-label="Top Companies Spotlight">
         <h2 className="text-2xl font-semibold">Top Companies Spotlight</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {topCompanies.map((company) => (
+          {isCompaniesLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border h-52 bg-muted/30" />
+            ))
+          ) : topCompanies.length === 0 ? (
+            <p className="col-span-4 py-8 text-center text-sm text-muted-foreground">No companies to show right now.</p>
+          ) : topCompanies.map((company) => (
             <Card key={company.recruiterId ?? company.name} className="elevate-card overflow-hidden border border-border bg-card">
               <div className="h-24 bg-gradient-to-r from-primary to-brand-blue" />
               <CardContent className="space-y-3 p-5">

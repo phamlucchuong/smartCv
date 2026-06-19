@@ -16,5 +16,4 @@ export interface WishlistResponse {
   jobType?: string;
   jobStatus?: string;
   savedAt?: string;
-  openings?: number;
 }

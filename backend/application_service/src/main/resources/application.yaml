@@ -6,6 +6,12 @@ server:
 spring:
   config:
     import: optional:file:../.env[.properties]
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  devtools:
+    livereload:
+      enabled: false
   application:
     name: ApplicationService
   data:
@@ -19,6 +25,7 @@ spring:
     password: ${RABBITMQ_PASSWORD:admin123}
   main:
     banner-mode: "off"
+    log-startup-info: false
   output:
     ansi:
       enabled: ALWAYS
@@ -35,6 +42,11 @@ app:
 logging:
   level:
     root: WARN
+    org.springframework: WARN
+    org.springframework.boot: WARN
+    org.springframework.data: WARN
+    org.mongodb.driver: WARN
+    org.hibernate: WARN
     "vn.chuongpl.application_service": INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level %msg%n"

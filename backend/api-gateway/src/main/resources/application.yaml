@@ -54,6 +54,7 @@ spring:
       password: ${REDIS_PASSWORD:}
   main:
     banner-mode: off
+    log-startup-info: false
   output:
     ansi:
       enabled: always
@@ -108,7 +109,12 @@ app:
 
 logging:
   level:
-    root: INFO
+    root: WARN
+    org.springframework: WARN
+    org.springframework.boot: WARN
+    org.springframework.cloud: WARN
+    org.springframework.data: WARN
+    reactor.netty: WARN
     "vn.chuongpl.api_gateway": INFO
   pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} %-5level %msg%n"
