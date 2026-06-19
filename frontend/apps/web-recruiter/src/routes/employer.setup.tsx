@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { RecruiterApi } from "@smart-cv/api";
 import { Sparkles, Upload, FileText, Clock, ExternalLink } from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/setup")({
   head: () => ({ meta: [{ title: "Company Profile Setup — SmartCV" }] }),
@@ -33,6 +34,7 @@ const FIELD_LABELS: Record<string, string> = {
 function SetupPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const signOut = useAuthStore((state) => state.signOut);
 
   const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
@@ -87,6 +89,14 @@ function SetupPage() {
       navigate({ to: "/employer", replace: true });
     }
   }, [status, navigate]);
+
+  useEffect(() => {
+    if (!isLoading && !recruiter) {
+      toast.error("Không tìm thấy hồ sơ nhà tuyển dụng. Vui lòng đăng nhập lại.");
+      signOut();
+      navigate({ to: "/login", replace: true });
+    }
+  }, [isLoading, recruiter, navigate, signOut]);
 
   const field = (key: keyof typeof form) => ({
     value: form[key],
@@ -170,11 +180,11 @@ function SetupPage() {
           <span className="font-bold text-lg">SmartCV</span>
         </Link>
 
-        {isLoading || !status ? (
+        {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-        ) : status === "PENDING" ? (
+        ) : !recruiter ? null : status === "PENDING" ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="max-w-md w-full text-center space-y-4">
               <Clock className="size-12 mx-auto text-primary" />
@@ -259,9 +269,6 @@ function SetupPage() {
                         <FileText className="size-5" />
                         <span className="text-sm font-medium">
                           {pendingFile.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          (chưa tải lên)
                         </span>
                       </div>
                     ) : recruiter?.businessLicenseUrl ? (

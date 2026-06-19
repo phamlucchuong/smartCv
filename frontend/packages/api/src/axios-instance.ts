@@ -1,8 +1,19 @@
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
 
+declare const __SMART_CV_API_BASE_URL__: string | undefined;
+
 const ACCESS_COOKIE = 'smart_cv_token';
 const REFRESH_COOKIE = 'smart_cv_refresh';
+const DEFAULT_API_BASE_URL = 'http://localhost:8080';
+
+function getApiBaseUrl(): string {
+  if (typeof __SMART_CV_API_BASE_URL__ === 'string' && __SMART_CV_API_BASE_URL__.length > 0) {
+    return __SMART_CV_API_BASE_URL__;
+  }
+
+  return DEFAULT_API_BASE_URL;
+}
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -25,7 +36,7 @@ export function registerSignOutHandler(fn: SignOutHandler) {
 }
 
 export const AXIOS_INSTANCE = axios.create({
-  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: getApiBaseUrl(),
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -97,10 +108,6 @@ AXIOS_INSTANCE.interceptors.response.use(
   async (error) => {
     const original = error.config as AxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status !== 401 || original._retry) {
-      return Promise.reject(error);
-    }
-
-    if ((import.meta as any).env?.VITE_MOCK_AUTH === 'true') {
       return Promise.reject(error);
     }
 

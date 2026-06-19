@@ -445,14 +445,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     uploadBusinessLicenseBody: UploadBusinessLicenseBody,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
+      
       const formData = new FormData();
-      if (uploadBusinessLicenseBody.file !== undefined) {
-        formData.append('file', uploadBusinessLicenseBody.file);
-      }
+formData.append(`file`, uploadBusinessLicenseBody.file)
 
       return customInstance<ApiResponseRecruiterResponse>(
       {url: `/api/recruiters/me/business-license`, method: 'POST',
-      data: formData, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }

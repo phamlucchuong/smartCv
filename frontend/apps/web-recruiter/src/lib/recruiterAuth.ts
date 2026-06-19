@@ -18,6 +18,24 @@ interface RecruiterSignupValues {
   password?: string
 }
 
+interface RecruiterProfileSeed {
+  fullname?: string | null
+  fullName?: string | null
+  email?: string | null
+  phone?: string | null
+}
+
+interface RecruiterRecordLike {
+  status?: string | null
+}
+
+export type RecruiterAccessState =
+  | 'missing'
+  | 'draft'
+  | 'pending'
+  | 'rejected'
+  | 'approved'
+
 export function extractAuthTokens(result: AuthEnvelope) {
   const accessToken = result.data?.token
   const refreshToken = result.data?.refreshToken
@@ -53,5 +71,39 @@ export function buildRecruiterRegistrationPayload(values: RecruiterSignupValues)
     phone: values.phone.trim(),
     preferredVerification: 'EMAIL' as const,
     role: 'RECRUITER',
+  }
+}
+
+export function buildRecruiterProfilePayload(values: RecruiterProfileSeed) {
+  const fullName = (values.fullName ?? values.fullname ?? '').trim()
+  const email = (values.email ?? '').trim()
+  const phone = (values.phone ?? '').trim()
+
+  return {
+    fullName,
+    email,
+    phone,
+    contactName: fullName,
+    contactEmail: email,
+    contactPhone: phone,
+    status: 'DRAFT' as const,
+  }
+}
+
+export function getRecruiterAccessState(recruiter?: RecruiterRecordLike | null): RecruiterAccessState {
+  if (!recruiter) {
+    return 'missing'
+  }
+
+  switch (recruiter.status) {
+    case 'APPROVED':
+      return 'approved'
+    case 'PENDING':
+      return 'pending'
+    case 'REJECTED':
+      return 'rejected'
+    case 'DRAFT':
+    default:
+      return 'draft'
   }
 }

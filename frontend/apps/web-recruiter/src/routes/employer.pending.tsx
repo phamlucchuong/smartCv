@@ -3,7 +3,6 @@ import { buttonVariants, cn } from "@smart-cv/ui";
 import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { RecruiterApi } from "@smart-cv/api";
 import { useEffect } from "react";
-import { useAuthStore } from "../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/pending")({
   head: () => ({ meta: [{ title: "Account Under Review — SmartCV" }] }),
@@ -12,17 +11,21 @@ export const Route = createFileRoute("/employer/pending")({
 
 function PendingPage() {
   const navigate = useNavigate();
-  const signOut = useAuthStore((state) => state.signOut);
   const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
   const status = recruiter?.status;
 
   useEffect(() => {
     if (status === 'APPROVED') {
-      signOut();
+      navigate({ to: '/employer', replace: true });
+    }
+  }, [status, navigate]);
+
+  useEffect(() => {
+    if (!isLoading && !recruiter) {
       navigate({ to: '/login', replace: true });
     }
-  }, [status, navigate, signOut]);
+  }, [isLoading, recruiter, navigate]);
 
   if (isLoading) {
     return (
@@ -30,6 +33,10 @@ function PendingPage() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
+  }
+
+  if (!recruiter) {
+    return null;
   }
 
   if (status === 'APPROVED') {
@@ -41,10 +48,10 @@ function PendingPage() {
           </div>
           <h1 className="text-2xl font-bold">Hồ sơ đã được phê duyệt!</h1>
           <p className="text-sm text-muted-foreground">
-            Vui lòng đăng nhập lại để truy cập dashboard tuyển dụng.
+            Bạn đang được chuyển vào dashboard tuyển dụng.
           </p>
-          <Link to="/login" className={cn(buttonVariants(), "w-full justify-center")}>
-            Đăng nhập
+          <Link to="/employer" className={cn(buttonVariants(), "w-full justify-center")}>
+            Vào dashboard
           </Link>
         </div>
       </div>

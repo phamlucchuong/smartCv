@@ -1,12 +1,14 @@
-import { createFileRoute, redirect, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, redirect, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLayout";
 import Cookies from "js-cookie";
 import {
   LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Bell, Settings, Building2,
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
+import { useEffect } from "react";
 import { hasRecruiterRole } from "../lib/recruiterAuth";
 import { RecruiterApi } from "@smart-cv/api";
+import { useAuthStore } from "../store/useAuthStore";
 
 const GATE_PATHS = ["/employer/setup", "/employer/pending"];
 
@@ -25,6 +27,9 @@ export const Route = createFileRoute("/employer")({
     try {
       const result = await RecruiterApi.getMe1();
       const status = result?.data?.status;
+      if (!result?.data) {
+        throw redirect({ to: "/login", replace: true });
+      }
       if (status === "DRAFT") {
         throw redirect({ to: "/employer/setup", replace: true });
       }
@@ -33,25 +38,53 @@ export const Route = createFileRoute("/employer")({
       }
       return result;
     } catch (err) {
-      // Re-throw redirect errors as-is; swallow network errors (let the page render)
       if ((err as { isRedirect?: boolean })?.isRedirect) throw err;
-      return null;
+      throw redirect({ to: "/login", replace: true });
     }
   },
   component: EmployerLayoutRoute,
 });
 
 function EmployerLayoutRoute() {
-  // All hooks unconditionally before any conditional return
+  const navigate = useNavigate();
+  const signOut = useAuthStore((state) => state.signOut);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { t } = useTranslation();
   const isGate = GATE_PATHS.some((p) => pathname.startsWith(p));
-  // Disable fetch on gate paths — they handle their own data fetching
-  const { data } = RecruiterApi.useGetMe1({ query: { enabled: !isGate } });
+  const { data, isLoading, isError } = RecruiterApi.useGetMe1({ query: { enabled: !isGate } });
   const recruiter = data?.data;
+
+  useEffect(() => {
+    if (isGate || isLoading) {
+      return;
+    }
+
+    if (isError || !recruiter) {
+      signOut();
+      navigate({ to: "/login", replace: true });
+      return;
+    }
+
+    if (recruiter.status === "DRAFT") {
+      navigate({ to: "/employer/setup", replace: true });
+      return;
+    }
+
+    if (recruiter.status === "PENDING" || recruiter.status === "REJECTED") {
+      navigate({ to: "/employer/pending", replace: true });
+    }
+  }, [isGate, isLoading, isError, recruiter, navigate, signOut]);
 
   if (isGate) {
     return <Outlet />;
+  }
+
+  if (isLoading || !recruiter || recruiter.status !== "APPROVED") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   const nav: NavItem[] = [

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildRecruiterProfilePayload,
   buildRecruiterRegistrationPayload,
   hasRecruiterRole,
   ensureRecruiterRole,
   extractAuthTokens,
+  getRecruiterAccessState,
 } from '../lib/recruiterAuth'
 
 function createJwt(payload: Record<string, unknown>) {
@@ -83,5 +85,31 @@ describe('recruiterAuth', () => {
       preferredVerification: 'EMAIL',
       role: 'RECRUITER',
     })
+  })
+
+  it('builds a draft recruiter profile payload from signup values', () => {
+    expect(
+      buildRecruiterProfilePayload({
+        fullname: 'Recruiter User',
+        email: 'hr@company.com',
+        phone: '0901234567',
+      }),
+    ).toEqual({
+      fullName: 'Recruiter User',
+      email: 'hr@company.com',
+      phone: '0901234567',
+      contactName: 'Recruiter User',
+      contactEmail: 'hr@company.com',
+      contactPhone: '0901234567',
+      status: 'DRAFT',
+    })
+  })
+
+  it('classifies recruiter access state from recruiter status', () => {
+    expect(getRecruiterAccessState(null)).toBe('missing')
+    expect(getRecruiterAccessState({ status: 'DRAFT' })).toBe('draft')
+    expect(getRecruiterAccessState({ status: 'PENDING' })).toBe('pending')
+    expect(getRecruiterAccessState({ status: 'REJECTED' })).toBe('rejected')
+    expect(getRecruiterAccessState({ status: 'APPROVED' })).toBe('approved')
   })
 })

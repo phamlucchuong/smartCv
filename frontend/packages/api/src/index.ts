@@ -9,6 +9,7 @@ export * from './generated/user/candidate-controller/candidate-controller';
 export * from './generated/user/wishlist-controller/wishlist-controller';
 export * from './generated/user/company-controller/company-controller';
 export * as RecruiterApi from './generated/user/recruiter-controller/recruiter-controller';
+export { getMe as getRecruiterLoginUser } from './generated/user/user-controller/user-controller';
 
 // Job service
 export * from './generated/job/job-controller/job-controller';

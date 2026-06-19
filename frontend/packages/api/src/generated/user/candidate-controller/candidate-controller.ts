@@ -571,11 +571,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
-      
+      const formData = new FormData();
+formData.append(`file`, uploadAvatarBody.file)
+
       return customInstance<ApiResponseString>(
       {url: `/api/candidates/me/avatar`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: uploadAvatarBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }
@@ -685,11 +687,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
-      
+      const formData = new FormData();
+formData.append(`file`, uploadCvBody.file)
+
       return customInstance<ApiResponseCvUploadResponse>(
       {url: `/api/candidates/cv/upload`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: uploadCvBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }

@@ -4,16 +4,18 @@ import { useState, useRef, useEffect } from "react";
 import { Sparkles, User, Mail, Lock, Phone, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
-import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from "@smart-cv/api";
+import {
+  useRegisterCandidate,
+  useResendRegistrationOtp,
+  useVerifyCandidateRegistration,
+} from "@smart-cv/api";
 import {
   buildRecruiterRegistrationPayload,
-  ensureRecruiterRole,
-  extractAuthTokens,
 } from "../lib/recruiterAuth";
-import { useAuthStore } from "../store/useAuthStore";
 
 type ApiError = {
   response?: {
+    status?: number;
     data?: {
       code?: number;
       message?: string;
@@ -37,7 +39,6 @@ function maskContact(contact: string): string {
 function RecruiterSignup() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const signIn = useAuthStore((state) => state.signIn);
 
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
@@ -149,7 +150,7 @@ function RecruiterSignup() {
     if (code.length < 6) return;
     setOtpError("");
     try {
-      const result = await verifyMutation.mutateAsync({
+      await verifyMutation.mutateAsync({
         data: {
           contact: email,
           verificationType: "EMAIL",
@@ -157,13 +158,9 @@ function RecruiterSignup() {
         },
       });
 
-      const { accessToken, refreshToken } = extractAuthTokens(result);
-      ensureRecruiterRole(accessToken);
-      signIn(accessToken, refreshToken);
-
-      toast.success("Xác minh tài khoản thành công!");
+      toast.success("Xác minh tài khoản thành công! Hãy đăng nhập để tiếp tục tạo hồ sơ doanh nghiệp.");
       setOtpOpen(false);
-      navigate({ to: "/employer/setup", replace: true });
+      navigate({ to: "/login", replace: true });
     } catch (err: unknown) {
       const error = err as ApiError;
       setOtpError(error.response?.data?.message || "Mã OTP không chính xác. Vui lòng kiểm tra lại.");
