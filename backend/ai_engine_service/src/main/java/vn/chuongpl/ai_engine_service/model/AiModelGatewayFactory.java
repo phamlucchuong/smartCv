@@ -18,10 +18,12 @@ public class AiModelGatewayFactory {
 
     public AiModelGateway create(AiProviderConfig config) {
         return switch (config.getProvider()) {
-            case GROQ         -> buildGroq(config);
-            case GEMINI       -> buildGemini(config);
-            case ANTHROPIC    -> buildAnthropic(config);
-            case AZURE_OPENAI -> buildAzure(config);
+            case GROQ             -> buildGroq(config);
+            case GEMINI           -> buildGemini(config);
+            case ANTHROPIC        -> buildAnthropic(config);
+            case AZURE_OPENAI     -> buildAzure(config);
+            case LLAMA_3          -> buildLlama3(config);
+            case CLAUDE_AGENT_SDK -> buildClaudeAgentSdk(config);
         };
     }
 
@@ -82,5 +84,35 @@ public class AiModelGatewayFactory {
                         .build())
                 .build();
         return new AzureOpenAiModelGateway(model);
+    }
+
+    private Llama3ModelGateway buildLlama3(AiProviderConfig c) {
+        var api = OpenAiApi.builder()
+                .baseUrl(c.getBaseUrl() != null && !c.getBaseUrl().isBlank() ? c.getBaseUrl() : "http://localhost:11434/v1")
+                .apiKey(c.getApiKey() != null ? c.getApiKey() : "no-key")
+                .build();
+        var model = OpenAiChatModel.builder()
+                .openAiApi(api)
+                .defaultOptions(OpenAiChatOptions.builder()
+                        .model(c.getModel())
+                        .temperature(0.2)
+                        .build())
+                .build();
+        return new Llama3ModelGateway(model);
+    }
+
+    private ClaudeAgentSdkModelGateway buildClaudeAgentSdk(AiProviderConfig c) {
+        var api = AnthropicApi.builder()
+                .apiKey(c.getOauthToken())
+                .build();
+        var model = AnthropicChatModel.builder()
+                .anthropicApi(api)
+                .defaultOptions(AnthropicChatOptions.builder()
+                        .model(c.getModel())
+                        .maxTokens(4096)
+                        .temperature(0.2)
+                        .build())
+                .build();
+        return new ClaudeAgentSdkModelGateway(model);
     }
 }

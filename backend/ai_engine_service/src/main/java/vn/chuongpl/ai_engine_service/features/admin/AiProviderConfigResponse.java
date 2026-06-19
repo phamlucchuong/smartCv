@@ -20,6 +20,8 @@ public class AiProviderConfigResponse {
     String model;
     String baseUrl;
     String deploymentName;
+    String oauthToken;
+    String apiVersion;
     boolean active;
     boolean configured;
     LocalDateTime updatedAt;
