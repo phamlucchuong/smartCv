@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { Badge, Button, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { Clock3, DollarSign, Heart, MapPin } from 'lucide-react'
+import { Clock3, DollarSign, Heart, MapPin, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useGetMyWishlists, useRemove } from '@smart-cv/api'
 import { useAuthStore } from '../store/useAuthStore'
@@ -105,6 +105,9 @@ function WishlistsPage() {
                 <div className="mb-3 flex flex-wrap gap-2 text-xs">
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1"><DollarSign className="h-3.5 w-3.5" />{salary}</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                  {job.openings != null && job.openings > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><Users className="h-3.5 w-3.5" />{job.openings} vị trí</span>
+                  )}
                 </div>
 
                 <div className="mb-4 flex flex-wrap gap-2">
