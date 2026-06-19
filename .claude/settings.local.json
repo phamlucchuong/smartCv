@@ -26,7 +26,13 @@
       "Bash(rtk tsc *)",
       "Bash(rtk ls *)",
       "Bash(xargs ls -la)",
-      "Skill(code-review)"
+      "Skill(code-review)",
+      "Bash(git checkout *)",
+      "Bash(rtk find *)",
+      "Bash(pnpm -F web-admin add js-cookie jwt-decode)",
+      "Bash(pnpm -F web-admin add -D @types/js-cookie)",
+      "Bash(./mvnw compile *)",
+      "Bash(mvn compile *)"
     ]
   }
 }
