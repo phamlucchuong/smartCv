@@ -4,12 +4,20 @@ import { Button } from '@smart-cv/ui'
 import { Lock, Mail, Sparkles } from 'lucide-react'
 import { useLoginCandidate } from '@smart-cv/api'
 import Cookies from 'js-cookie'
+import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from '@smart-cv/i18n'
 
 export const Route = createFileRoute('/signin')({
   beforeLoad: () => {
-    if (Cookies.get('smart_cv_token')) throw redirect({ to: '/admin' })
+    const token = Cookies.get('smart_cv_token')
+    if (!token) return
+    try {
+      const { scope } = jwtDecode<{ scope?: string }>(token)
+      if (scope?.includes('ROLE_ADMIN')) throw redirect({ to: '/admin' })
+    } catch (e) {
+      if ((e as { isRedirect?: boolean })?.isRedirect) throw e
+    }
   },
   component: SigninPage,
 })

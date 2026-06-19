@@ -7,10 +7,17 @@ export const Route = createFileRoute('/admin')({
   beforeLoad: () => {
     const token = Cookies.get('smart_cv_token')
     if (!token) throw redirect({ to: '/signin' })
+
+    let scope: string | undefined
     try {
-      const { scope } = jwtDecode<{ scope?: string }>(token)
-      if (!scope?.includes('ROLE_ADMIN')) throw redirect({ to: '/signin' })
+      scope = jwtDecode<{ scope?: string }>(token).scope
     } catch {
+      Cookies.remove('smart_cv_token')
+      throw redirect({ to: '/signin' })
+    }
+
+    if (!scope?.includes('ROLE_ADMIN')) {
+      Cookies.remove('smart_cv_token')
       throw redirect({ to: '/signin' })
     }
   },
