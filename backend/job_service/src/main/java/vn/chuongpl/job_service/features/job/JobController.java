@@ -65,9 +65,10 @@ public class JobController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<JobResponse>> getAllJobs(@RequestParam(defaultValue = "1") int page,
                                                              @RequestParam(defaultValue = "10") int size,
-                                                             @RequestParam(required = false) String moderationStatus) {
+                                                             @RequestParam(required = false) String moderationStatus,
+                                                             @RequestParam(required = false) String keyword) {
         return ApiResponse.<PageResponse<JobResponse>>builder()
-                .data(jobService.getAllJobs(moderationStatus, page, size))
+                .data(jobService.getAllJobs(moderationStatus, keyword, page, size))
                 .build();
     }
 

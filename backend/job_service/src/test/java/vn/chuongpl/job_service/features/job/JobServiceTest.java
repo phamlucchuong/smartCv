@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.util.ReflectionTestUtils;
 import vn.chuongpl.job_service.config.RabbitMQConfig;
 import vn.chuongpl.job_service.dtos.PageResponse;
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.when;
 class JobServiceTest {
 
     @Mock JobRepository jobRepository;
+    @Mock MongoTemplate mongoTemplate;
     @Mock JobIndexService jobIndexService;
     @Mock JobMapper jobMapper;
     @Mock RabbitTemplate rabbitTemplate;
@@ -342,29 +345,23 @@ class JobServiceTest {
                 .id("job-pending")
                 .moderationStatus(JobModerationStatus.PENDING)
                 .build();
-        PageRequest expectedPage = PageRequest.of(0, 10, Sort.by("createdAt").descending());
 
-        when(jobRepository.findByModerationStatusAndDeletedFalse(
-                eq(JobModerationStatus.PENDING),
-                any(Pageable.class)
-        )).thenReturn(new PageImpl<>(List.of(pendingJob), expectedPage, 1));
+        when(mongoTemplate.find(any(Query.class), eq(Job.class))).thenReturn(List.of(pendingJob));
+        when(mongoTemplate.count(any(Query.class), eq(Job.class))).thenReturn(1L);
         when(jobMapper.toJobResponse(pendingJob)).thenReturn(response);
 
-        PageResponse<JobResponse> actual = jobService.getAllJobs("PENDING", 1, 10);
+        PageResponse<JobResponse> actual = jobService.getAllJobs("PENDING", null, 1, 10);
 
         assertEquals(1, actual.getItems().size());
         assertEquals("job-pending", actual.getItems().get(0).getId());
-        verify(jobRepository).findByModerationStatusAndDeletedFalse(
-                eq(JobModerationStatus.PENDING),
-                any(Pageable.class)
-        );
+        verify(mongoTemplate).find(any(Query.class), eq(Job.class));
         verify(jobRepository, never()).findByDeletedFalse(any(Pageable.class));
     }
 
     @Test
     void getAllJobs_shouldThrowAppException_whenModerationStatusIsInvalid() {
         AppException ex = assertThrows(AppException.class,
-                () -> jobService.getAllJobs("INVALID_STATUS", 1, 10));
+                () -> jobService.getAllJobs("INVALID_STATUS", null, 1, 10));
         assertEquals(ErrorCode.JOB_STATUS_INVALID, ex.getErrorCode());
         verify(jobRepository, never()).findByDeletedFalse(any());
         verify(jobRepository, never()).findByModerationStatusAndDeletedFalse(any(), any());
@@ -380,7 +377,7 @@ class JobServiceTest {
                 .thenReturn(new PageImpl<>(List.of(job), expectedPage, 1));
         when(jobMapper.toJobResponse(job)).thenReturn(response);
 
-        PageResponse<JobResponse> actual = jobService.getAllJobs(null, 1, 10);
+        PageResponse<JobResponse> actual = jobService.getAllJobs(null, null, 1, 10);
 
         assertEquals(1, actual.getItems().size());
         verify(jobRepository).findByDeletedFalse(any(Pageable.class));
