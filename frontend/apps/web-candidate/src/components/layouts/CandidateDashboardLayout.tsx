@@ -1,7 +1,6 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import * as React from 'react'
 import {
-  Bell,
   ChevronDown,
   ClipboardCheck,
   FileText,
@@ -22,12 +21,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  NotificationPopover,
   cn,
 } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
 import { useGetMe2 } from '@smart-cv/api'
 import { useAuthStore } from '../../store/useAuthStore'
 import { useCandidatePreferences } from '../../store/candidatePreferences'
+import { useNotificationsStore } from '../../store/useNotificationsStore'
 
 interface NavItem {
   key: string
@@ -56,6 +57,13 @@ export function CandidateDashboardLayout() {
 
   const { email, isAuthenticated, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
   const { theme, language, toggleTheme, toggleLanguage } = useCandidatePreferences()
+  const notifications = useNotificationsStore((s) => s.notifications)
+  const filter = useNotificationsStore((s) => s.filter)
+  const setFilter = useNotificationsStore((s) => s.setFilter)
+  const markAsRead = useNotificationsStore((s) => s.markAsRead)
+  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead)
+  const deleteNotification = useNotificationsStore((s) => s.deleteNotification)
+  const clearAll = useNotificationsStore((s) => s.clearAll)
 
   const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && (!fullName || !avatarUrl) } })
   React.useEffect(() => {
@@ -65,6 +73,7 @@ export function CandidateDashboardLayout() {
   }, [profileData, setAvatarUrl, setFullName])
 
   const displayName = fullName ?? email?.split('@')[0] ?? 'Account'
+  const unreadCount = notifications.filter((notification) => !notification.read).length
 
   const navGroups: NavGroup[] = [
     {
@@ -89,7 +98,6 @@ export function CandidateDashboardLayout() {
       key: 'other',
       label: t('candidate_sidebar_group_other'),
       items: [
-        { key: 'notifications', label: t('account_notifications'), to: '/notifications', icon: Bell },
         { key: 'settings', label: t('account_settings'), to: '/settings', icon: Settings },
       ],
     },
@@ -193,10 +201,32 @@ export function CandidateDashboardLayout() {
                 : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
 
-            <button className="hover:bg-accent relative rounded-lg p-2">
-              <Bell className="size-5" />
-              <span className="bg-danger absolute top-1.5 right-1.5 size-2 rounded-full" />
-            </button>
+            <NotificationPopover
+              notifications={notifications}
+              unreadCount={unreadCount}
+              filter={filter}
+              onFilterChange={setFilter}
+              onMarkRead={markAsRead}
+              onDelete={deleteNotification}
+              onMarkAllRead={markAllAsRead}
+              onClearAll={clearAll}
+              locale={language === 'VI' ? 'vi-VN' : 'en-US'}
+              triggerClassName="hover:bg-accent text-foreground"
+              labels={{
+                title: t('account_notifications'),
+                all: t('notifications_filter_all'),
+                unread: t('notifications_filter_unread'),
+                read: t('notifications_filter_read'),
+                markRead: t('notifications_mark_read'),
+                delete: t('notifications_delete'),
+                markAllRead: t('notifications_mark_all_read'),
+                clearAll: t('notifications_clear_all'),
+                empty: t('notifications_empty'),
+                noUnread: t('notifications_no_unread'),
+                unreadCount: t('notifications_unread_count', { count: unreadCount }),
+                openNotifications: t('notifications_popup_aria'),
+              }}
+            />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
