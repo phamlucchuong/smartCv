@@ -54,7 +54,9 @@ public class RecruiterService {
         recruiter.setUpdatedAt(LocalDateTime.now());
         recruiter.setDeleted(false);
 
-        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public void createBasicProfile(String userId) {
@@ -87,19 +89,25 @@ public class RecruiterService {
     public RecruiterPublicResponse getById(String id) {
         Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return recruiterMapper.toRecruiterPublicResponse(recruiter, user);
+        RecruiterPublicResponse response = recruiterMapper.toRecruiterPublicResponse(recruiter, user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public RecruiterPublicResponse getByUserId(String userId) {
         Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return recruiterMapper.toRecruiterPublicResponse(recruiter, user);
+        RecruiterPublicResponse response = recruiterMapper.toRecruiterPublicResponse(recruiter, user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public RecruiterResponse getByUserIdFull(String userId) {
         Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return recruiterMapper.toRecruiterResponse(recruiter, user);
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiter, user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public PageResponse<RecruiterResponse> getAll(int page, int size, RecruiterStatus status, String keyword) {
@@ -115,7 +123,9 @@ public class RecruiterService {
             return PageResponse.<RecruiterResponse>builder()
                     .items(recruiters.getContent().stream().map(recruiter -> {
                         User user = userRepository.findById(recruiter.getUserId()).orElse(null);
-                        return recruiterMapper.toRecruiterResponse(recruiter, user);
+                        RecruiterResponse res = recruiterMapper.toRecruiterResponse(recruiter, user);
+                        res.setBusinessLicenseUrl(getFreshLicenseUrl(res.getBusinessLicenseUrl()));
+                        return res;
                     }).toList())
                     .total(recruiters.getTotalElements())
                     .page(pageCurrent + 1)
@@ -130,8 +140,8 @@ public class RecruiterService {
             parts.add(Criteria.where("status").is(status));
         }
         parts.add(new Criteria().orOperator(
-                Criteria.where("companyName").regex(keyword, "i"),
-                Criteria.where("contactName").regex(keyword, "i")
+                Criteria.where("company_name").regex(keyword, "i"),
+                Criteria.where("contact_name").regex(keyword, "i")
         ));
         Criteria criteria = new Criteria().andOperator(parts.toArray(new Criteria[0]));
         Query query = Query.query(criteria).with(pageable);
@@ -143,7 +153,9 @@ public class RecruiterService {
         return PageResponse.<RecruiterResponse>builder()
                 .items(items.stream().map(recruiter -> {
                     User user = userRepository.findById(recruiter.getUserId()).orElse(null);
-                    return recruiterMapper.toRecruiterResponse(recruiter, user);
+                    RecruiterResponse res = recruiterMapper.toRecruiterResponse(recruiter, user);
+                    res.setBusinessLicenseUrl(getFreshLicenseUrl(res.getBusinessLicenseUrl()));
+                    return res;
                 }).toList())
                 .total(total)
                 .page(pageCurrent + 1)
@@ -173,7 +185,9 @@ public class RecruiterService {
         }
 
         recruiter.setUpdatedAt(LocalDateTime.now());
-        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public RecruiterResponse updateStatus(String id, RecruiterStatusRequest request) {
@@ -190,7 +204,9 @@ public class RecruiterService {
         if (request.getQuotaCvViews() != null) recruiter.setQuotaCvViews(request.getQuotaCvViews());
         recruiter.setUpdatedAt(LocalDateTime.now());
 
-        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public RecruiterResponse submitForApproval(String userId) {
@@ -208,7 +224,9 @@ public class RecruiterService {
         recruiter.setUpdatedAt(LocalDateTime.now());
 
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public RecruiterResponse uploadBusinessLicense(String userId, MultipartFile file) {
@@ -220,7 +238,9 @@ public class RecruiterService {
         recruiter.setUpdatedAt(LocalDateTime.now());
 
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        return response;
     }
 
     public RecruiterResponse getMe(String userId) {
@@ -301,5 +321,24 @@ public class RecruiterService {
 
     private boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    private String getFreshLicenseUrl(String storedUrl) {
+        if (storedUrl == null || storedUrl.isBlank()) {
+            return storedUrl;
+        }
+        int idx = storedUrl.indexOf("recruiters/");
+        if (idx == -1) {
+            return storedUrl;
+        }
+        String key = storedUrl.substring(idx);
+        if (key.contains("?")) {
+            key = key.substring(0, key.indexOf("?"));
+        }
+        try {
+            return s3Service.generatePresignedUrl(key);
+        } catch (Exception e) {
+            return storedUrl;
+        }
     }
 }

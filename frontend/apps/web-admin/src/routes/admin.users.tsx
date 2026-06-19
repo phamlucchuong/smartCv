@@ -128,7 +128,7 @@ function UsersPage() {
                 const name = user.fullName ?? user.email?.split('@')[0] ?? '?'
                 const isLocked = user.locked ?? false
                 const isVerified = user.verified ?? false
-                const roles = (user.roles as string[] | undefined) ?? []
+                const roles = user.roles ?? []
                 return (
                   <tr key={user.id} className="border-t border-border">
                     <td className="p-3">

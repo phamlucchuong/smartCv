@@ -163,11 +163,11 @@ public class UserService {
         if (hasKeyword) {
             parts.add(new Criteria().orOperator(
                     Criteria.where("email").regex(keyword, "i"),
-                    Criteria.where("fullName").regex(keyword, "i")
+                    Criteria.where("full_name").regex(keyword, "i")
             ));
         }
         if (hasRole) {
-            parts.add(Criteria.where("roles.id").is(role.toUpperCase()));
+            parts.add(Criteria.where("roles").is(role.toUpperCase()));
         }
         Criteria criteria = parts.size() == 1
                 ? parts.get(0)
