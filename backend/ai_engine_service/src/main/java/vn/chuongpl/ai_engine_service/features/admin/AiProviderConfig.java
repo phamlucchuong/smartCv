@@ -28,9 +28,11 @@ public class AiProviderConfig {
     AiProvider provider;
 
     String apiKey;
+    String oauthToken;
     String model;
     String baseUrl;
     String deploymentName;
+    String apiVersion;
     boolean active;
     LocalDateTime updatedAt;
 }

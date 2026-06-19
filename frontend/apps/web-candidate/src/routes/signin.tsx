@@ -178,9 +178,9 @@ function SignInComponent() {
 
   return (
     <>
-      <section className="relative mx-auto grid min-h-[82vh] max-w-6xl items-center gap-6 px-4 md:min-h-[560px] md:grid-cols-2 md:px-6">
-        <div className={`hidden h-full rounded-3xl border border-border bg-card p-10 md:block ${fromSignup ? 'auth-swap-to-left' : ''}`}>
-          <Badge className="mb-4 border border-ai/20 bg-ai-soft text-ai"><Sparkles className="mr-1 h-3.5 w-3.5" /> Smart matching</Badge>
+      <section className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-6 px-4 md:grid-cols-2 md:px-6">
+        <div className={`hidden rounded-3xl border border-border bg-card p-10 md:flex md:flex-col md:justify-center ${fromSignup ? 'auth-swap-to-left' : ''}`}>
+          <Badge className="mb-4 border border-ai/20 bg-ai-soft text-ai w-fit flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 animate-pulse text-ai" /> Smart matching</Badge>
           <h1 className="hero-title mb-5 text-5xl font-bold leading-tight lg:text-6xl">{t('signin_welcome').replace('SmartCV', '').trim()} <span className="hero-gradient">SmartCV</span></h1>
           <p className="mb-8 max-w-md text-lg leading-8 text-muted-foreground">Continue your hiring journey with personalized jobs, salary insights, and one-click applications.</p>
           <ul className="space-y-3 text-base text-muted-foreground">

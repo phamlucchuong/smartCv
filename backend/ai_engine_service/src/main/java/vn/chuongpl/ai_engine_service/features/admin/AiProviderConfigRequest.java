@@ -8,7 +8,9 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AiProviderConfigRequest {
     String apiKey;
+    String oauthToken;
     String model;
     String baseUrl;
     String deploymentName;
+    String apiVersion;
 }

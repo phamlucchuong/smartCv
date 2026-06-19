@@ -14,4 +14,6 @@ export const AiProviderConfigResponseProvider = {
   AZURE_OPENAI: 'AZURE_OPENAI',
   ANTHROPIC: 'ANTHROPIC',
   GEMINI: 'GEMINI',
+  LLAMA_3: 'LLAMA_3',
+  CLAUDE_AGENT_SDK: 'CLAUDE_AGENT_SDK',
 } as const;

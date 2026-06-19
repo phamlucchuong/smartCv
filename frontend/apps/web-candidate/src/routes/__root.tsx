@@ -1,7 +1,6 @@
 import { createRootRoute, Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import * as React from 'react'
 import {
-  Bell,
   ChevronDown,
   ClipboardCheck,
   Facebook,
@@ -19,12 +18,13 @@ import {
   UserRound,
   ArrowLeft,
 } from 'lucide-react'
-import { Button } from '@smart-cv/ui'
+import { Button, NotificationPopover } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { registerSignOutHandler, useGetMe2 } from '@smart-cv/api'
 import { Toaster } from 'sonner'
 import { useAuthStore } from '../store/useAuthStore'
 import { useCandidatePreferences } from '../store/candidatePreferences'
+import { useNotificationsStore } from '../store/useNotificationsStore'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -35,9 +35,9 @@ function RootComponent() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const accountPaths = ['/profile', '/cv', '/assessments', '/notifications', '/settings', '/applications', '/wishlists', '/job-suggestions']
+  const accountPaths = ['/profile', '/cv', '/assessments', '/settings', '/applications', '/wishlists', '/job-suggestions']
   const isAccountArea = accountPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-  const hidePublicChrome = isAccountArea
+  const hidePublicChrome = isAccountArea || pathname === '/signin' || pathname === '/signup'
   const hideFooter = pathname === '/signin' || pathname === '/signup' || hidePublicChrome
   const [jobMenuOpen, setJobMenuOpen] = React.useState(false)
   const [resourceMenuOpen, setResourceMenuOpen] = React.useState(false)
@@ -55,6 +55,13 @@ function RootComponent() {
     toggleLanguage,
     isLoading: preferencesLoading,
   } = useCandidatePreferences()
+  const notifications = useNotificationsStore((s) => s.notifications)
+  const filter = useNotificationsStore((s) => s.filter)
+  const setFilter = useNotificationsStore((s) => s.setFilter)
+  const markAsRead = useNotificationsStore((s) => s.markAsRead)
+  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead)
+  const deleteNotification = useNotificationsStore((s) => s.deleteNotification)
+  const clearAll = useNotificationsStore((s) => s.clearAll)
 
   const jobMenuRef = React.useRef<HTMLDivElement>(null)
   const resourceMenuRef = React.useRef<HTMLDivElement>(null)
@@ -63,6 +70,7 @@ function RootComponent() {
 
   const jobOptions = [t('nav_all_jobs'), t('nav_companies'), t('nav_top_companies'), t('nav_remote_jobs'), t('nav_internships')]
   const resourceOptions = [t('nav_career_resources'), t('nav_cv_templates'), t('nav_interview_guides'), t('nav_salary_report')]
+  const unreadCount = notifications.filter((notification) => !notification.read).length
 
   const navigateToJobOption = (item: string) => {
     if (item === t('nav_companies')) {
@@ -228,9 +236,32 @@ function RootComponent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-muted/80">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <NotificationPopover
+              notifications={notifications}
+              unreadCount={unreadCount}
+              filter={filter}
+              onFilterChange={setFilter}
+              onMarkRead={markAsRead}
+              onDelete={deleteNotification}
+              onMarkAllRead={markAllAsRead}
+              onClearAll={clearAll}
+              locale={language === 'VI' ? 'vi-VN' : 'en-US'}
+              triggerClassName="text-muted-foreground hover:bg-muted/80"
+              labels={{
+                title: t('account_notifications'),
+                all: t('notifications_filter_all'),
+                unread: t('notifications_filter_unread'),
+                read: t('notifications_filter_read'),
+                markRead: t('notifications_mark_read'),
+                delete: t('notifications_delete'),
+                markAllRead: t('notifications_mark_all_read'),
+                clearAll: t('notifications_clear_all'),
+                empty: t('notifications_empty'),
+                noUnread: t('notifications_no_unread'),
+                unreadCount: t('notifications_unread_count', { count: unreadCount }),
+                openNotifications: t('notifications_popup_aria'),
+              }}
+            />
             <button
               onClick={handleToggleLanguage}
               disabled={preferencesLoading}
@@ -300,10 +331,6 @@ function RootComponent() {
                     <Link to="/assessments" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors">
                       <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                       {t('account_assessments')}
-                    </Link>
-                    <Link to="/notifications" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors">
-                      <Bell className="h-4 w-4 text-muted-foreground" />
-                      {t('account_notifications')}
                     </Link>
                   </div>
                   <hr className="border-border my-1" />

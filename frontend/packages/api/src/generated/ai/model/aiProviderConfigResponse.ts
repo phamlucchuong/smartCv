@@ -11,6 +11,8 @@ export interface AiProviderConfigResponse {
   model?: string;
   baseUrl?: string;
   deploymentName?: string;
+  oauthToken?: string;
+  apiVersion?: string;
   active?: boolean;
   configured?: boolean;
   updatedAt?: string;

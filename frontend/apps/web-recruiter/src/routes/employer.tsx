@@ -2,7 +2,7 @@ import { createFileRoute, redirect, Outlet, useNavigate, useRouterState } from "
 import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLayout";
 import Cookies from "js-cookie";
 import {
-  LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Bell, Settings, Building2,
+  LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Settings, Building2,
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
 import { useEffect } from "react";
@@ -97,7 +97,6 @@ function EmployerLayoutRoute() {
     { to: "/employer/assessments", label: t("recruiter_nav_assessments"), icon: ClipboardCheck },
     { to: "/employer/profile", label: t("recruiter_nav_profile"), icon: Building2 },
     { to: "/employer/billing", label: t("recruiter_nav_billing"), icon: CreditCard },
-    { to: "/employer/notifications", label: t("recruiter_nav_notifications"), icon: Bell },
     { to: "/employer/settings", label: t("recruiter_nav_settings"), icon: Settings },
   ];
 
