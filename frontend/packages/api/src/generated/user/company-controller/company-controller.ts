@@ -581,3 +581,89 @@ export function useGetFollowed<TData = Awaited<ReturnType<typeof getFollowed>>, 
 
 
 
+export const getByRecruiterId = (
+    userId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseCompanyResponse>(
+      {url: `/api/companies/by-recruiter/${userId}`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetByRecruiterIdQueryKey = (userId?: string,) => {
+    return [
+    `/api/companies/by-recruiter/${userId}`
+    ] as const;
+    }
+
+    
+export const getGetByRecruiterIdQueryOptions = <TData = Awaited<ReturnType<typeof getByRecruiterId>>, TError = unknown>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getByRecruiterId>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetByRecruiterIdQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getByRecruiterId>>> = ({ signal }) => getByRecruiterId(userId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getByRecruiterId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetByRecruiterIdQueryResult = NonNullable<Awaited<ReturnType<typeof getByRecruiterId>>>
+export type GetByRecruiterIdQueryError = unknown
+
+
+export function useGetByRecruiterId<TData = Awaited<ReturnType<typeof getByRecruiterId>>, TError = unknown>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getByRecruiterId>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getByRecruiterId>>,
+          TError,
+          Awaited<ReturnType<typeof getByRecruiterId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetByRecruiterId<TData = Awaited<ReturnType<typeof getByRecruiterId>>, TError = unknown>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getByRecruiterId>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getByRecruiterId>>,
+          TError,
+          Awaited<ReturnType<typeof getByRecruiterId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetByRecruiterId<TData = Awaited<ReturnType<typeof getByRecruiterId>>, TError = unknown>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getByRecruiterId>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetByRecruiterId<TData = Awaited<ReturnType<typeof getByRecruiterId>>, TError = unknown>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getByRecruiterId>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetByRecruiterIdQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

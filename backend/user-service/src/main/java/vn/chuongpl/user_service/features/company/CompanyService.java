@@ -79,7 +79,9 @@ public class CompanyService {
     }
 
     public List<JobSummary> getCompanyJobs(String companyId) {
-        return jobClient.getJobsByRecruiter(companyId);
+        return recruiterRepository.findByIdAndDeletedFalse(companyId)
+                .map(r -> jobClient.getJobsByRecruiter(r.getUserId()))
+                .orElse(List.of());
     }
 
     public List<CompanyResponse> getRelatedCompanies(String companyId) {

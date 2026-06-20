@@ -61,7 +61,6 @@ export * from './job-moderation-hooks';
 export * from './user-otp-hooks';
 export * from './notification-hooks';
 export * from './service-package-hooks';
-export * from './home-hooks';
 
 // Job-service types not re-exported by root model
 export type { JobUpdateRequest, JobResponse } from './generated/job/model';

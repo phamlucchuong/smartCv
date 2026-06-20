@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -19,12 +21,21 @@ public class JobClient {
     @Value("${integration.job-service-url}")
     private String jobServiceUrl;
 
+    @Value("${app.gateway.internal-secret}")
+    private String internalSecret;
+
+    private HttpEntity<Void> internalRequest() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Gateway-Secret", internalSecret);
+        return new HttpEntity<>(headers);
+    }
+
     public JobSummary getJobById(String jobId) {
         try {
             var response = restTemplate.exchange(
                     jobServiceUrl + "/api/jobs/" + jobId,
                     HttpMethod.GET,
-                    null,
+                    internalRequest(),
                     new ParameterizedTypeReference<JobApiResponse<JobSummary>>() {}
             );
             if (response.getBody() != null) {
@@ -41,7 +52,7 @@ public class JobClient {
             var response = restTemplate.exchange(
                     jobServiceUrl + "/api/jobs/by-recruiter/" + recruiterId,
                     HttpMethod.GET,
-                    null,
+                    internalRequest(),
                     new ParameterizedTypeReference<JobApiResponse<List<JobSummary>>>() {}
             );
             if (response.getBody() != null && response.getBody().getData() != null) {
@@ -60,7 +71,7 @@ public class JobClient {
             var response = restTemplate.exchange(
                     jobServiceUrl + "/api/jobs/batch?ids=" + ids,
                     HttpMethod.GET,
-                    null,
+                    internalRequest(),
                     new ParameterizedTypeReference<JobApiResponse<List<JobSummary>>>() {}
             );
             if (response.getBody() != null && response.getBody().getData() != null) {

@@ -265,6 +265,28 @@ public class RecruiterService {
         return response;
     }
 
+    public String uploadLogo(String userId, MultipartFile file) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+
+        String url = s3Service.uploadAvatar(file, userId);
+        recruiter.setLogoUrl(url);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+        return url;
+    }
+
+    public String uploadBanner(String userId, MultipartFile file) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+
+        String url = s3Service.uploadAvatar(file, userId);
+        recruiter.setCoverImageUrl(url);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+        return url;
+    }
+
     public RecruiterResponse getMe(String userId) {
         if (recruiterRepository.findByUserIdAndDeletedFalse(userId).isEmpty()) {
             createBasicProfile(userId);
