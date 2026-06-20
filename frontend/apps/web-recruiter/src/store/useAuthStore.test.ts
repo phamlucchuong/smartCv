@@ -30,7 +30,7 @@ describe('useAuthStore', () => {
     expect(state.isAuthenticated).toBe(true)
     expect(state.userId).toBe('u1')
     expect(state.email).toBe('hr@company.com')
-    expect(state.role).toBe('ROLE_RECRUITER')
+    expect(state.role).toBe('ROLE_RECRUITER recruiter:write')
     expect(document.cookie).toContain('smart_cv_token=')
     expect(document.cookie).toContain('smart_cv_refresh=refresh-token')
   })
