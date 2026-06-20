@@ -38,7 +38,16 @@
       "Bash(grep -v '^$')",
       "Bash(./mvnw test *)",
       "Bash(go build *)",
-      "Bash(go test *)"
+      "Bash(go test *)",
+      "Bash(xargs cat)",
+      "Bash(pnpm -F web-candidate build)",
+      "Bash(gh pr *)",
+      "Read(//usr/local/bin/**)",
+      "Bash(command -v gh)",
+      "Bash(curl *)",
+      "Skill(playwright-cli)",
+      "Bash(npx playwright *)",
+      "Bash(npx playwright-cli *)"
     ]
   }
 }
