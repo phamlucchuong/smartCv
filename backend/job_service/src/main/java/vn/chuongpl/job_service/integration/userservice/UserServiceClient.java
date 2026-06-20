@@ -43,7 +43,9 @@ public class UserServiceClient {
         return new RecruiterStatusDto(null);
     }
 
-    public String getCompanyId(String userId) {
+    public record CompanyData(String id, String logoUrl, String coverImageUrl, String industry) {}
+
+    public CompanyData getCompanyData(String userId) {
         String url = userServiceUrl + "/user/api/companies/by-recruiter/" + userId;
         try {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
@@ -54,14 +56,22 @@ public class UserServiceClient {
             if (response.getBody() != null) {
                 Object data = response.getBody().get("data");
                 if (data instanceof Map<?, ?> dataMap) {
-                    Object id = dataMap.get("id");
-                    return id != null ? id.toString() : null;
+                    String id = dataMap.get("id") != null ? dataMap.get("id").toString() : null;
+                    String logoUrl = dataMap.get("logoUrl") != null ? dataMap.get("logoUrl").toString() : null;
+                    String coverImageUrl = dataMap.get("coverImageUrl") != null ? dataMap.get("coverImageUrl").toString() : null;
+                    String industry = dataMap.get("industry") != null ? dataMap.get("industry").toString() : null;
+                    return new CompanyData(id, logoUrl, coverImageUrl, industry);
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to fetch companyId for userId={}: {}", userId, e.getMessage());
+            log.warn("Failed to fetch company data for userId={}: {}", userId, e.getMessage());
         }
         return null;
+    }
+
+    public String getCompanyId(String userId) {
+        CompanyData data = getCompanyData(userId);
+        return data != null ? data.id() : null;
     }
 
     public String getRecruiterEmail(String userId) {

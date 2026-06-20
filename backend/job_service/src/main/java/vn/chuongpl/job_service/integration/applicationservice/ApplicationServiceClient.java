@@ -27,6 +27,31 @@ public class ApplicationServiceClient {
     @Value("${app.gateway-internal-secret:changeme}")
     private String internalSecret;
 
+    public List<Map<String, Object>> getTopJobs(int limit) {
+        String url = applicationServiceUrl + "/application/api/applications/top-jobs?limit=" + limit;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Gateway-Secret", internalSecret);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
+            if (response.getBody() == null) return Collections.emptyList();
+            Object data = response.getBody().get("data");
+            if (data instanceof List<?> list) {
+                return list.stream()
+                        .filter(item -> item instanceof Map)
+                        .map(item -> {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> m = (Map<String, Object>) item;
+                            return m;
+                        })
+                        .toList();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch top jobs with counts from application-service: {}", e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+
     public List<String> getTopJobIds(int limit) {
         String url = applicationServiceUrl + "/application/api/applications/top-jobs?limit=" + limit;
         try {
