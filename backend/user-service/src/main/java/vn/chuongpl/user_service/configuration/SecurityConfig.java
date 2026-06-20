@@ -46,7 +46,8 @@ public class SecurityConfig {
                                 "/api/companies",
                                 "/api/companies/*",
                                 "/api/companies/*/jobs",
-                                "/api/companies/*/related").permitAll()
+                                "/api/companies/*/related",
+                                "/api/companies/by-recruiter/*").permitAll()
                         // Internal service-to-service endpoints — protected by InternalAuthFilter (X-Gateway-Secret)
                         .requestMatchers("/api/internal/**").permitAll()
                         .anyRequest().authenticated()
