@@ -31,7 +31,11 @@ import {
   useGetFaqs,
   useGetActiveJobs,
   useGetAll3,
+  useSubmit,
+  useListCvs,
 } from '@smart-cv/api'
+import { toast } from 'sonner'
+import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   FULL_TIME: 'Full-time',
@@ -45,17 +49,93 @@ export const Route = createFileRoute('/')({
   component: IndexComponent,
 })
 
+function formatDate(dateInput?: string | Date): string {
+  if (!dateInput) return ''
+  if (typeof dateInput === 'string') {
+    const cleanStr = dateInput.trim()
+    // Handle date-only strings like YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('-')
+      return `${day}/${month}/${year}`
+    }
+    // Handle ISO date-time strings by extracting the date part
+    if (cleanStr.includes('T')) {
+      const datePart = cleanStr.split('T')[0]
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [year, month, day] = datePart.split('-')
+        return `${day}/${month}/${year}`
+      }
+    }
+  }
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+  if (isNaN(d.getTime())) return ''
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
 function IndexComponent() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [page, setPage] = React.useState(1)
   const aiMatchScore = 82
 
+  const { isAuthenticated, role } = useAuthStore()
+  const isCandidate = isAuthenticated && hasCandidateRole(role)
+
   const { data: hotJobsData, isLoading: isHotJobsLoading } = useGetHotJobs()
   const jobs = hotJobsData?.data ?? []
 
   const { data: allJobsData, isLoading: isAllJobsLoading } = useGetActiveJobs({ page: 0, size: 6 })
   const allJobsPreview = allJobsData?.data?.items ?? []
+
+  const { data: cvsData } = useListCvs({
+    query: { enabled: isCandidate },
+  })
+  const cvList = cvsData?.data ?? []
+
+  const submitMutation = useSubmit()
+
+  function handleQuickApply(e: React.MouseEvent, jobId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!isCandidate) {
+      navigate({ to: '/signin' })
+      return
+    }
+
+    if (cvList.length === 0) {
+      toast.error('Bạn chưa có CV nào. Vui lòng tải lên CV trước khi ứng tuyển.', {
+        action: {
+          label: 'Tải CV',
+          onClick: () => navigate({ to: '/cv' }),
+        },
+      })
+      return
+    }
+
+    const defaultCv = cvList.find((c) => c.default) ?? cvList[0]
+    if (!defaultCv?.url) {
+      toast.error('CV của bạn không hợp lệ. Vui lòng kiểm tra lại.', {
+        action: {
+          label: 'Quản lý CV',
+          onClick: () => navigate({ to: '/cv' }),
+        },
+      })
+      return
+    }
+
+    submitMutation.mutate(
+      { data: { jobId, cvUrl: defaultCv.url } },
+      {
+        onSuccess: () => {
+          toast.success('Ứng tuyển nhanh thành công!')
+        },
+        onError: () => {
+          toast.error('Có lỗi xảy ra khi ứng tuyển. Vui lòng thử lại.')
+        }
+      }
+    )
+  }
 
   const { data: companiesListData, isLoading: isCompaniesListLoading } = useGetAll3({ page: 1, size: 6 })
   const companiesListPreview = companiesListData?.data?.items ?? []
@@ -314,9 +394,9 @@ function IndexComponent() {
                 <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3.5 w-3.5" />
-                    {job.createdAt ? `Posted ${new Date(job.createdAt).toLocaleDateString()}` : 'Recently posted'}
+                    {job.createdAt ? `Posted ${formatDate(job.createdAt)}` : 'Recently posted'}
                   </span>
-                  <Button size="sm" onClick={(e) => e.preventDefault()}>Quick Apply</Button>
+                  <Button size="sm" onClick={(e) => handleQuickApply(e, job.id ?? '')} disabled={submitMutation.isPending}>Quick Apply</Button>
                 </div>
               </article>
             </Link>
@@ -357,20 +437,38 @@ function IndexComponent() {
           ) : topCompanies.length === 0 ? (
             <p className="col-span-4 py-8 text-center text-sm text-muted-foreground">No companies to show right now.</p>
           ) : topCompanies.map((company) => (
-            <Card key={company.recruiterId ?? company.name} className="elevate-card overflow-hidden border border-border bg-card">
-              <div className="h-24 bg-gradient-to-r from-primary to-brand-blue" />
-              <CardContent className="space-y-3 p-5">
-                <div className="-mt-11 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background"><Building2 className="h-5 w-5" /></div>
-                <h3 className="text-base font-semibold">{company.name}</h3>
-                {company.location && (
-                  <p className="flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="h-4 w-4" />{company.location}</p>
-                )}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.activeJobCount ?? 0} Open Positions</span>
-                  <Link to="/companies/$companyId" params={{ companyId: company.companyId ?? '' }} className="text-primary hover:underline">View Profile</Link>
+            <Link key={company.recruiterId ?? company.name} to="/companies/$companyId" params={{ companyId: company.companyId ?? '' }} className="block">
+              <Card className="elevate-card overflow-hidden border border-border bg-card h-full flex flex-col">
+                <div className="h-20 bg-muted overflow-hidden relative shrink-0">
+                  {company.coverImageUrl ? (
+                    <img src={company.coverImageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-primary/70 to-brand-blue/70" />
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+                <CardContent className="p-4 flex-1 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="relative z-10 -mt-9 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+                      {company.logoUrl ? (
+                        <img src={company.logoUrl} alt={company.name ?? ''} className="w-full h-full object-contain" />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <h3 className="text-base font-semibold">{company.name}</h3>
+                    {company.location && (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{company.location}</p>
+                    )}
+                    {company.industry && (
+                      <Badge variant="outline" className="text-xs">{company.industry}</Badge>
+                    )}
+                  </div>
+                  <Button className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
+                    Xem thông tin
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </section>
@@ -416,11 +514,12 @@ function IndexComponent() {
                 <div className="mb-4 flex flex-wrap gap-2">
                   {(job.skills ?? []).map((skill) => <Badge key={skill} variant="outline" className="border-border text-xs">{skill}</Badge>)}
                 </div>
-                <div className="border-t border-border pt-3 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3.5 w-3.5" />
-                    {job.createdAt ? `Posted ${new Date(job.createdAt).toLocaleDateString()}` : 'Recently posted'}
+                    {job.createdAt ? `Posted ${formatDate(job.createdAt)}` : 'Recently posted'}
                   </span>
+                  <Button size="sm" onClick={(e) => handleQuickApply(e, job.id ?? '')} disabled={submitMutation.isPending}>Quick Apply</Button>
                 </div>
               </article>
             </Link>
@@ -454,7 +553,7 @@ function IndexComponent() {
                 </div>
                 <CardContent className="p-4 flex-1 flex flex-col justify-between">
                   <div className="space-y-2">
-                    <div className="relative z-10 -mt-9 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+                    <div className="relative z-10 -mt-9 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white shadow-sm overflow-hidden">
                       {company.logoUrl ? (
                         <img src={company.logoUrl} alt={company.name ?? ''} className="w-full h-full object-contain" />
                       ) : (

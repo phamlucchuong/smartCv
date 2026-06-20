@@ -3,7 +3,7 @@ import { i18n } from '@smart-cv/i18n'
 import {
   getGetSettingsQueryKey,
   useGetSettings,
-  useUpdatePreferences,
+  useUpdateCandidatePreferences,
   type UserModels,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
@@ -61,7 +61,7 @@ export function useCandidatePreferences() {
       queryKey: settingsQueryKey,
     },
   })
-  const updatePreferencesMutation = useUpdatePreferences()
+  const updatePreferencesMutation = useUpdateCandidatePreferences()
 
   React.useEffect(() => {
     if (!isAuthenticated || !userId || !hasCandidateRole(role)) {

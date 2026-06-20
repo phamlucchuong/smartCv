@@ -13,6 +13,29 @@ export const Route = createFileRoute('/jobs/')({
   component: JobsPage,
 })
 
+function formatDate(dateInput?: string | Date): string {
+  if (!dateInput) return ''
+  if (typeof dateInput === 'string') {
+    const cleanStr = dateInput.trim()
+    // Handle date-only strings like YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('-')
+      return `${day}/${month}/${year}`
+    }
+    // Handle ISO date-time strings by extracting the date part
+    if (cleanStr.includes('T')) {
+      const datePart = cleanStr.split('T')[0]
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [year, month, day] = datePart.split('-')
+        return `${day}/${month}/${year}`
+      }
+    }
+  }
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+  if (isNaN(d.getTime())) return ''
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
 type JobItem = JobModels.JobResponse
 
 function JobsPage() {
@@ -113,7 +136,7 @@ function JobsPage() {
                   <div className="border-t border-border pt-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       <Clock3 className="h-3.5 w-3.5" />
-                      {job.createdAt ? `Posted ${new Date(job.createdAt).toLocaleDateString()}` : 'Recently posted'}
+                      {job.createdAt ? `Posted ${formatDate(job.createdAt)}` : 'Recently posted'}
                     </span>
                   </div>
                 </article>

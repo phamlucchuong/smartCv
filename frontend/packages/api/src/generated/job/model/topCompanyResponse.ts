@@ -10,5 +10,8 @@ export interface TopCompanyResponse {
   companyId?: string;
   name?: string;
   location?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  industry?: string;
   activeJobCount?: number;
 }
