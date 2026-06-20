@@ -47,7 +47,9 @@
       "Bash(curl *)",
       "Skill(playwright-cli)",
       "Bash(npx playwright *)",
-      "Bash(npx playwright-cli *)"
+      "Bash(npx playwright-cli *)",
+      "Bash(make run-user *)",
+      "Bash(make run-application *)"
     ]
   }
 }
