@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CANDIDATES, type Candidate } from "@/lib/mock-data";
-import { AIScoreRing } from "@/components/ui-kit/AIScoreRing";
+import { useGetAllCandidates } from "@smart-cv/api";
+import type { UserModels } from "@smart-cv/api";
 import { Button } from "@smart-cv/ui";
 import {
   Dialog,
@@ -21,10 +21,12 @@ import {
   Search,
   Sparkles,
   X,
-  FileText,
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthStore } from "../store/useAuthStore";
+
+type CandidateItem = UserModels.CandidateResponse;
 
 export const Route = createFileRoute("/employer/cv-search")({
   head: () => ({ meta: [{ title: "Tìm kiếm CV Database — SmartCV" }] }),
@@ -32,55 +34,60 @@ export const Route = createFileRoute("/employer/cv-search")({
 });
 
 function CvSearchPage() {
-  // 1. States for Filters
+  const { isAuthenticated, role } = useAuthStore();
+  const isRecruiter = isAuthenticated && (role?.includes("RECRUITER") ?? false);
+
   const [keyword, setKeyword] = useState("");
   const [skill, setSkill] = useState("");
   const [experience, setExperience] = useState("");
   const [location, setLocation] = useState("");
-
-  // 2. States for Unlocked Candidates (default even indices c1, c3, c5 unlocked)
-  const [unlockedIds, setUnlockedIds] = useState<string[]>(["c1", "c3", "c5"]);
-
-  // 3. States for Candidate Detail Modal
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // 3.5. Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
-  // Reset page to 1 when filters change — intentional derived-state reset
+  const { data: candidatesData, isLoading } = useGetAllCandidates(
+    { page: 1, size: 100 },
+    { query: { enabled: isRecruiter } },
+  );
+
+  // Reset page when filters change
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [keyword, skill, experience, location]);
 
-  // 4. Filtering Logic
   const filteredCandidates = useMemo(() => {
-    return CANDIDATES.filter((c) => {
-      const isLocked = !unlockedIds.includes(c.id);
-      const displayName = isLocked ? "Ứng viên ***" : c.name;
+    const allCandidates = candidatesData?.data?.items ?? [];
+    return allCandidates.filter((c) => {
+      const isLocked = !unlockedIds.includes(c.id ?? "");
+      const displayName = isLocked ? "Ứng viên ***" : (c.fullName ?? "");
 
       const matchesKeyword =
         !keyword.trim() ||
         displayName.toLowerCase().includes(keyword.toLowerCase()) ||
-        c.title.toLowerCase().includes(keyword.toLowerCase());
+        (c.title ?? "").toLowerCase().includes(keyword.toLowerCase());
 
       const matchesSkill =
         !skill.trim() ||
-        c.skills.some((s) => s.toLowerCase().includes(skill.toLowerCase()));
+        (c.skills ?? []).some((s) =>
+          s.toLowerCase().includes(skill.toLowerCase()),
+        );
 
+      const expStr =
+        c.yearsOfExperience != null ? `${c.yearsOfExperience}` : "";
       const matchesExperience =
-        !experience.trim() ||
-        c.experience.toLowerCase().includes(experience.toLowerCase());
+        !experience.trim() || expStr.includes(experience.trim());
 
       const matchesLocation =
         !location.trim() ||
-        c.location.toLowerCase().includes(location.toLowerCase());
+        (c.address ?? "").toLowerCase().includes(location.toLowerCase());
 
       return matchesKeyword && matchesSkill && matchesExperience && matchesLocation;
     });
-  }, [keyword, skill, experience, location, unlockedIds]);
+  }, [candidatesData, keyword, skill, experience, location, unlockedIds]);
 
   const totalPages = Math.ceil(filteredCandidates.length / ITEMS_PER_PAGE);
   const paginatedCandidates = useMemo(() => {
@@ -92,15 +99,10 @@ function CvSearchPage() {
     if (!unlockedIds.includes(candidateId)) {
       setUnlockedIds((prev) => [...prev, candidateId]);
       toast.success("Mở khóa thông tin ứng viên thành công!");
-      
-      // Update selected candidate details in-place if modal is open
-      if (selectedCandidate && selectedCandidate.id === candidateId) {
-        setSelectedCandidate((prev) => prev ? { ...prev } : null);
-      }
     }
   };
 
-  const handleOpenModal = (candidate: Candidate) => {
+  const handleOpenModal = (candidate: CandidateItem) => {
     setSelectedCandidate(candidate);
     setIsModalOpen(true);
   };
@@ -123,7 +125,8 @@ function CvSearchPage() {
             Tìm kiếm CV Database
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Tìm kiếm và sàng lọc ứng viên tiềm năng từ kho hồ sơ ứng tuyển chất lượng của SmartCV.
+            Tìm kiếm và sàng lọc ứng viên tiềm năng từ kho hồ sơ ứng tuyển
+            chất lượng của SmartCV.
           </p>
         </div>
         <div className="rounded-full bg-ai/10 border border-ai/20 text-ai px-4 py-1.5 text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm animate-pulse">
@@ -149,7 +152,9 @@ function CvSearchPage() {
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Từ khóa / Tên</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Từ khóa / Tên
+              </label>
               <input
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
@@ -159,7 +164,9 @@ function CvSearchPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kỹ năng</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Kỹ năng
+              </label>
               <input
                 value={skill}
                 onChange={(e) => setSkill(e.target.value)}
@@ -169,17 +176,21 @@ function CvSearchPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kinh nghiệm</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Số năm kinh nghiệm
+              </label>
               <input
                 value={experience}
                 onChange={(e) => setExperience(e.target.value)}
-                placeholder="Ví dụ: 3 năm, 5 năm..."
+                placeholder="Ví dụ: 3, 5..."
                 className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Địa điểm</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Địa điểm
+              </label>
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -193,13 +204,28 @@ function CvSearchPage() {
         {/* Candidate List */}
         <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            Tìm thấy <span className="font-bold text-foreground">{filteredCandidates.length}</span> ứng viên phù hợp
+            Tìm thấy{" "}
+            <span className="font-bold text-foreground">
+              {filteredCandidates.length}
+            </span>{" "}
+            ứng viên phù hợp
           </div>
 
-          {filteredCandidates.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse rounded-2xl bg-muted/30 border border-border/40 h-28"
+                />
+              ))}
+            </div>
+          ) : filteredCandidates.length === 0 ? (
             <div className="card-surface p-12 text-center rounded-2xl border border-dashed flex flex-col items-center justify-center">
               <X className="size-12 text-muted-foreground/60 mb-3" />
-              <h3 className="font-semibold text-lg text-foreground">Không tìm thấy ứng viên</h3>
+              <h3 className="font-semibold text-lg text-foreground">
+                Không tìm thấy ứng viên
+              </h3>
               <p className="text-sm text-muted-foreground mt-1.5">
                 Thử thay đổi từ khóa hoặc bộ lọc để mở rộng phạm vi tìm kiếm.
               </p>
@@ -208,8 +234,14 @@ function CvSearchPage() {
             <>
               <div className="space-y-4">
                 {paginatedCandidates.map((c) => {
-                  const isLocked = !unlockedIds.includes(c.id);
-                  const displayName = isLocked ? "Ứng viên ***" : c.name;
+                  const isLocked = !unlockedIds.includes(c.id ?? "");
+                  const displayName = isLocked
+                    ? "Ứng viên ***"
+                    : (c.fullName ?? "—");
+                  const expDisplay =
+                    c.yearsOfExperience != null
+                      ? `${c.yearsOfExperience} năm`
+                      : "Chưa rõ";
 
                   return (
                     <div
@@ -218,13 +250,19 @@ function CvSearchPage() {
                     >
                       {/* Avatar Area */}
                       <div className="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-lg shrink-0 shadow-inner">
-                        {isLocked ? <Lock className="size-5 text-primary/70 animate-pulse" /> : c.name.split(" ").pop()?.[0]}
+                        {isLocked ? (
+                          <Lock className="size-5 text-primary/70 animate-pulse" />
+                        ) : (
+                          (c.fullName?.split(" ").pop()?.[0] ?? "?")
+                        )}
                       </div>
 
                       {/* Profile Info */}
                       <div className="flex-1 space-y-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-lg text-foreground leading-tight">{displayName}</h3>
+                          <h3 className="font-bold text-lg text-foreground leading-tight">
+                            {displayName}
+                          </h3>
                           {isLocked && (
                             <span className="text-[10px] bg-amber-500/10 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
                               <Lock className="size-2.5" /> Chưa mở khóa
@@ -232,14 +270,19 @@ function CvSearchPage() {
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 items-center">
-                          <span className="flex items-center gap-1"><Briefcase className="size-3.5" /> {c.title}</span>
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="size-3.5" /> {c.title ?? "—"}
+                          </span>
                           <span>•</span>
-                          <span className="flex items-center gap-1"><MapPin className="size-3.5" /> {c.location}</span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="size-3.5" />{" "}
+                            {c.address ?? "Chưa rõ"}
+                          </span>
                           <span>•</span>
-                          <span>Kinh nghiệm: {c.experience}</span>
+                          <span>Kinh nghiệm: {expDisplay}</span>
                         </div>
                         <div className="mt-2.5 flex flex-wrap gap-1.5">
-                          {c.skills.map((s) => (
+                          {(c.skills ?? []).map((s) => (
                             <span
                               key={s}
                               className="text-xs bg-secondary text-secondary-foreground px-2.5 py-0.5 rounded-md font-medium"
@@ -250,27 +293,30 @@ function CvSearchPage() {
                         </div>
                       </div>
 
-                      {/* AI Match Score */}
-                      <div className="shrink-0 flex items-center gap-4 sm:border-l sm:border-border/60 sm:pl-5">
-                        <AIScoreRing score={c.score} size={60} thickness={5.5} label="AI fit" />
-                      </div>
-
                       {/* Action Buttons */}
                       <div className="flex flex-col sm:flex-col gap-2 w-full sm:w-auto shrink-0">
-                        <Button size="sm" onClick={() => handleOpenModal(c)} className="w-full">
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenModal(c)}
+                          className="w-full"
+                        >
                           Xem hồ sơ
                         </Button>
                         {isLocked ? (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleUnlock(c.id)}
+                            onClick={() => handleUnlock(c.id ?? "")}
                             className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
                           >
                             <Unlock className="size-3.5 mr-1" /> Mở khóa
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" className="w-full">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                          >
                             Mời ứng tuyển
                           </Button>
                         )}
@@ -284,7 +330,22 @@ function CvSearchPage() {
               {totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-4 border-t border-border/60">
                   <div className="text-sm text-muted-foreground">
-                    Hiển thị <span className="font-semibold text-foreground">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> - <span className="font-semibold text-foreground">{Math.min(currentPage * ITEMS_PER_PAGE, filteredCandidates.length)}</span> trong tổng số <span className="font-semibold text-foreground">{filteredCandidates.length}</span> ứng viên
+                    Hiển thị{" "}
+                    <span className="font-semibold text-foreground">
+                      {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                    </span>{" "}
+                    -{" "}
+                    <span className="font-semibold text-foreground">
+                      {Math.min(
+                        currentPage * ITEMS_PER_PAGE,
+                        filteredCandidates.length,
+                      )}
+                    </span>{" "}
+                    trong tổng số{" "}
+                    <span className="font-semibold text-foreground">
+                      {filteredCandidates.length}
+                    </span>{" "}
+                    ứng viên
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
@@ -296,21 +357,25 @@ function CvSearchPage() {
                     >
                       Trang trước
                     </Button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                      <Button
-                        key={p}
-                        variant={currentPage === p ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(p)}
-                        className="size-8 p-0 text-xs cursor-pointer font-bold"
-                      >
-                        {p}
-                      </Button>
-                    ))}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (p) => (
+                        <Button
+                          key={p}
+                          variant={currentPage === p ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(p)}
+                          className="size-8 p-0 text-xs cursor-pointer font-bold"
+                        >
+                          {p}
+                        </Button>
+                      ),
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="h-8 text-xs cursor-pointer"
                     >
@@ -329,15 +394,28 @@ function CvSearchPage() {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="max-w-2xl rounded-2xl">
             {(() => {
-              const isLocked = !unlockedIds.includes(selectedCandidate.id);
-              const displayName = isLocked ? "Ứng viên ***" : selectedCandidate.name;
+              const isLocked = !unlockedIds.includes(
+                selectedCandidate.id ?? "",
+              );
+              const displayName = isLocked
+                ? "Ứng viên ***"
+                : (selectedCandidate.fullName ?? "—");
+              const expDisplay =
+                selectedCandidate.yearsOfExperience != null
+                  ? `${selectedCandidate.yearsOfExperience} năm`
+                  : "Chưa rõ";
 
               return (
                 <>
                   <DialogHeader>
                     <div className="flex items-center gap-4 border-b border-border/60 pb-4">
                       <div className="size-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-2xl shadow-inner">
-                        {isLocked ? <Lock className="size-6 text-primary/70" /> : selectedCandidate.name.split(" ").pop()?.[0]}
+                        {isLocked ? (
+                          <Lock className="size-6 text-primary/70" />
+                        ) : (
+                          (selectedCandidate.fullName?.split(" ").pop()?.[0] ??
+                            "?")
+                        )}
                       </div>
                       <div className="text-left space-y-1">
                         <DialogTitle className="text-2xl font-black flex items-center gap-2">
@@ -349,7 +427,8 @@ function CvSearchPage() {
                           )}
                         </DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                          <Briefcase className="size-3.5" /> {selectedCandidate.title}
+                          <Briefcase className="size-3.5" />{" "}
+                          {selectedCandidate.title ?? "—"}
                         </DialogDescription>
                       </div>
                     </div>
@@ -359,27 +438,42 @@ function CvSearchPage() {
                     {/* Left Column: Basic Info */}
                     <div className="md:col-span-2 space-y-5">
                       <div className="space-y-2.5">
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border pb-1">Thông tin chi tiết</h4>
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border pb-1">
+                          Thông tin chi tiết
+                        </h4>
                         <div className="space-y-2 text-sm leading-relaxed">
-                          <div className="flex items-center gap-2"><MapPin className="size-4 text-muted-foreground" /> <strong>Địa điểm:</strong> {selectedCandidate.location}</div>
-                          <div className="flex items-center gap-2"><Briefcase className="size-4 text-muted-foreground" /> <strong>Kinh nghiệm:</strong> {selectedCandidate.experience}</div>
-                          <div className="flex items-center gap-2"><FileText className="size-4 text-muted-foreground" /> <strong>Công việc ứng tuyển:</strong> {selectedCandidate.appliedJob}</div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="size-4 text-muted-foreground" />
+                            <strong>Địa điểm:</strong>{" "}
+                            {selectedCandidate.address ?? "Chưa rõ"}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="size-4 text-muted-foreground" />
+                            <strong>Kinh nghiệm:</strong> {expDisplay}
+                          </div>
                         </div>
                       </div>
 
                       {/* Contact Info Card */}
                       <div className="rounded-xl p-4 bg-muted/30 border border-border/50 space-y-3.5">
                         <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1">
-                          <UserCheck className="size-3.5 text-primary" /> Thông tin liên hệ
+                          <UserCheck className="size-3.5 text-primary" /> Thông
+                          tin liên hệ
                         </h4>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center gap-2">
                             <Mail className="size-4 text-muted-foreground" />
-                            <strong>Email:</strong> {isLocked ? "********@gmail.com" : selectedCandidate.email}
+                            <strong>Email:</strong>{" "}
+                            {isLocked
+                              ? "********@gmail.com"
+                              : (selectedCandidate.email ?? "—")}
                           </div>
                           <div className="flex items-center gap-2">
                             <Phone className="size-4 text-muted-foreground" />
-                            <strong>Số điện thoại:</strong> {isLocked ? "09** *** ***" : selectedCandidate.phone}
+                            <strong>Số điện thoại:</strong>{" "}
+                            {isLocked
+                              ? "09** *** ***"
+                              : (selectedCandidate.phone ?? "—")}
                           </div>
                         </div>
                         {isLocked && (
@@ -387,28 +481,32 @@ function CvSearchPage() {
                             <Button
                               size="sm"
                               className="w-full gap-1.5 font-bold shadow-md bg-amber-600 hover:bg-amber-700 text-white"
-                              onClick={() => handleUnlock(selectedCandidate.id)}
+                              onClick={() =>
+                                handleUnlock(selectedCandidate.id ?? "")
+                              }
                             >
-                              <Unlock className="size-4" /> Mở khóa hồ sơ đầy đủ
+                              <Unlock className="size-4" /> Mở khóa hồ sơ đầy
+                              đủ
                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Right Column: AI Analysis & Skills */}
+                    {/* Right Column: Skills */}
                     <div className="space-y-5 border-t md:border-t-0 md:border-l border-border/60 pt-5 md:pt-0 md:pl-5">
-                      <div className="flex flex-col items-center text-center space-y-2.5">
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider w-full text-center border-b border-border pb-1">Đánh giá AI</h4>
-                        <AIScoreRing score={selectedCandidate.score} size={80} thickness={7} label="AI fit" />
-                        <span className="text-xs text-muted-foreground mt-1">Độ tương thích năng lực</span>
-                      </div>
-
                       <div className="space-y-2.5">
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border pb-1">Kỹ năng</h4>
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border pb-1">
+                          Kỹ năng
+                        </h4>
                         <div className="flex flex-wrap gap-1">
-                          {selectedCandidate.skills.map((s) => (
-                            <span key={s} className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded font-medium">{s}</span>
+                          {(selectedCandidate.skills ?? []).map((s) => (
+                            <span
+                              key={s}
+                              className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded font-medium"
+                            >
+                              {s}
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -416,12 +514,23 @@ function CvSearchPage() {
                   </div>
 
                   <DialogFooter className="border-t border-border/60 pt-4">
-                    <Button variant="outline" onClick={() => setIsModalOpen(false)}>Đóng</Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      Đóng
+                    </Button>
                     {!isLocked && (
-                      <Button onClick={() => {
-                        toast.success(`Đã gửi thư mời ứng tuyển tới ứng viên ${selectedCandidate.name}`);
-                        setIsModalOpen(false);
-                      }}>Mời ứng tuyển</Button>
+                      <Button
+                        onClick={() => {
+                          toast.success(
+                            `Đã gửi thư mời ứng tuyển tới ứng viên ${selectedCandidate.fullName}`,
+                          );
+                          setIsModalOpen(false);
+                        }}
+                      >
+                        Mời ứng tuyển
+                      </Button>
                     )}
                   </DialogFooter>
                 </>

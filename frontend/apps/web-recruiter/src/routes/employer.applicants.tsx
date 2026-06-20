@@ -1,52 +1,216 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CANDIDATES, SCORE_COLOR } from "@/lib/mock-data";
+import {
+  useGetMyJobs,
+  useGetByJobId,
+  useUpdateStatus,
+  useGetById2,
+  getGetByJobIdQueryKey,
+} from "@smart-cv/api";
+import type { ApplicationModels } from "@smart-cv/api";
 import { AIScoreRing } from "@/components/ui-kit/AIScoreRing";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { Button } from "@smart-cv/ui";
-import { Search, Filter, Download, List, Kanban } from "lucide-react";
+import { Search, Download, List, Kanban, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuthStore } from "../store/useAuthStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/employer/applicants")({
   head: () => ({ meta: [{ title: "Ứng viên" }] }),
   component: ApplicantsPage,
 });
 
-const STATUS_COLUMNS = ["Qualified", "Interview Scheduled", "Interviewed", "Offer Sent", "Accepted", "Rejected"] as const;
-type Col = typeof STATUS_COLUMNS[number];
+const STATUS_COLUMNS = [
+  "PENDING",
+  "REVIEWING",
+  "ACCEPTED",
+  "REJECTED",
+  "WITHDRAWN",
+] as const;
+type ApplicationStatus = (typeof STATUS_COLUMNS)[number];
+
+const STATUS_LABELS: Record<ApplicationStatus, string> = {
+  PENDING: "Chờ duyệt",
+  REVIEWING: "Đang xét",
+  ACCEPTED: "Chấp nhận",
+  REJECTED: "Từ chối",
+  WITHDRAWN: "Đã rút",
+};
+
+type AppItem = ApplicationModels.ApplicationDetailResponse;
+
+function ApplicationKanbanCard({
+  application,
+  onDragStart,
+  statusOverride,
+}: {
+  application: AppItem;
+  onDragStart: (e: React.DragEvent, id: string, fromStatus: string) => void;
+  statusOverride?: string;
+}) {
+  const { data: candidateData } = useGetById2(application.candidateId ?? "", {
+    query: { enabled: !!application.candidateId, staleTime: 60_000 },
+  });
+  const candidate = candidateData?.data;
+  const effectiveStatus = statusOverride ?? application.status ?? "PENDING";
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, application.id ?? "", effectiveStatus)}
+      className="card-surface p-3.5 cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-200 border border-border/50 hover:border-primary/30 space-y-2 group"
+    >
+      <div className="flex items-start justify-between gap-1.5">
+        <Link
+          to="/employer/applicants/$id"
+          params={{ id: application.id ?? "" }}
+          className="font-semibold text-sm hover:text-primary line-clamp-1 flex-1 transition-colors"
+        >
+          {candidate?.fullName ?? "..."}
+        </Link>
+        <AIScoreRing score={application.aiScore ?? 0} size={30} thickness={3} />
+      </div>
+      <div className="text-xs text-muted-foreground line-clamp-1">
+        {candidate?.title ?? "—"}
+      </div>
+      {(candidate?.skills ?? []).length > 0 && (
+        <div className="flex flex-wrap gap-1 pt-1">
+          {(candidate?.skills ?? []).slice(0, 2).map((s) => (
+            <span
+              key={s}
+              className="text-[9px] bg-primary/5 text-primary border border-primary/15 px-1.5 py-0.5 rounded font-medium"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="pt-2 flex items-center justify-between border-t border-border/30 text-[10px] text-muted-foreground">
+        <span>
+          {application.appliedAt
+            ? new Date(application.appliedAt).toLocaleDateString("vi-VN")
+            : "—"}
+        </span>
+        {application.aiScore != null && (
+          <span className="font-semibold bg-success/10 text-success border border-success/20 px-1.5 py-0.5 rounded">
+            AI: {application.aiScore}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ApplicationListRow({ application }: { application: AppItem }) {
+  const { data: candidateData } = useGetById2(application.candidateId ?? "", {
+    query: { enabled: !!application.candidateId, staleTime: 60_000 },
+  });
+  const candidate = candidateData?.data;
+  const status = (application.status ?? "PENDING") as ApplicationStatus;
+
+  return (
+    <tr className="border-t border-border hover:bg-accent/30">
+      <td className="py-3 px-4">
+        <input type="checkbox" />
+      </td>
+      <td className="py-3 px-4">
+        <Link
+          to="/employer/applicants/$id"
+          params={{ id: application.id ?? "" }}
+          className="font-medium hover:text-primary"
+        >
+          {candidate?.fullName ?? "..."}
+        </Link>
+        <div className="text-xs text-muted-foreground">{candidate?.title ?? "—"}</div>
+      </td>
+      <td className="py-3 px-4">
+        <div className="flex items-center gap-2">
+          <AIScoreRing score={application.aiScore ?? 0} size={36} thickness={4} />
+          <span
+            className={`text-xs font-semibold ${(application.aiScore ?? 0) >= 70 ? "text-success" : "text-warning"}`}
+          >
+            {(application.aiScore ?? 0) >= 70 ? "Đạt" : "Xem xét"}
+          </span>
+        </div>
+      </td>
+      <td className="py-3 px-4">
+        <StatusBadge status={STATUS_LABELS[status] ?? status} />
+      </td>
+      <td className="py-3 px-4 text-xs text-muted-foreground">
+        {(application.missingSkills ?? []).join(", ")}
+      </td>
+      <td className="py-3 px-4 text-muted-foreground">
+        {application.appliedAt
+          ? new Date(application.appliedAt).toLocaleDateString("vi-VN")
+          : "—"}
+      </td>
+      <td className="py-3 px-4 text-right">
+        <Link to="/employer/applicants/$id" params={{ id: application.id ?? "" }}>
+          <Button size="sm" variant="ghost">
+            Xem
+          </Button>
+        </Link>
+      </td>
+    </tr>
+  );
+}
 
 function ApplicantsPage() {
+  const { isAuthenticated, role } = useAuthStore();
+  const isRecruiter = isAuthenticated && (role?.includes("RECRUITER") ?? false);
+  const queryClient = useQueryClient();
+
   const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
-  const [candidatesList, setCandidatesList] = useState(CANDIDATES);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedJob, setSelectedJob] = useState("Tất cả tin tuyển");
+  const [selectedJobId, setSelectedJobId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("Tất cả trạng thái");
   const [selectedScore, setSelectedScore] = useState("Mọi điểm số");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
 
-  // Get unique job list for the dropdown filter
-  const uniqueJobs = Array.from(new Set(CANDIDATES.map((c) => c.appliedJob)));
+  const { data: myJobsData } = useGetMyJobs(undefined, {
+    query: { enabled: isRecruiter },
+  });
+  const myJobs = myJobsData?.data?.items ?? [];
 
-  // Filter logic
-  const filteredCandidates = candidatesList.filter((c) => {
+  const { data: applicationsData, isLoading: isAppsLoading } = useGetByJobId(
+    selectedJobId,
+    { page: 1, size: 50 },
+    { query: { enabled: !!selectedJobId } },
+  );
+  const applications = applicationsData?.data?.items ?? [];
+
+  const updateStatusMutation = useUpdateStatus();
+
+  const filteredApplications = applications.filter((app) => {
+    const effectiveStatus =
+      statusOverrides[app.id ?? ""] ?? app.status ?? "PENDING";
+    const matchesStatus =
+      selectedStatus === "Tất cả trạng thái" ||
+      STATUS_LABELS[effectiveStatus as ApplicationStatus] === selectedStatus ||
+      effectiveStatus === selectedStatus;
+    const score = app.aiScore ?? 0;
+    const matchesScore =
+      selectedScore === "Mọi điểm số" ||
+      (selectedScore === "≥ 80%" && score >= 80) ||
+      (selectedScore === "70-79%" && score >= 70 && score < 80);
     const matchesSearch =
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.missingSkills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      c.skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const matchesJob = selectedJob === "Tất cả tin tuyển" || c.appliedJob === selectedJob;
-    const matchesStatus = selectedStatus === "Tất cả trạng thái" || c.status === selectedStatus;
-
-    let matchesScore = true;
-    if (selectedScore === "≥ 80%") matchesScore = c.score >= 80;
-    else if (selectedScore === "70-79%") matchesScore = c.score >= 70 && c.score < 80;
-
-    return matchesSearch && matchesJob && matchesStatus && matchesScore;
+      !searchQuery.trim() ||
+      (app.matchedSkills ?? []).some((s) =>
+        s.toLowerCase().includes(searchQuery.toLowerCase()),
+      ) ||
+      (app.missingSkills ?? []).some((s) =>
+        s.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+    return matchesStatus && matchesScore && matchesSearch;
   });
 
-  // Drag and Drop Handlers
-  const handleDragStart = (e: React.DragEvent, candidateId: string, fromStatus: Col) => {
-    e.dataTransfer.setData("candidateId", candidateId);
+  const handleDragStart = (
+    e: React.DragEvent,
+    id: string,
+    fromStatus: string,
+  ) => {
+    e.dataTransfer.setData("applicationId", id);
     e.dataTransfer.setData("fromStatus", fromStatus);
   };
 
@@ -54,17 +218,41 @@ function ApplicantsPage() {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, toStatus: Col) => {
+  const handleDrop = (e: React.DragEvent, toStatus: ApplicationStatus) => {
     e.preventDefault();
-    const candidateId = e.dataTransfer.getData("candidateId");
-    const fromStatus = e.dataTransfer.getData("fromStatus") as Col;
+    const applicationId = e.dataTransfer.getData("applicationId");
+    const fromStatus = e.dataTransfer.getData("fromStatus");
+    if (!applicationId || fromStatus === toStatus) return;
 
-    if (fromStatus === toStatus) return;
-
-    setCandidatesList((prev) =>
-      prev.map((c) => (c.id === candidateId ? { ...c, status: toStatus } : c))
+    setStatusOverrides((prev) => ({ ...prev, [applicationId]: toStatus }));
+    updateStatusMutation.mutate(
+      {
+        id: applicationId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: { status: toStatus as any },
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Đã chuyển sang "${STATUS_LABELS[toStatus]}"`);
+          queryClient.invalidateQueries({
+            queryKey: getGetByJobIdQueryKey(selectedJobId),
+          });
+          setStatusOverrides((prev) => {
+            const n = { ...prev };
+            delete n[applicationId];
+            return n;
+          });
+        },
+        onError: () => {
+          toast.error("Không thể cập nhật trạng thái");
+          setStatusOverrides((prev) => {
+            const n = { ...prev };
+            delete n[applicationId];
+            return n;
+          });
+        },
+      },
     );
-    toast.success(`Đã chuyển trạng thái sang "${toStatus}"`);
   };
 
   return (
@@ -73,11 +261,10 @@ function ApplicantsPage() {
         <div>
           <h1 className="text-2xl font-bold">Ứng viên</h1>
           <p className="text-sm text-muted-foreground">
-            {filteredCandidates.length} ứng viên • Sàng lọc bởi AI
+            {filteredApplications.length} ứng viên
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Toggle View Mode Button Group */}
           <div className="inline-flex rounded-lg border border-border bg-card p-1">
             <button
               onClick={() => setViewMode("list")}
@@ -111,20 +298,22 @@ function ApplicantsPage() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <input
-            placeholder="Tìm theo tên, kỹ năng..."
+            placeholder="Tìm theo kỹ năng..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-9 pl-9 pr-3 rounded-md border border-input bg-background text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
         <select
-          value={selectedJob}
-          onChange={(e) => setSelectedJob(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background text-sm px-3 cursor-pointer"
+          value={selectedJobId}
+          onChange={(e) => setSelectedJobId(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background text-sm px-3 cursor-pointer min-w-[200px]"
         >
-          <option>Tất cả tin tuyển</option>
-          {uniqueJobs.map((j) => (
-            <option key={j}>{j}</option>
+          <option value="">Chọn tin tuyển</option>
+          {myJobs.map((j) => (
+            <option key={j.id} value={j.id ?? ""}>
+              {j.title ?? j.id}
+            </option>
           ))}
         </select>
         <select
@@ -134,7 +323,7 @@ function ApplicantsPage() {
         >
           <option>Tất cả trạng thái</option>
           {STATUS_COLUMNS.map((s) => (
-            <option key={s}>{s}</option>
+            <option key={s}>{STATUS_LABELS[s]}</option>
           ))}
         </select>
         <select
@@ -146,17 +335,34 @@ function ApplicantsPage() {
           <option>≥ 80%</option>
           <option>70-79%</option>
         </select>
-        <Button variant="outline" size="sm" className="gap-1">
-          <Filter className="size-4" /> Bộ lọc
-        </Button>
       </div>
 
-      {/* Layout Content */}
-      {viewMode === "kanban" ? (
+      {!selectedJobId ? (
+        <div className="card-surface p-16 text-center flex flex-col items-center gap-3">
+          <Briefcase className="size-10 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">
+            Chọn tin tuyển để xem danh sách ứng viên
+          </p>
+        </div>
+      ) : isAppsLoading ? (
+        <div className="grid gap-4 grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-xl bg-secondary/30 border border-border/40 h-64"
+            />
+          ))}
+        </div>
+      ) : viewMode === "kanban" ? (
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-[1200px]">
             {STATUS_COLUMNS.map((col) => {
-              const colCandidates = filteredCandidates.filter((c) => c.status === col);
+              const colApps = filteredApplications.filter(
+                (app) =>
+                  (statusOverrides[app.id ?? ""] ??
+                    app.status ??
+                    "PENDING") === col,
+              );
               return (
                 <div
                   key={col}
@@ -166,62 +372,22 @@ function ApplicantsPage() {
                 >
                   <div className="flex items-center justify-between mb-3 px-1">
                     <span className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
-                      {col}
+                      {STATUS_LABELS[col]}
                     </span>
                     <span className="text-xs font-semibold rounded-full bg-card border border-border px-2 py-0.5">
-                      {colCandidates.length}
+                      {colApps.length}
                     </span>
                   </div>
-
                   <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[600px] pr-1">
-                    {colCandidates.map((c) => (
-                      <div
-                        key={c.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, c.id, col)}
-                        className="card-surface p-3.5 cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-200 border border-border/50 hover:border-primary/30 space-y-2 group"
-                      >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <Link
-                            to="/employer/applicants/$id"
-                            params={{ id: c.id }}
-                            className="font-semibold text-sm hover:text-primary line-clamp-1 flex-1 transition-colors"
-                          >
-                            {c.name}
-                          </Link>
-                          <AIScoreRing score={c.score} size={30} thickness={3} />
-                        </div>
-                        <div className="text-xs text-muted-foreground line-clamp-1">
-                          {c.title}
-                        </div>
-                        <div className="text-[10px] bg-secondary text-secondary-foreground font-medium px-2 py-0.5 rounded border border-border/40 truncate">
-                          {c.appliedJob}
-                        </div>
-
-                        {c.skills && c.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {c.skills.slice(0, 2).map((s) => (
-                              <span
-                                key={s}
-                                className="text-[9px] bg-primary/5 text-primary border border-primary/15 px-1.5 py-0.5 rounded font-medium"
-                              >
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="pt-2 flex items-center justify-between border-t border-border/30 text-[10px] text-muted-foreground">
-                          <span>{c.appliedDate}</span>
-                          {c.assessmentScore && (
-                            <span className="font-medium bg-success/10 text-success border border-success/20 px-1.5 py-0.5 rounded">
-                              Test: {c.assessmentScore}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    {colApps.map((app) => (
+                      <ApplicationKanbanCard
+                        key={app.id}
+                        application={app}
+                        onDragStart={handleDragStart}
+                        statusOverride={statusOverrides[app.id ?? ""]}
+                      />
                     ))}
-                    {colCandidates.length === 0 && (
+                    {colApps.length === 0 && (
                       <div className="h-24 border border-dashed border-border/60 rounded-xl flex items-center justify-center text-xs text-muted-foreground">
                         Kéo thả vào đây
                       </div>
@@ -241,65 +407,27 @@ function ApplicantsPage() {
                   <input type="checkbox" />
                 </th>
                 <th className="text-left py-3 px-4">Ứng viên</th>
-                <th className="text-left py-3 px-4">Vị trí</th>
                 <th className="text-left py-3 px-4">Match Score</th>
                 <th className="text-left py-3 px-4">Trạng thái</th>
                 <th className="text-left py-3 px-4">Kỹ năng thiếu</th>
-                <th className="text-right py-3 px-4">Điểm test</th>
                 <th className="text-left py-3 px-4">Ngày ứng tuyển</th>
                 <th className="text-right py-3 px-4">Hành động</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCandidates.map((c) => (
-                <tr key={c.id} className="border-t border-border hover:bg-accent/30">
-                  <td className="py-3 px-4">
-                    <input type="checkbox" />
-                  </td>
-                  <td className="py-3 px-4">
-                    <Link
-                      to="/employer/applicants/$id"
-                      params={{ id: c.id }}
-                      className="font-medium hover:text-primary"
-                    >
-                      {c.name}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">{c.title}</div>
-                  </td>
-                  <td className="py-3 px-4 text-muted-foreground">{c.appliedJob}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <AIScoreRing score={c.score} size={36} thickness={4} />
-                      <span
-                        className={`text-xs font-semibold ${
-                          SCORE_COLOR(c.score) === "success"
-                            ? "text-success"
-                            : SCORE_COLOR(c.score) === "warning"
-                            ? "text-warning"
-                            : "text-danger"
-                        }`}
-                      >
-                        {c.score >= 70 ? "Đạt" : c.score >= 50 ? "Xem xét" : "Không đạt"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">
-                    {c.missingSkills.join(", ")}
-                  </td>
-                  <td className="py-3 px-4 text-right">{c.assessmentScore ?? "—"}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{c.appliedDate}</td>
-                  <td className="py-3 px-4 text-right">
-                    <Link to="/employer/applicants/$id" params={{ id: c.id }}>
-                      <Button size="sm" variant="ghost">
-                        Xem
-                      </Button>
-                    </Link>
+              {filteredApplications.map((app) => (
+                <ApplicationListRow key={app.id} application={app} />
+              ))}
+              {filteredApplications.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-12 text-center text-sm text-muted-foreground"
+                  >
+                    Không có ứng viên nào
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
