@@ -27,14 +27,11 @@ import type {
   ApiResponsePageResponseRecruiterResponse,
   ApiResponseRecruiterPublicResponse,
   ApiResponseRecruiterResponse,
-  ApiResponseString,
   ApiResponseVoid,
   GetAllParams,
   RecruiterRequest,
   RecruiterStatusRequest,
-  UploadBannerBody,
-  UploadBusinessLicenseBody,
-  UploadLogoBody
+  UploadBusinessLicenseBody
 } from '.././model';
 
 import { customInstance } from '../../../axios-instance';
@@ -444,66 +441,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const uploadLogo = (
-    uploadLogoBody: UploadLogoBody,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-      
-      const formData = new FormData();
-formData.append(`file`, uploadLogoBody.file)
-
-      return customInstance<ApiResponseString>(
-      {url: `/api/recruiters/me/logo`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData, signal
-    },
-      options);
-    }
-  
-
-
-export const getUploadLogoMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadLogo>>, TError,{data: UploadLogoBody}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadLogo>>, TError,{data: UploadLogoBody}, TContext> => {
-
-const mutationKey = ['uploadLogo'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadLogo>>, {data: UploadLogoBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadLogo(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UploadLogoMutationResult = NonNullable<Awaited<ReturnType<typeof uploadLogo>>>
-    export type UploadLogoMutationBody = UploadLogoBody
-    export type UploadLogoMutationError = unknown
-
-    export const useUploadLogo = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadLogo>>, TError,{data: UploadLogoBody}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof uploadLogo>>,
-        TError,
-        {data: UploadLogoBody},
-        TContext
-      > => {
-
-      const mutationOptions = getUploadLogoMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
     export const uploadBusinessLicense = (
     uploadBusinessLicenseBody: UploadBusinessLicenseBody,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
@@ -561,66 +498,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getUploadBusinessLicenseMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    export const uploadBanner = (
-    uploadBannerBody: UploadBannerBody,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-      
-      const formData = new FormData();
-formData.append(`file`, uploadBannerBody.file)
-
-      return customInstance<ApiResponseString>(
-      {url: `/api/recruiters/me/banner`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData, signal
-    },
-      options);
-    }
-  
-
-
-export const getUploadBannerMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadBanner>>, TError,{data: UploadBannerBody}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadBanner>>, TError,{data: UploadBannerBody}, TContext> => {
-
-const mutationKey = ['uploadBanner'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadBanner>>, {data: UploadBannerBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadBanner(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UploadBannerMutationResult = NonNullable<Awaited<ReturnType<typeof uploadBanner>>>
-    export type UploadBannerMutationBody = UploadBannerBody
-    export type UploadBannerMutationError = unknown
-
-    export const useUploadBanner = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadBanner>>, TError,{data: UploadBannerBody}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof uploadBanner>>,
-        TError,
-        {data: UploadBannerBody},
-        TContext
-      > => {
-
-      const mutationOptions = getUploadBannerMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

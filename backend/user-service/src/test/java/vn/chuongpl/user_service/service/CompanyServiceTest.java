@@ -73,34 +73,4 @@ class CompanyServiceTest {
         assertEquals("ACME Inc", result.getName());
         assertNull(result.getActiveJobCount());
     }
-
-    @Test
-    void getByRecruiterId_shouldReturnCompanyByUserId() {
-        Recruiter approved = Recruiter.builder().id("company-uuid").companyName("TechCorp")
-                .status(RecruiterStatus.APPROVED).deleted(false).build();
-        when(recruiterRepository.findByUserIdAndDeletedFalse("user-uuid")).thenReturn(Optional.of(approved));
-
-        CompanyResponse result = companyService.getByRecruiterId("user-uuid");
-
-        assertEquals("company-uuid", result.getId());
-        assertEquals("TechCorp", result.getName());
-    }
-
-    @Test
-    void getByRecruiterId_shouldThrowWhenNotFound() {
-        when(recruiterRepository.findByUserIdAndDeletedFalse("unknown")).thenReturn(Optional.empty());
-
-        AppException ex = assertThrows(AppException.class, () -> companyService.getByRecruiterId("unknown"));
-        assertEquals(ErrorCode.COMPANY_NOT_FOUND, ex.getErrorCode());
-    }
-
-    @Test
-    void getByRecruiterId_shouldThrowWhenNotApproved() {
-        Recruiter pending = Recruiter.builder().id("r1")
-                .status(RecruiterStatus.PENDING).deleted(false).build();
-        when(recruiterRepository.findByUserIdAndDeletedFalse("user-uuid")).thenReturn(Optional.of(pending));
-
-        AppException ex = assertThrows(AppException.class, () -> companyService.getByRecruiterId("user-uuid"));
-        assertEquals(ErrorCode.COMPANY_NOT_FOUND, ex.getErrorCode());
-    }
 }

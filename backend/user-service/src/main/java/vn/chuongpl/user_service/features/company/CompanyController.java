@@ -75,11 +75,4 @@ public class CompanyController {
                 .data(companyService.getRelatedCompanies(id))
                 .build();
     }
-
-    @GetMapping("/by-recruiter/{userId}")
-    public ApiResponse<CompanyResponse> getByRecruiterId(@PathVariable String userId) {
-        return ApiResponse.<CompanyResponse>builder()
-                .data(companyService.getByRecruiterId(userId))
-                .build();
-    }
 }

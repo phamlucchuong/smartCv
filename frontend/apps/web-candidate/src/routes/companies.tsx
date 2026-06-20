@@ -3,10 +3,10 @@ import * as React from 'react'
 import { Badge, Button } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { ChevronLeft, ChevronRight, MapPin, Search, Star } from 'lucide-react'
-import { useGetAll3 } from '@smart-cv/api'
+import { useGetAll2 } from '@smart-cv/api'
 import type { UserModels } from '@smart-cv/api'
 
-export const Route = createFileRoute('/companies/')({
+export const Route = createFileRoute('/companies')({
   component: CompaniesPage,
 })
 
@@ -20,7 +20,7 @@ function CompaniesPage() {
   const [location, setLocation] = React.useState('')
   const [page, setPage] = React.useState(1)
 
-  const { data, isLoading } = useGetAll3({ page: 1, size: 100 })
+  const { data, isLoading } = useGetAll2()
   const rawItems = data?.data?.items
   const companies = React.useMemo(() => rawItems ?? [], [rawItems])
 

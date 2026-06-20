@@ -43,27 +43,6 @@ public class UserServiceClient {
         return new RecruiterStatusDto(null);
     }
 
-    public String getCompanyId(String userId) {
-        String url = userServiceUrl + "/user/api/companies/by-recruiter/" + userId;
-        try {
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("X-Gateway-Secret", internalSecret);
-            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url, org.springframework.http.HttpMethod.GET, entity, Map.class);
-            if (response.getBody() != null) {
-                Object data = response.getBody().get("data");
-                if (data instanceof Map<?, ?> dataMap) {
-                    Object id = dataMap.get("id");
-                    return id != null ? id.toString() : null;
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch companyId for userId={}: {}", userId, e.getMessage());
-        }
-        return null;
-    }
-
     public String getRecruiterEmail(String userId) {
         String url = userServiceUrl + "/user/api/internal/recruiters/by-user/" + userId;
         try {

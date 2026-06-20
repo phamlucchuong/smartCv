@@ -5,8 +5,8 @@ import { useTranslation } from '@smart-cv/i18n'
 import { Briefcase, Camera, Eye, MapPin, Github, Linkedin, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  useGetCandidateProfile, useUpdateCandidate, useUpdateUser, useUploadCandidateAvatar,
-  getCandidateProfileQueryKey, getGetCurrentUserQueryKey,
+  useGetMe2, useUpdate1, useUpdateUser, useUploadAvatar,
+  getGetMe2QueryKey, getGetCurrentUserQueryKey,
   UserModels,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
@@ -293,14 +293,14 @@ function ProfilePage() {
   const { t } = useTranslation()
   const { isAuthenticated, userId, setAvatarUrl } = useAuthStore()
   const lang = usePreferencesStore((s) => s.language) // 'EN' | 'VI'
-  const { data, isLoading, isError } = useGetCandidateProfile({ query: { enabled: isAuthenticated } })
+  const { data, isLoading, isError } = useGetMe2({ query: { enabled: isAuthenticated } })
   const profile = data?.data
   const candidateId = profile?.id
 
   const queryClient = useQueryClient()
-  const updateCandidateMutation = useUpdateCandidate()
+  const updateCandidateMutation = useUpdate1()
   const updateUserMutation = useUpdateUser()
-  const uploadAvatarMutation = useUploadCandidateAvatar({
+  const uploadAvatarMutation = useUploadAvatar({
     request: {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -405,7 +405,7 @@ function ProfilePage() {
       }),
       updateUserMutation.mutateAsync({ userId, data: { fullName: draft.name } }),
     ]).then(() => {
-      queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() })
+      queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
       queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() })
       setEditMode(false)
       toast.success(t('profile_saved') || 'Profile saved')
@@ -441,7 +441,7 @@ function ProfilePage() {
     updateCandidateMutation.mutate(
       { id: candidateId, data: { ...buildCandidateRequest(profile), experiences: updatedExps } },
       {
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() }); resetExpForm(); toast.success('Experience saved') },
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() }); resetExpForm(); toast.success('Experience saved') },
         onError: () => toast.error('Failed to save experience'),
       }
     )
@@ -452,7 +452,7 @@ function ProfilePage() {
     updateCandidateMutation.mutate(
       { id: candidateId, data: { ...buildCandidateRequest(profile), experiences: experiences.filter((_, i) => i !== idx) } },
       {
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() }); toast.success('Experience deleted') },
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() }); toast.success('Experience deleted') },
         onError: () => toast.error('Failed to delete experience'),
       }
     )
@@ -481,7 +481,7 @@ function ProfilePage() {
     updateCandidateMutation.mutate(
       { id: candidateId, data: { ...buildCandidateRequest(profile), educations: updatedEdus } },
       {
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() }); resetEduForm(); toast.success('Education saved') },
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() }); resetEduForm(); toast.success('Education saved') },
         onError: () => toast.error('Failed to save education'),
       }
     )
@@ -492,7 +492,7 @@ function ProfilePage() {
     updateCandidateMutation.mutate(
       { id: candidateId, data: { ...buildCandidateRequest(profile), educations: educations.filter((_, i) => i !== idx) } },
       {
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() }); toast.success('Education deleted') },
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() }); toast.success('Education deleted') },
         onError: () => toast.error('Failed to delete education'),
       }
     )
@@ -521,7 +521,7 @@ function ProfilePage() {
     updateCandidateMutation.mutate(
       { id: candidateId, data: { ...buildCandidateRequest(profile), certifications: updatedCerts } },
       {
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() }); resetCertForm(); toast.success('Certification saved') },
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() }); resetCertForm(); toast.success('Certification saved') },
         onError: () => toast.error('Failed to save certification'),
       }
     )
@@ -532,7 +532,7 @@ function ProfilePage() {
     updateCandidateMutation.mutate(
       { id: candidateId, data: { ...buildCandidateRequest(profile), certifications: certifications.filter((_, i) => i !== idx) } },
       {
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() }); toast.success('Certification deleted') },
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() }); toast.success('Certification deleted') },
         onError: () => toast.error('Failed to delete certification'),
       }
     )
@@ -557,7 +557,7 @@ function ProfilePage() {
           const newUrl = res.data
           if (newUrl) {
             setAvatarUrl(newUrl)
-            queryClient.invalidateQueries({ queryKey: getCandidateProfileQueryKey() })
+            queryClient.invalidateQueries({ queryKey: getGetMe2QueryKey() })
             toast.success(lang === 'VI' ? 'Cập nhật ảnh đại diện thành công!' : 'Avatar updated successfully!', { id: toastId })
           } else {
             toast.error(lang === 'VI' ? 'Không nhận được URL ảnh mới.' : 'Failed to receive new avatar URL.', { id: toastId })

@@ -16,8 +16,6 @@ import {
   Edit2,
   Info,
   ExternalLink,
-  Upload,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -56,46 +54,6 @@ function CompanyProfilePage() {
 
   // 3. Component States
   const [isEditing, setIsEditing] = useState(false);
-  const [showLogoMenu, setShowLogoMenu] = useState(false);
-  const [showBannerMenu, setShowBannerMenu] = useState(false);
-
-  const uploadLogoMutation = RecruiterApi.useUploadLogo({
-    mutation: {
-      onSuccess: (res) => {
-        toast.success("Tải lên logo thành công!");
-        setLogoUrl(res.data || "");
-      },
-      onError: () => {
-        toast.error("Tải lên logo thất bại.");
-      }
-    }
-  });
-
-  const uploadBannerMutation = RecruiterApi.useUploadBanner({
-    mutation: {
-      onSuccess: (res) => {
-        toast.success("Tải lên banner thành công!");
-        setCoverImageUrl(res.data || "");
-      },
-      onError: () => {
-        toast.error("Tải lên banner thất bại.");
-      }
-    }
-  });
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadLogoMutation.mutate({ data: { file } });
-    }
-  };
-
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadBannerMutation.mutate({ data: { file } });
-    }
-  };
 
   // Form states
   const [companyName, setCompanyName] = useState("");
@@ -126,8 +84,8 @@ function CompanyProfilePage() {
       setCompanyType(recruiter.companyType || "");
       setFoundedYear(recruiter.foundedYear || 2000);
       setIndustry(recruiter.industry || "");
-      setLogoUrl(recruiter.logoUrl || "");
-      setCoverImageUrl(recruiter.coverImageUrl || "");
+      setLogoUrl(recruiter.logoUrl || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=128&auto=format&fit=crop&q=60");
+      setCoverImageUrl(recruiter.coverImageUrl || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74?w=1200&auto=format&fit=crop&q=60");
       setContactName(recruiter.contactName || "");
       setContactEmail(recruiter.contactEmail || "");
       setContactPhone(recruiter.contactPhone || "");
@@ -205,139 +163,55 @@ function CompanyProfilePage() {
         <div className="card-surface overflow-hidden relative border border-border/50 shadow-md rounded-2xl transition-all duration-300 hover:shadow-lg">
           {/* Cover image banner */}
           <div className="h-56 sm:h-72 bg-muted relative group overflow-hidden">
-            {coverImageUrl ? (
-              <img
-                src={coverImageUrl}
-                alt="Banner Công ty"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-r from-primary/80 to-brand-blue/80 flex items-center justify-center text-white">
-                <ImageIcon className="size-16 opacity-40" />
-              </div>
-            )}
+            <img
+              src={coverImageUrl}
+              alt="Banner Công ty"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
             {isEditing && (
-              <>
-                {/* Pencil icon on top-right, visible on hover */}
-                <button
-                  type="button"
-                  onClick={() => setShowBannerMenu(!showBannerMenu)}
-                  className="absolute top-4 right-4 h-9 w-9 z-20 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition-opacity opacity-0 group-hover:opacity-100 shadow-md cursor-pointer border-0"
-                >
-                  <Edit2 className="size-4" />
-                </button>
-                {/* Click outside overlay */}
-                {showBannerMenu && (
-                  <>
-                    <div className="fixed inset-0 z-20 bg-transparent" onClick={() => setShowBannerMenu(false)} />
-                    <div className="absolute top-14 right-4 z-30 w-48 rounded-xl border border-border/60 bg-background p-1.5 shadow-2xl backdrop-blur-sm flex flex-col gap-1 text-left">
-                      <label className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg hover:bg-muted text-foreground cursor-pointer transition-colors m-0">
-                        {uploadBannerMutation.isPending ? (
-                          <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-                        ) : (
-                          <Upload className="size-3.5 text-primary" />
-                        )}
-                        Tải ảnh mới
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            handleBannerUpload(e);
-                            setShowBannerMenu(false);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      {coverImageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCoverImageUrl("");
-                            setShowBannerMenu(false);
-                          }}
-                          className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-red-500/10 text-destructive hover:text-destructive cursor-pointer transition-colors border-0 bg-transparent"
-                        >
-                          <Trash2 className="size-3.5" />
-                          Xóa ảnh hiện tại
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </>
+              <div className="absolute inset-0 bg-black/55 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-96 bg-background/95 p-4 rounded-xl border border-border/60 flex flex-col gap-2.5 shadow-2xl backdrop-blur-sm">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <ImageIcon className="size-4 text-primary" /> Thay đổi link ảnh bìa (Banner)
+                  </span>
+                  <input
+                    type="text"
+                    value={coverImageUrl}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    placeholder="URL hình ảnh banner..."
+                    className="h-9 text-xs rounded-lg border border-input bg-background px-3 w-full focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
             )}
           </div>
 
           {/* Logo and Company Name Overlay */}
           <div className="absolute top-44 sm:top-56 left-6 sm:left-10 right-6 sm:right-10 flex flex-col sm:flex-row items-start sm:items-end gap-5">
-            <div className="size-28 sm:size-36 rounded-2xl border-4 border-card bg-card shadow-xl relative group shrink-0">
-              <div className="w-full h-full rounded-xl overflow-hidden flex items-center justify-center bg-white dark:bg-zinc-900">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt="Logo Công ty"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary">
-                    <Building2 className="size-12 sm:size-16" />
-                  </div>
-                )}
-              </div>
+            <div className="size-28 sm:size-36 rounded-2xl border-4 border-card bg-card overflow-hidden shadow-xl relative group shrink-0">
+              <img
+                src={logoUrl}
+                alt="Logo Công ty"
+                className="w-full h-full object-cover"
+              />
               {isEditing && (
-                <>
-                  {/* Pencil icon on top-right, visible on hover */}
-                  <button
-                    type="button"
-                    onClick={() => setShowLogoMenu(!showLogoMenu)}
-                    className="absolute top-2 right-2 h-7 w-7 z-20 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition-opacity opacity-0 group-hover:opacity-100 shadow-md cursor-pointer border-0"
-                  >
-                    <Edit2 className="size-3.5" />
-                  </button>
-                  {/* Click outside overlay */}
-                  {showLogoMenu && (
-                    <>
-                      <div className="fixed inset-0 z-20 bg-transparent" onClick={() => setShowLogoMenu(false)} />
-                      <div className="absolute top-10 right-2 z-30 w-36 rounded-lg border border-border/60 bg-background p-1 shadow-xl backdrop-blur-sm flex flex-col gap-0.5 text-left">
-                        <label className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-semibold rounded hover:bg-muted text-foreground cursor-pointer transition-colors m-0">
-                          {uploadLogoMutation.isPending ? (
-                            <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
-                          ) : (
-                            <Upload className="size-3 text-primary" />
-                          )}
-                          Tải ảnh mới
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              handleLogoUpload(e);
-                              setShowLogoMenu(false);
-                            }}
-                            className="hidden"
-                          />
-                        </label>
-                        {logoUrl && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLogoUrl("");
-                              setShowLogoMenu(false);
-                            }}
-                            className="flex items-center gap-1.5 w-full text-left px-2 py-1.5 text-[10px] font-semibold rounded hover:bg-red-500/10 text-destructive hover:text-destructive cursor-pointer transition-colors border-0 bg-transparent"
-                          >
-                            <Trash2 className="size-3" />
-                            Xóa ảnh hiện tại
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </>
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="p-2 bg-background/95 rounded-lg border border-border flex flex-col gap-1.5 shadow-2xl text-[10px] w-28 text-center backdrop-blur-sm">
+                    <span className="font-bold text-foreground">Đổi Link Logo</span>
+                    <input
+                      type="text"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="URL logo..."
+                      className="h-7 text-[10px] rounded border border-input bg-background px-1.5 w-full focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
               )}
             </div>
             <div className="mb-2 space-y-1">
-              <h2 className="text-2xl sm:text-3xl font-black text-primary dark:text-white drop-shadow-sm">
+              <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow-md">
                 {companyName || "Chưa đặt tên công ty"}
               </h2>
               <div className="flex flex-wrap gap-2">
@@ -349,7 +223,7 @@ function CompanyProfilePage() {
                     href={companyWebsite}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-primary dark:text-white/90 hover:text-primary flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-0.5 rounded-full transition-colors backdrop-blur-md"
+                    className="text-xs text-white/90 hover:text-white flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-0.5 rounded-full transition-colors backdrop-blur-md"
                   >
                     <Globe className="size-3" /> {companyWebsite.replace(/^https?:\/\//, "")} <ExternalLink className="size-2.5" />
                   </a>

@@ -88,36 +88,4 @@ class UserServiceClientTest {
 
         org.junit.jupiter.api.Assertions.assertNull(email);
     }
-
-    @Test
-    void getCompanyId_shouldReturnIdFromCompanyByRecruiterEndpoint() {
-        ReflectionTestUtils.setField(userServiceClient, "userServiceUrl", "http://localhost:8081");
-        ReflectionTestUtils.setField(userServiceClient, "internalSecret", "super-secret");
-
-        when(restTemplate.exchange(
-                eq("http://localhost:8081/user/api/companies/by-recruiter/user-1"),
-                eq(HttpMethod.GET),
-                org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(),
-                eq(Map.class)
-        )).thenReturn(ResponseEntity.ok(Map.of(
-                "data", Map.of("id", "company-uuid-123")
-        )));
-
-        String companyId = userServiceClient.getCompanyId("user-1");
-
-        assertEquals("company-uuid-123", companyId);
-    }
-
-    @Test
-    void getCompanyId_shouldReturnNullWhenCallFails() {
-        ReflectionTestUtils.setField(userServiceClient, "userServiceUrl", "http://localhost:8081");
-        ReflectionTestUtils.setField(userServiceClient, "internalSecret", "secret");
-
-        when(restTemplate.exchange(any(String.class), any(), any(), eq(Map.class)))
-                .thenThrow(new RuntimeException("connection refused"));
-
-        String companyId = userServiceClient.getCompanyId("user-1");
-
-        org.junit.jupiter.api.Assertions.assertNull(companyId);
-    }
 }

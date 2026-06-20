@@ -9,7 +9,7 @@ import (
 )
 
 // authMiddleware reads the forwarded identity headers set by the API Gateway
-// (X-User-Id, X-User-Scope) and stores user_id and audience in the Echo context.
+// (X-User-Id, X-Role) and stores user_id and audience in the Echo context.
 func authMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
@@ -18,22 +18,21 @@ func authMiddleware() echo.MiddlewareFunc {
 				return pkg.JSONError(c, http.StatusUnauthorized, pkg.CodeUnauthorized, "unauthorized")
 			}
 
-			scope := c.Request().Header.Get("X-User-Scope")
+			role := c.Request().Header.Get("X-Role")
 			c.Set("user_id", userID)
-			c.Set("audience", audienceFromScope(scope))
+			c.Set("audience", audienceFromRole(role))
 			return next(c)
 		}
 	}
 }
 
-// audienceFromScope maps the gateway-forwarded scope claim to an FCM audience string.
-// ROLE_RECRUITER → web-vendor, ROLE_ADMIN → web-admin, anything else → web-user.
-func audienceFromScope(scope string) string {
-	normalized := strings.ToUpper(scope)
-	switch {
-	case strings.Contains(normalized, "ROLE_RECRUITER"):
+// audienceFromRole maps the gateway-forwarded X-Role value to an FCM audience string.
+// RECRUITER → web-vendor, ADMIN → web-admin, anything else → web-user.
+func audienceFromRole(role string) string {
+	switch strings.ToUpper(role) {
+	case "RECRUITER":
 		return "web-vendor"
-	case strings.Contains(normalized, "ROLE_ADMIN"):
+	case "ADMIN":
 		return "web-admin"
 	default:
 		return "web-user"

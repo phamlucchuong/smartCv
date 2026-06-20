@@ -59,22 +59,6 @@ public class RecruiterController {
         return ApiResponse.<RecruiterResponse>builder().data(recruiterService.uploadBusinessLicense(userId, file)).build();
     }
 
-    @PostMapping("/me/logo")
-    @PreAuthorize("hasRole('RECRUITER')")
-    public ApiResponse<String> uploadLogo(
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal String userId) {
-        return ApiResponse.<String>builder().data(recruiterService.uploadLogo(userId, file)).build();
-    }
-
-    @PostMapping("/me/banner")
-    @PreAuthorize("hasRole('RECRUITER')")
-    public ApiResponse<String> uploadBanner(
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal String userId) {
-        return ApiResponse.<String>builder().data(recruiterService.uploadBanner(userId, file)).build();
-    }
-
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<RecruiterResponse>> getAll(

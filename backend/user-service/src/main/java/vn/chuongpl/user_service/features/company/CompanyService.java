@@ -61,13 +61,6 @@ public class CompanyService {
         return CompanyResponse.from(recruiter);
     }
 
-    public CompanyResponse getByRecruiterId(String userId) {
-        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
-                .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
-                .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
-        return CompanyResponse.from(recruiter);
-    }
-
     public List<CompanyResponse> getByIds(List<String> ids) {
         return ids.stream()
                 .map(id -> recruiterRepository.findByIdAndDeletedFalse(id)
@@ -79,9 +72,7 @@ public class CompanyService {
     }
 
     public List<JobSummary> getCompanyJobs(String companyId) {
-        return recruiterRepository.findByIdAndDeletedFalse(companyId)
-                .map(r -> jobClient.getJobsByRecruiter(r.getUserId()))
-                .orElse(List.of());
+        return jobClient.getJobsByRecruiter(companyId);
     }
 
     public List<CompanyResponse> getRelatedCompanies(String companyId) {

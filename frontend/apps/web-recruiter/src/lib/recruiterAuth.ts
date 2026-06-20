@@ -29,12 +29,6 @@ interface RecruiterRecordLike {
   status?: string | null
 }
 
-interface ApiErrorLike {
-  response?: {
-    status?: number
-  }
-}
-
 export type RecruiterAccessState =
   | 'missing'
   | 'draft'
@@ -61,11 +55,6 @@ export function hasRecruiterRole(accessToken: string) {
   } catch {
     return false
   }
-}
-
-export function isAuthError(error: unknown): boolean {
-  const status = (error as ApiErrorLike | undefined)?.response?.status
-  return status === 401 || status === 403
 }
 
 export function ensureRecruiterRole(accessToken: string) {

@@ -9,7 +9,6 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class TopCompanyResponse implements Serializable {
     String recruiterId;
-    String companyId;
     String name;
     String location;
     long activeJobCount;

@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { RecruiterApi } from "@smart-cv/api";
 import { Sparkles, Upload, FileText, Clock, ExternalLink } from "lucide-react";
-import { isAuthError } from "../lib/recruiterAuth";
 import { useAuthStore } from "../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/setup")({
@@ -37,7 +36,7 @@ function SetupPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const signOut = useAuthStore((state) => state.signOut);
 
-  const { data, isLoading, isError, error } = RecruiterApi.useGetMe1();
+  const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
   const status = recruiter?.status;
 
@@ -92,12 +91,12 @@ function SetupPage() {
   }, [status, navigate]);
 
   useEffect(() => {
-    if (!isLoading && isError && isAuthError(error)) {
+    if (!isLoading && !recruiter) {
       toast.error("Không tìm thấy hồ sơ nhà tuyển dụng. Vui lòng đăng nhập lại.");
       signOut();
       navigate({ to: "/login", replace: true });
     }
-  }, [error, isError, isLoading, navigate, signOut]);
+  }, [isLoading, recruiter, navigate, signOut]);
 
   const field = (key: keyof typeof form) => ({
     value: form[key],

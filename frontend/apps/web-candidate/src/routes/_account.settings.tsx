@@ -12,7 +12,7 @@ import {
   useSendUpdateOtp, useVerifyUpdateOtp,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
-import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
+import { useAuthStore } from '../store/useAuthStore'
 import { useCandidatePreferences } from '../store/candidatePreferences'
 
 export const Route = createFileRoute('/_account/settings')({
@@ -25,17 +25,15 @@ function SettingsPage() {
   const { t } = useTranslation()
   const { language: lang } = useCandidatePreferences()
   const navigate = useNavigate()
-  const { isAuthenticated, userId, role, signOut } = useAuthStore()
+  const { isAuthenticated, userId, signOut } = useAuthStore()
   const settingsQueryKey = React.useMemo(
     () => [...getGetSettingsQueryKey(), userId ?? 'anonymous', 'settings-page'] as const,
     [userId],
   )
-  const { data: settingsData } = useGetSettings({
-    query: { enabled: isAuthenticated && !!userId && hasCandidateRole(role), queryKey: settingsQueryKey },
-  })
+  const { data: settingsData } = useGetSettings({ query: { enabled: isAuthenticated && !!userId, queryKey: settingsQueryKey } })
   const settingsPayload = settingsData?.data
 
-  const { data: meData } = useGetMe2({ query: { enabled: isAuthenticated && hasCandidateRole(role), retry: false } })
+  const { data: meData } = useGetMe2({ query: { enabled: isAuthenticated } })
   const me = meData?.data
 
   const queryClient = useQueryClient()

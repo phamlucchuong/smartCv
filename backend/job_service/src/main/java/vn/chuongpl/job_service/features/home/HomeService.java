@@ -16,8 +16,6 @@ import vn.chuongpl.job_service.enums.JobType;
 import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.features.job.Job;
 import vn.chuongpl.job_service.features.job.JobMapper;
-import vn.chuongpl.job_service.integration.applicationservice.ApplicationServiceClient;
-import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.util.List;
 
@@ -28,8 +26,6 @@ public class HomeService {
 
     MongoTemplate mongoTemplate;
     JobMapper jobMapper;
-    UserServiceClient userServiceClient;
-    ApplicationServiceClient applicationServiceClient;
 
     private static final List<ResourceItem> STATIC_RESOURCES = List.of(
             new ResourceItem("1", "How to Write a Winning CV", "Practical tips to make your CV stand out to recruiters.", "/resources/cv-guide", "guide"),
@@ -102,18 +98,6 @@ public class HomeService {
         return mongoTemplate.find(q, Job.class).stream().map(jobMapper::toJobResponse).toList();
     }
 
-    @Cacheable(value = "home:hot-jobs", unless = "#result == null")
-    public List<JobResponse> getHotJobs() {
-        List<String> topJobIds = applicationServiceClient.getTopJobIds(6);
-        Criteria activeCriteria = Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
-                .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
-                .and("deleted").is(false);
-        Query q = topJobIds.isEmpty()
-                ? Query.query(activeCriteria).with(Sort.by(Sort.Direction.DESC, "createdAt")).limit(6)
-                : Query.query(Criteria.where("_id").in(topJobIds).andOperator(activeCriteria));
-        return mongoTemplate.find(q, Job.class).stream().map(jobMapper::toJobResponse).toList();
-    }
-
     @Cacheable(value = "home:top-companies", unless = "#result == null")
     public List<TopCompanyResponse> getTopCompanies() {
         Aggregation agg = Aggregation.newAggregation(
@@ -130,9 +114,7 @@ public class HomeService {
         );
         AggregationResults<TopCompanyResponse> results =
                 mongoTemplate.aggregate(agg, "jobs", TopCompanyResponse.class);
-        List<TopCompanyResponse> companies = results.getMappedResults();
-        companies.forEach(c -> c.setCompanyId(userServiceClient.getCompanyId(c.getRecruiterId())));
-        return companies;
+        return results.getMappedResults();
     }
 
     public List<ResourceItem> getResources() {

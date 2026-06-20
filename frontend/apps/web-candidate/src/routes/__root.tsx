@@ -22,7 +22,7 @@ import { Button, NotificationPopover } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { registerSignOutHandler, useGetMe2 } from '@smart-cv/api'
 import { Toaster } from 'sonner'
-import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
+import { useAuthStore } from '../store/useAuthStore'
 import { useCandidatePreferences } from '../store/candidatePreferences'
 import { useNotificationsStore } from '../store/useNotificationsStore'
 
@@ -47,7 +47,7 @@ function RootComponent() {
   const [jobHighlightIndex, setJobHighlightIndex] = React.useState(0)
   const [resourceHighlightIndex, setResourceHighlightIndex] = React.useState(0)
 
-  const { isAuthenticated, email, role, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
+  const { isAuthenticated, email, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
   const {
     theme,
     language,
@@ -144,7 +144,7 @@ function RootComponent() {
   }, [])
 
   // Fetch profile once to cache fullName and avatar globally
-  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && hasCandidateRole(role) && (!fullName || !avatarUrl), retry: false } })
+  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && (!fullName || !avatarUrl) } })
   React.useEffect(() => {
     const name = profileData?.data?.fullName
     if (name) setFullName(name)

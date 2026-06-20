@@ -31,11 +31,6 @@ public class HomeController {
         return ApiResponse.<List<JobResponse>>builder().data(homeService.getFeaturedJobs()).build();
     }
 
-    @GetMapping("/hot-jobs")
-    public ApiResponse<List<JobResponse>> getHotJobs() {
-        return ApiResponse.<List<JobResponse>>builder().data(homeService.getHotJobs()).build();
-    }
-
     @GetMapping("/top-companies")
     public ApiResponse<List<TopCompanyResponse>> getTopCompanies() {
         return ApiResponse.<List<TopCompanyResponse>>builder().data(homeService.getTopCompanies()).build();

@@ -14,23 +14,12 @@ import vn.chuongpl.application_service.dtos.request.ApplicationStatusUpdateReque
 import vn.chuongpl.application_service.dtos.response.ApplicationDetailResponse;
 import vn.chuongpl.application_service.dtos.response.ApplicationResponse;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/applications")
 @RequiredArgsConstructor
 public class ApplicationController {
 
     final ApplicationService applicationService;
-    final ApplicationAggregateService applicationAggregateService;
-
-    @GetMapping("/top-jobs")
-    public ApiResponse<List<TopJobCountDto>> getTopJobs(
-            @RequestParam(defaultValue = "6") int limit) {
-        return ApiResponse.<List<TopJobCountDto>>builder()
-                .data(applicationAggregateService.getTopJobsByApplicationCount(limit))
-                .build();
-    }
 
     @PostMapping
     @PreAuthorize("hasRole('CANDIDATE')")

@@ -3,8 +3,6 @@ import { buttonVariants, cn } from "@smart-cv/ui";
 import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { RecruiterApi } from "@smart-cv/api";
 import { useEffect } from "react";
-import { isAuthError } from "../lib/recruiterAuth";
-import { useAuthStore } from "../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/pending")({
   head: () => ({ meta: [{ title: "Account Under Review — SmartCV" }] }),
@@ -13,8 +11,7 @@ export const Route = createFileRoute("/employer/pending")({
 
 function PendingPage() {
   const navigate = useNavigate();
-  const signOut = useAuthStore((state) => state.signOut);
-  const { data, isLoading, isError, error } = RecruiterApi.useGetMe1();
+  const { data, isLoading } = RecruiterApi.useGetMe1();
   const recruiter = data?.data;
   const status = recruiter?.status;
 
@@ -25,11 +22,10 @@ function PendingPage() {
   }, [status, navigate]);
 
   useEffect(() => {
-    if (!isLoading && isError && isAuthError(error)) {
-      signOut();
+    if (!isLoading && !recruiter) {
       navigate({ to: '/login', replace: true });
     }
-  }, [error, isError, isLoading, navigate, signOut]);
+  }, [isLoading, recruiter, navigate]);
 
   if (isLoading) {
     return (
