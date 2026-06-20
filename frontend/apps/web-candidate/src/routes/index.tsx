@@ -22,13 +22,15 @@ import {
   Users,
 } from 'lucide-react'
 import {
-  useGetFeaturedJobs,
+  useGetHotJobs,
   useGetTopCompanies,
   useGetStats,
   useGetCategories,
   useGetTestimonials,
   useGetResources,
   useGetFaqs,
+  useGetActiveJobs,
+  useGetAll3,
 } from '@smart-cv/api'
 
 const JOB_TYPE_LABELS: Record<string, string> = {
@@ -49,8 +51,14 @@ function IndexComponent() {
   const [page, setPage] = React.useState(1)
   const aiMatchScore = 82
 
-  const { data: featuredJobsData, isLoading: isFeaturedJobsLoading } = useGetFeaturedJobs()
-  const jobs = featuredJobsData?.data ?? []
+  const { data: hotJobsData, isLoading: isHotJobsLoading } = useGetHotJobs()
+  const jobs = hotJobsData?.data ?? []
+
+  const { data: allJobsData, isLoading: isAllJobsLoading } = useGetActiveJobs({ page: 0, size: 6 })
+  const allJobsPreview = allJobsData?.data?.items ?? []
+
+  const { data: companiesListData, isLoading: isCompaniesListLoading } = useGetAll3({ page: 1, size: 6 })
+  const companiesListPreview = companiesListData?.data?.items ?? []
 
   const { data: companiesData, isLoading: isCompaniesLoading } = useGetTopCompanies()
   const topCompanies = companiesData?.data ?? []
@@ -256,12 +264,14 @@ function IndexComponent() {
 
       <section id="remote-jobs" className="space-y-4" aria-label="Featured and Hot Jobs">
         <div className="flex items-end justify-between">
-          <h2 className="text-2xl font-semibold">{t('featured_jobs')}</h2>
-          <Link to="/about" className="text-sm text-primary hover:underline">Explore career profile tips</Link>
+          <h2 className="text-2xl font-semibold">Việc làm nổi bật</h2>
+          <Link to="/jobs" search={{ q: undefined, location: undefined, page: 1 }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            Xem tất cả <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {isFeaturedJobsLoading ? (
+          {isHotJobsLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="animate-pulse rounded-2xl border border-border p-5 h-48 bg-muted/30" />
             ))
@@ -313,7 +323,7 @@ function IndexComponent() {
           ))}
         </div>
 
-        {!isFeaturedJobsLoading && jobs.length > 0 && <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border bg-white/5 p-4 text-sm md:flex-row">
+        {!isHotJobsLoading && jobs.length > 0 && <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border bg-white/5 p-4 text-sm md:flex-row">
           <p className="text-muted-foreground">Page {page} of {totalPages} • Showing {(page - 1) * jobsPerPage + 1}–{Math.min(page * jobsPerPage, jobs.length)} of {jobs.length} jobs</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="border-border bg-white/5">
@@ -357,10 +367,97 @@ function IndexComponent() {
                 )}
                 <div className="flex items-center justify-between text-sm">
                   <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{company.activeJobCount ?? 0} Open Positions</span>
-                  <Link to="/companies/$companyId" params={{ companyId: company.recruiterId ?? '' }} className="text-primary hover:underline">View Profile</Link>
+                  <Link to="/companies/$companyId" params={{ companyId: company.companyId ?? '' }} className="text-primary hover:underline">View Profile</Link>
                 </div>
               </CardContent>
             </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4" aria-label="All Jobs Preview">
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-semibold">Tất cả việc làm</h2>
+          <Link to="/jobs" search={{ q: undefined, location: undefined, page: 1 }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            Xem tất cả <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {isAllJobsLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border p-5 h-48 bg-muted/30" />
+            ))
+          ) : allJobsPreview.length === 0 ? (
+            <p className="col-span-3 py-8 text-center text-sm text-muted-foreground">No jobs available right now.</p>
+          ) : allJobsPreview.map((job) => (
+            <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id ?? '' }} className="block">
+              <article className="elevate-card rounded-2xl card-surface p-5 h-full">
+                <div className="mb-3 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-semibold">{job.title}</h3>
+                    <p className="text-sm text-muted-foreground">{job.company}</p>
+                  </div>
+                </div>
+                <div className="mb-3 flex flex-wrap gap-2 text-xs">
+                  {(job.salaryMin != null || job.salaryMax != null) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      {job.salaryMin != null && job.salaryMax != null
+                        ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
+                        : job.salaryMin != null
+                          ? `From $${job.salaryMin.toLocaleString()}`
+                          : `Up to $${job.salaryMax!.toLocaleString()}`}
+                    </span>
+                  )}
+                  {job.location && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                  )}
+                </div>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {(job.skills ?? []).map((skill) => <Badge key={skill} variant="outline" className="border-border text-xs">{skill}</Badge>)}
+                </div>
+                <div className="border-t border-border pt-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {job.createdAt ? `Posted ${new Date(job.createdAt).toLocaleDateString()}` : 'Recently posted'}
+                  </span>
+                </div>
+              </article>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4" aria-label="Company List Preview">
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-semibold">Danh sách công ty</h2>
+          <Link to="/companies" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            Xem tất cả <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {isCompaniesListLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border h-40 bg-muted/30" />
+            ))
+          ) : companiesListPreview.length === 0 ? (
+            <p className="col-span-3 py-8 text-center text-sm text-muted-foreground">No companies to show right now.</p>
+          ) : companiesListPreview.map((company) => (
+            <Link key={company.id} to="/companies/$companyId" params={{ companyId: company.id ?? '' }} className="block">
+              <Card className="elevate-card overflow-hidden border border-border bg-card h-full">
+                <div className="h-20 bg-gradient-to-r from-primary/70 to-brand-blue/70" />
+                <CardContent className="space-y-2 p-4">
+                  <div className="-mt-9 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background"><Building2 className="h-4 w-4" /></div>
+                  <h3 className="text-base font-semibold">{company.name}</h3>
+                  {company.location && (
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{company.location}</p>
+                  )}
+                  {company.industry && (
+                    <Badge variant="outline" className="text-xs">{company.industry}</Badge>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </section>

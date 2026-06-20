@@ -7,6 +7,7 @@
 
 export interface TopCompanyResponse {
   recruiterId?: string;
+  companyId?: string;
   name?: string;
   location?: string;
   activeJobCount?: number;
