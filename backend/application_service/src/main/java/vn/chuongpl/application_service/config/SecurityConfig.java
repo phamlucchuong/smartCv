@@ -3,6 +3,7 @@ package vn.chuongpl.application_service.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,6 +31,8 @@ public class SecurityConfig {
                 .addFilterBefore(internalAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_ENDPOINTS).permitAll()
+                        // Internal service-to-service aggregation endpoint — protected by InternalAuthFilter
+                        .requestMatchers(HttpMethod.GET, "/api/applications/top-jobs").permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }

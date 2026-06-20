@@ -10,6 +10,29 @@ export const Route = createFileRoute('/_account/assessments')({
   component: AssessmentsPage,
 })
 
+function formatDate(dateInput?: string | Date): string {
+  if (!dateInput) return ''
+  if (typeof dateInput === 'string') {
+    const cleanStr = dateInput.trim()
+    // Handle date-only strings like YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('-')
+      return `${day}/${month}/${year}`
+    }
+    // Handle ISO date-time strings by extracting the date part
+    if (cleanStr.includes('T')) {
+      const datePart = cleanStr.split('T')[0]
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [year, month, day] = datePart.split('-')
+        return `${day}/${month}/${year}`
+      }
+    }
+  }
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+  if (isNaN(d.getTime())) return ''
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
 type AssessmentStatusFilter = 'all' | 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
 
 const statusStyle: Record<string, string> = {
@@ -168,7 +191,7 @@ function AssessmentsPage() {
 
                 <div>
                   <p className="font-semibold text-foreground">{a.assessmentId}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{a.startedAt ? new Date(a.startedAt).toLocaleDateString() : ''}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{a.startedAt ? formatDate(a.startedAt) : ''}</p>
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">

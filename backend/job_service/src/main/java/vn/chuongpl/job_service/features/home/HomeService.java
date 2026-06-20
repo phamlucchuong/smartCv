@@ -20,6 +20,7 @@ import vn.chuongpl.job_service.integration.applicationservice.ApplicationService
 import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -114,25 +115,83 @@ public class HomeService {
         return mongoTemplate.find(q, Job.class).stream().map(jobMapper::toJobResponse).toList();
     }
 
-    @Cacheable(value = "home:top-companies", unless = "#result == null")
+    @Cacheable(value = "home:top-companies-v3", unless = "#result == null")
     public List<TopCompanyResponse> getTopCompanies() {
-        Aggregation agg = Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
-                        .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
-                        .and("deleted").is(false)),
-                Aggregation.group("recruiterId")
-                        .count().as("activeJobCount")
-                        .first("company").as("name")
-                        .first("location").as("location"),
-                Aggregation.project("activeJobCount", "name", "location").and("_id").as("recruiterId"),
-                Aggregation.sort(Sort.by(Sort.Direction.DESC, "activeJobCount")),
-                Aggregation.limit(8)
-        );
-        AggregationResults<TopCompanyResponse> results =
-                mongoTemplate.aggregate(agg, "jobs", TopCompanyResponse.class);
-        List<TopCompanyResponse> companies = results.getMappedResults();
-        companies.forEach(c -> c.setCompanyId(userServiceClient.getCompanyId(c.getRecruiterId())));
+        // 1. Get all active published jobs
+        Query activeQuery = Query.query(Criteria.where("moderationStatus").is(JobModerationStatus.PUBLISHED)
+                .and("visibilityStatus").is(JobVisibilityStatus.ACTIVE)
+                .and("deleted").is(false));
+        List<Job> activeJobs = mongoTemplate.find(activeQuery, Job.class);
+
+        if (activeJobs.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        // 2. Fetch top jobs by application count from application-service
+        List<Map<String, Object>> topJobs = applicationServiceClient.getTopJobs(1000);
+        java.util.Map<String, Long> jobCounts = new java.util.HashMap<>();
+        for (Map<String, Object> item : topJobs) {
+            String jobId = (String) item.get("jobId");
+            Number count = (Number) item.get("count");
+            if (jobId != null && count != null) {
+                jobCounts.put(jobId, count.longValue());
+            }
+        }
+
+        // 3. Group jobs by recruiterId and sum application counts and active job count
+        java.util.Map<String, CompanyStats> statsMap = new java.util.HashMap<>();
+        for (Job job : activeJobs) {
+            String recruiterId = job.getRecruiterId();
+            if (recruiterId == null) recruiterId = "";
+            
+            CompanyStats stats = statsMap.computeIfAbsent(recruiterId, k -> new CompanyStats(job.getCompany(), job.getLocation()));
+            stats.activeJobCount++;
+            stats.totalApplications += jobCounts.getOrDefault(job.getId(), 0L);
+        }
+
+        // 4. Sort companies by total applications, then by active job count
+        List<String> sortedRecruiterIds = statsMap.entrySet().stream()
+                .sorted((e1, e2) -> {
+                    int cmp = Long.compare(e2.getValue().totalApplications, e1.getValue().totalApplications);
+                    if (cmp != 0) return cmp;
+                    return Integer.compare(e2.getValue().activeJobCount, e1.getValue().activeJobCount);
+                })
+                .map(java.util.Map.Entry::getKey)
+                .limit(8)
+                .toList();
+
+        // 5. Build response list
+        List<TopCompanyResponse> companies = new java.util.ArrayList<>();
+        for (String recruiterId : sortedRecruiterIds) {
+            CompanyStats stats = statsMap.get(recruiterId);
+            TopCompanyResponse resp = new TopCompanyResponse();
+            resp.setRecruiterId(recruiterId);
+            resp.setName(stats.name);
+            resp.setLocation(stats.location);
+            resp.setActiveJobCount(stats.activeJobCount);
+            UserServiceClient.CompanyData companyData = userServiceClient.getCompanyData(recruiterId);
+            if (companyData != null) {
+                resp.setCompanyId(companyData.id());
+                resp.setLogoUrl(companyData.logoUrl());
+                resp.setCoverImageUrl(companyData.coverImageUrl());
+                resp.setIndustry(companyData.industry());
+            }
+            companies.add(resp);
+        }
+
         return companies;
+    }
+
+    private static class CompanyStats {
+        String name;
+        String location;
+        int activeJobCount = 0;
+        long totalApplications = 0;
+
+        CompanyStats(String name, String location) {
+            this.name = name;
+            this.location = location;
+        }
     }
 
     public List<ResourceItem> getResources() {

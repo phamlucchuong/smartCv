@@ -19,6 +19,7 @@ export {
   useGetMe2 as useGetCandidateProfile,
   useUpdate2 as useUpdateCandidate,
   useUploadAvatar as useUploadCandidateAvatar,
+  useUpdatePreferences1 as useUpdateCandidatePreferences,
 } from './generated/user/candidate-controller/candidate-controller';
 export { getMe as getRecruiterLoginUser } from './generated/user/user-controller/user-controller';
 export {

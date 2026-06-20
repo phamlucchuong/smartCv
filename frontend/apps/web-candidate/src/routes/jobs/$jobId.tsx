@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { Badge, Button, Card, CardContent, cn } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import {
   AlertTriangle,
+  Banknote,
   Briefcase,
   Building2,
   Calendar,
@@ -11,38 +12,163 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
-  DollarSign,
   Heart,
   Home,
   MapPin,
+  Users,
+  X,
 } from 'lucide-react'
-import { useGetJobById, useGetRelatedJobs } from '@smart-cv/api'
+import {
+  useGetJobById,
+  useGetRelatedJobs,
+  useGetMyApplicationForJob,
+  useSubmit,
+  useContains,
+  useSave,
+  useRemove,
+  useGetByRecruiterId,
+  useListCvs,
+} from '@smart-cv/api'
+import { hasCandidateRole, useAuthStore } from '../../store/useAuthStore'
 
 export const Route = createFileRoute('/jobs/$jobId')({
   component: JobDetailPage,
 })
 
+function formatVnd(amount: number): string {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+}
+
+function formatDate(dateInput?: string | Date | number): string {
+  if (!dateInput) return ''
+  
+  if (typeof dateInput === 'number') {
+    const d = new Date(dateInput)
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  }
+
+  if (typeof dateInput === 'string') {
+    const cleanStr = dateInput.trim()
+    
+    if (/^\d+$/.test(cleanStr)) {
+      const d = new Date(parseInt(cleanStr, 10))
+      if (isNaN(d.getTime())) return ''
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('-')
+      return `${day}/${month}/${year}`
+    }
+    
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('/')
+      return `${day}/${month}/${year}`
+    }
+
+    if (cleanStr.includes('T') || cleanStr.includes(' ')) {
+      const separator = cleanStr.includes('T') ? 'T' : ' '
+      const datePart = cleanStr.split(separator)[0]
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [year, month, day] = datePart.split('-')
+        return `${day}/${month}/${year}`
+      }
+      if (/^\d{4}\/\d{2}\/\d{2}$/.test(datePart)) {
+        const [year, month, day] = datePart.split('/')
+        return `${day}/${month}/${year}`
+      }
+    }
+  }
+
+  try {
+    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  } catch (e) {
+    return ''
+  }
+}
+
 function JobDetailPage() {
   const { jobId } = Route.useParams()
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { isAuthenticated, role } = useAuthStore()
+  const isCandidate = isAuthenticated && hasCandidateRole(role)
+
   const [applied, setApplied] = React.useState(false)
   const [saved, setSaved] = React.useState(false)
+  const [showApplyModal, setShowApplyModal] = React.useState(false)
   const [showStickyBar, setShowStickyBar] = React.useState(false)
   const heroRef = React.useRef<HTMLDivElement>(null)
 
   const { data: jobData, isLoading, isError } = useGetJobById(jobId)
   const job = jobData?.data
 
+  const deadlineDaysLeft = job?.deadline
+    ? (() => {
+        const parts = job.deadline.split('-')
+        if (parts.length !== 3) {
+          const deadlineDate = new Date(job.deadline)
+          if (isNaN(deadlineDate.getTime())) return null
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const deadline = new Date(deadlineDate)
+          deadline.setHours(23, 59, 59, 999)
+          const diffMs = deadline.getTime() - today.getTime()
+          return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+        }
+        const year = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const day = parseInt(parts[2], 10)
+        const deadline = new Date(year, month, day, 23, 59, 59, 999)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const diffMs = deadline.getTime() - today.getTime()
+        return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+      })()
+    : null
+
   const { data: relatedData } = useGetRelatedJobs(jobId)
   const relatedJobs = relatedData?.data ?? []
+
+  const { data: appliedData } = useGetMyApplicationForJob(jobId, {
+    query: { enabled: isCandidate, retry: false },
+  })
+  React.useEffect(() => {
+    if (appliedData?.data) setApplied(true)
+  }, [appliedData])
+
+  const { data: containsData, isLoading: containsLoading } = useContains(jobId, {
+    query: { enabled: isCandidate },
+  })
+  React.useEffect(() => {
+    if (containsData?.data !== undefined) setSaved(Boolean(containsData.data))
+  }, [containsData])
+
+  const saveMutation = useSave()
+  const removeMutation = useRemove()
+  const savePending = saveMutation.isPending || removeMutation.isPending
+  const saveDisabled = containsLoading || savePending
+
+  const { data: companyData } = useGetByRecruiterId(job?.recruiterId ?? '', {
+    query: { enabled: !!job?.recruiterId },
+  })
+  const logoUrl = companyData?.data?.logoUrl
 
   React.useEffect(() => {
     if (job) {
       document.title = t('page_title_job_detail', { title: job.title ?? '', company: job.company ?? '' })
+      console.log('SmartCV Debug Job Dates:', {
+        rawCreatedAt: job.createdAt,
+        rawDeadline: job.deadline,
+        formattedCreatedAt: formatDate(job.createdAt),
+        formattedDeadline: formatDate(job.deadline),
+        deadlineDaysLeft
+      });
     }
-  }, [job, t])
-
-  const [todayMs] = React.useState(() => Date.now())
+  }, [job, t, deadlineDaysLeft])
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -52,6 +178,28 @@ function JobDetailPage() {
     if (heroRef.current) observer.observe(heroRef.current)
     return () => observer.disconnect()
   }, [])
+
+  function handleApplyClick() {
+    if (!isCandidate) {
+      navigate({ to: '/signin' })
+      return
+    }
+    setShowApplyModal(true)
+  }
+
+  function handleSaveClick() {
+    if (!isCandidate) {
+      navigate({ to: '/signin' })
+      return
+    }
+    if (saved) {
+      setSaved(false)
+      removeMutation.mutate({ jobId }, { onError: () => setSaved(true) })
+    } else {
+      setSaved(true)
+      saveMutation.mutate({ data: { jobId } }, { onError: () => setSaved(false) })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -75,20 +223,26 @@ function JobDetailPage() {
     )
   }
 
-  const deadlineDaysLeft = job.deadline
-    ? Math.max(0, Math.ceil((new Date(job.deadline).getTime() - todayMs) / (1000 * 60 * 60 * 24)))
-    : null
+
 
   const salaryDisplay = job.salaryMin != null && job.salaryMax != null
-    ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
+    ? `${formatVnd(job.salaryMin)} - ${formatVnd(job.salaryMax)}`
     : job.salaryMin != null
-      ? `From $${job.salaryMin.toLocaleString()}`
+      ? `From ${formatVnd(job.salaryMin)}`
       : job.salaryMax != null
-        ? `Up to $${job.salaryMax.toLocaleString()}`
+        ? `Up to ${formatVnd(job.salaryMax)}`
         : null
 
   return (
     <div className="relative pb-20 lg:pb-0">
+      {showApplyModal && (
+        <ApplyModal
+          jobId={jobId}
+          onSuccess={() => setApplied(true)}
+          onClose={() => setShowApplyModal(false)}
+        />
+      )}
+
       {/* Sticky mini bar — appears when hero card scrolls out of view */}
       <div
         className={cn(
@@ -103,17 +257,19 @@ function JobDetailPage() {
               variant="outline"
               size="sm"
               className={cn('border-primary text-primary', saved && 'bg-primary/5')}
-              onClick={() => setSaved((v) => !v)}
+              disabled={saveDisabled}
+              onClick={handleSaveClick}
             >
               <Heart className={cn('h-3.5 w-3.5 mr-1.5', saved && 'fill-current')} />
               {saved ? t('job_saved') : t('job_save')}
             </Button>
             <Button
               size="sm"
+              disabled={applied}
               className={cn(
                 applied ? 'bg-muted text-muted-foreground border border-border hover:bg-muted' : 'bg-primary text-primary-foreground'
               )}
-              onClick={() => setApplied((v) => !v)}
+              onClick={handleApplyClick}
             >
               {applied
                 ? <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />{t('job_applied')}</>
@@ -151,8 +307,12 @@ function JobDetailPage() {
               <Card className="border-border bg-card shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-xl border border-border bg-muted flex items-center justify-center text-sm font-bold text-foreground shrink-0">
-                      <Building2 className="h-6 w-6 text-muted-foreground" />
+                    <div className="w-16 h-16 rounded-xl border border-border bg-white flex items-center justify-center text-sm font-bold text-foreground shrink-0 overflow-hidden p-1.5">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={job.company ?? 'Company logo'} className="w-full h-full object-contain" />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-muted-foreground" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h1 className="text-2xl font-bold text-foreground">{job.title}</h1>
@@ -165,7 +325,7 @@ function JobDetailPage() {
                         )}
                         {job.createdAt && (
                           <span className="text-xs text-muted-foreground">
-                            Posted {new Date(job.createdAt).toLocaleDateString()}
+                            Posted {formatDate(job.createdAt)}
                           </span>
                         )}
                       </div>
@@ -175,11 +335,16 @@ function JobDetailPage() {
                   <div className="flex flex-wrap gap-2 mt-4">
                     {salaryDisplay && (
                       <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary inline-flex items-center gap-1">
-                        <DollarSign className="h-3.5 w-3.5" />{salaryDisplay}
+                        <Banknote className="h-3.5 w-3.5" />{salaryDisplay}
                       </span>
                     )}
                     {deadlineDaysLeft != null && (
-                      <span className="rounded-full bg-destructive/10 px-3 py-1 text-sm font-medium text-destructive inline-flex items-center gap-1">
+                      <span className={cn(
+                        "rounded-full px-3 py-1 text-sm font-medium inline-flex items-center gap-1",
+                        deadlineDaysLeft < 30
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400"
+                      )}>
                         <Calendar className="h-3.5 w-3.5" />{t('job_days_left', { days: deadlineDaysLeft })}
                       </span>
                     )}
@@ -203,7 +368,8 @@ function JobDetailPage() {
                           ? 'bg-muted text-muted-foreground border border-border hover:bg-muted'
                           : 'bg-primary text-primary-foreground hover:bg-primary/90'
                       )}
-                      onClick={() => setApplied((v) => !v)}
+                      disabled={applied}
+                      onClick={handleApplyClick}
                     >
                       {applied
                         ? <><CheckCircle2 className="h-4 w-4 mr-2" />{t('job_applied')}</>
@@ -215,7 +381,8 @@ function JobDetailPage() {
                         'h-11 px-6 rounded-xl border-primary text-primary',
                         saved && 'bg-primary/5'
                       )}
-                      onClick={() => setSaved((v) => !v)}
+                      disabled={saveDisabled}
+                      onClick={handleSaveClick}
                     >
                       <Heart className={cn('h-4 w-4 mr-2', saved && 'fill-current')} />
                       {saved ? t('job_saved') : t('job_save')}
@@ -223,9 +390,14 @@ function JobDetailPage() {
                   </div>
 
                   {job.deadline && (
-                    <p className="mt-3 text-sm text-destructive flex items-center gap-1">
+                    <p className={cn(
+                      "mt-3 text-sm flex items-center gap-1",
+                      (deadlineDaysLeft !== null && deadlineDaysLeft < 30)
+                        ? "text-destructive"
+                        : "text-emerald-600 dark:text-emerald-400"
+                    )}>
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      {t('job_deadline_warning', { date: new Date(job.deadline).toLocaleDateString() })}
+                      {t('job_deadline_warning', { date: formatDate(job.deadline) })}
                     </p>
                   )}
                 </CardContent>
@@ -316,20 +488,34 @@ function JobDetailPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-24 h-fit">
             {/* Job Overview Card */}
-            <Card className="border-border bg-card sticky top-20">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <h3 className="text-base font-semibold text-foreground mb-2">{t('job_overview')}</h3>
                 <hr className="border-border mb-3" />
                 <div className="space-y-0">
                   {([
-                    job.deadline ? { icon: Calendar, label: t('job_overview_deadline'), value: new Date(job.deadline).toLocaleDateString() } : null,
-                    salaryDisplay ? { icon: DollarSign, label: t('job_overview_salary'), value: salaryDisplay } : null,
+                    job.deadline
+                      ? {
+                          icon: Calendar,
+                          label: t('job_overview_deadline'),
+                          value: (
+                            <span className={cn(
+                              (deadlineDaysLeft !== null && deadlineDaysLeft < 30)
+                                ? "text-destructive font-semibold"
+                                : "text-emerald-600 dark:text-emerald-400 font-semibold"
+                            )}>
+                              {formatDate(job.deadline)}
+                            </span>
+                          )
+                        }
+                      : null,
+                    salaryDisplay ? { icon: Banknote, label: t('job_overview_salary'), value: salaryDisplay } : null,
                     job.experienceLevel ? { icon: Briefcase, label: t('job_overview_experience'), value: job.experienceLevel } : null,
                     job.jobType ? { icon: Briefcase, label: t('job_overview_type'), value: job.jobType } : null,
-                  ] as ({ icon: typeof Calendar; label: string; value: string } | null)[])
-                    .filter((item): item is { icon: typeof Calendar; label: string; value: string } => item !== null)
+                  ] as ({ icon: typeof Calendar; label: string; value: React.ReactNode } | null)[])
+                    .filter((item): item is { icon: typeof Calendar; label: string; value: React.ReactNode } => item !== null)
                     .map(({ icon: Icon, label, value }) => (
                       <div key={label} className="flex items-start justify-between text-sm py-2 border-b border-border last:border-0">
                         <span className="flex items-center gap-2 text-muted-foreground">
@@ -347,11 +533,37 @@ function JobDetailPage() {
             <Card className="border-border bg-card">
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center text-xs font-bold text-foreground shrink-0">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <div className="w-12 h-12 rounded-lg border border-border bg-white flex items-center justify-center text-xs font-bold text-foreground shrink-0 overflow-hidden p-1">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt={job.company ?? 'Company logo'} className="w-full h-full object-contain" />
+                    ) : (
+                      <Building2 className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
-                  <p className="font-semibold text-foreground text-sm">{job.company}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground text-sm truncate">{job.company}</p>
+                    {companyData?.data?.industry && (
+                      <p className="text-xs text-muted-foreground truncate">{companyData.data.industry}</p>
+                    )}
+                  </div>
                 </div>
+
+                {(companyData?.data?.location || companyData?.data?.size) && (
+                  <div className="space-y-2 text-xs text-muted-foreground pt-1">
+                    {companyData.data.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{companyData.data.location}</span>
+                      </div>
+                    )}
+                    {companyData.data.size && (
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span>{t('job_company_size')}: {companyData.data.size}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <hr className="border-border" />
                 <Link
                   to="/companies/$companyId"
@@ -367,6 +579,38 @@ function JobDetailPage() {
                 </a>
               </CardContent>
             </Card>
+
+            {/* Sticky Action Card in Sidebar — visible when scrolling down */}
+            {showStickyBar && (
+              <Card className="border-border bg-card shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-200">
+                <CardContent className="p-5 space-y-3">
+                  <Button
+                    className={cn(
+                      'w-full h-11 px-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90',
+                      applied && 'bg-muted text-muted-foreground border border-border hover:bg-muted'
+                    )}
+                    disabled={applied}
+                    onClick={handleApplyClick}
+                  >
+                    {applied
+                      ? <><CheckCircle2 className="h-4 w-4 mr-2" />{t('job_applied')}</>
+                      : t('job_apply_now')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full h-11 px-6 rounded-xl border-primary text-primary',
+                      saved && 'bg-primary/5'
+                    )}
+                    disabled={saveDisabled}
+                    onClick={handleSaveClick}
+                  >
+                    <Heart className={cn('h-4 w-4 mr-2', saved && 'fill-current')} />
+                    {saved ? t('job_saved') : t('job_save')}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
 
@@ -385,12 +629,12 @@ function JobDetailPage() {
                     <div className="flex flex-wrap gap-2 text-xs">
                       {(rJob.salaryMin != null || rJob.salaryMax != null) && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-primary font-medium">
-                          <DollarSign className="h-3 w-3" />
+                          <Banknote className="h-3 w-3" />
                           {rJob.salaryMin != null && rJob.salaryMax != null
-                            ? `$${rJob.salaryMin.toLocaleString()} - $${rJob.salaryMax.toLocaleString()}`
+                            ? `${formatVnd(rJob.salaryMin)} - ${formatVnd(rJob.salaryMax)}`
                             : rJob.salaryMin != null
-                              ? `From $${rJob.salaryMin.toLocaleString()}`
-                              : `Up to $${rJob.salaryMax!.toLocaleString()}`}
+                              ? `From ${formatVnd(rJob.salaryMin)}`
+                              : `Up to ${formatVnd(rJob.salaryMax!)}`}
                         </span>
                       )}
                       {rJob.location && (
@@ -411,7 +655,16 @@ function JobDetailPage() {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border p-3 flex items-center justify-between lg:hidden">
         <div>
           {salaryDisplay && <p className="text-sm font-semibold text-foreground">{salaryDisplay}</p>}
-          {deadlineDaysLeft != null && <p className="text-xs text-destructive">{t('job_days_left', { days: deadlineDaysLeft })}</p>}
+          {deadlineDaysLeft != null && (
+            <p className={cn(
+              "text-xs font-semibold",
+              deadlineDaysLeft < 30
+                ? "text-destructive"
+                : "text-emerald-600 dark:text-emerald-400"
+            )}>
+              {t('job_days_left', { days: deadlineDaysLeft })}
+            </p>
+          )}
         </div>
         <Button
           className={cn(
@@ -420,13 +673,123 @@ function JobDetailPage() {
               ? 'bg-muted text-muted-foreground border border-border hover:bg-muted'
               : 'bg-primary text-primary-foreground hover:bg-primary/90'
           )}
-          onClick={() => setApplied((v) => !v)}
+          disabled={applied}
+          onClick={handleApplyClick}
         >
           {applied
             ? <><CheckCircle2 className="h-4 w-4 mr-1.5" />{t('job_applied')}</>
             : t('job_apply_now')}
         </Button>
       </div>
+    </div>
+  )
+}
+
+interface ApplyModalProps {
+  jobId: string
+  onSuccess: () => void
+  onClose: () => void
+}
+
+function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
+  const { isAuthenticated, role } = useAuthStore()
+  const isCandidate = isAuthenticated && hasCandidateRole(role)
+  const [coverLetter, setCoverLetter] = React.useState('')
+  const [selectedCvUrl, setSelectedCvUrl] = React.useState('')
+
+  const { data: cvsData, isLoading: cvsLoading } = useListCvs({
+    query: { enabled: isCandidate },
+  })
+  const cvList = cvsData?.data ?? []
+
+  // Initialize selected CV URL with default CV or first CV
+  React.useEffect(() => {
+    if (cvList.length > 0 && !selectedCvUrl) {
+      const defaultCv = cvList.find((c) => c.default) ?? cvList[0]
+      if (defaultCv?.url) {
+        setSelectedCvUrl(defaultCv.url)
+      }
+    }
+  }, [cvList, selectedCvUrl])
+
+  const submitMutation = useSubmit()
+
+  function handleSubmit() {
+    if (!selectedCvUrl) return
+    submitMutation.mutate(
+      { data: { jobId, cvUrl: selectedCvUrl, coverLetter: coverLetter.trim() || undefined } },
+      { onSuccess: () => { onSuccess(); onClose() } }
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="w-full max-w-md border-border bg-card shadow-lg">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">Nộp hồ sơ ứng tuyển</h3>
+            <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {cvsLoading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Đang tải thông tin...</p>
+          ) : cvList.length === 0 ? (
+            <div className="text-center space-y-3 py-4">
+              <p className="text-sm text-muted-foreground">
+                Bạn chưa tải lên CV. Vui lòng tải CV lên trước khi ứng tuyển.
+              </p>
+              <Link to="/cv" onClick={onClose} className="inline-block text-primary text-sm hover:underline">
+                Tải lên CV →
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label htmlFor="cv-select" className="block text-sm font-medium text-foreground mb-1.5">
+                  Chọn CV ứng tuyển
+                </label>
+                <select
+                  id="cv-select"
+                  value={selectedCvUrl}
+                  onChange={(e) => setSelectedCvUrl(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+                >
+                  {cvList.map((cv) => (
+                    <option key={cv.id} value={cv.url ?? ''}>
+                      {cv.filename} {cv.default ? '(Mặc định)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground mb-1.5">
+                  Thư xin việc <span className="font-normal text-muted-foreground">(tùy chọn)</span>
+                </p>
+                <textarea
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  placeholder="Viết thư xin việc của bạn..."
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 resize-none"
+                  rows={4}
+                />
+              </div>
+              {submitMutation.isError && (
+                <p className="text-sm text-destructive">Có lỗi xảy ra. Vui lòng thử lại.</p>
+              )}
+              <div className="flex gap-2 justify-end pt-1">
+                <Button variant="outline" onClick={onClose} disabled={submitMutation.isPending}>
+                  Hủy
+                </Button>
+                <Button onClick={handleSubmit} disabled={submitMutation.isPending || !selectedCvUrl}>
+                  {submitMutation.isPending ? 'Đang nộp...' : 'Nộp hồ sơ'}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
