@@ -4,9 +4,14 @@ import { Badge, Button, Card, CardContent, CardDescription, CardFooter, CardHead
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import Cookies from 'js-cookie'
+import { jwtDecode } from 'jwt-decode'
 import { toast } from 'sonner'
 import { useLoginCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from '@smart-cv/api'
-import { useAuthStore } from '../store/useAuthStore'
+import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
+
+interface JwtPayload {
+  scope?: string
+}
 
 function maskContact(contact: string): string {
   if (contact.includes('@')) {
@@ -80,6 +85,10 @@ function SignInComponent() {
     const accessToken = result.data?.token
     const refreshToken = result.data?.refreshToken
     if (!accessToken || !refreshToken) throw new Error('Invalid token response')
+    const payload = jwtDecode<JwtPayload>(accessToken)
+    if (!hasCandidateRole(payload.scope)) {
+      throw new Error('This account does not have candidate access.')
+    }
     signIn(accessToken, refreshToken)
     navigate({ to: '/' })
   }
@@ -98,7 +107,7 @@ function SignInComponent() {
       if (e?.response?.data?.code === 3003) {
         openOtpPanel()
       } else {
-        setError(e?.response?.data?.message ?? 'Invalid email or password.')
+        setError(e instanceof Error ? e.message : (e?.response?.data?.message ?? 'Invalid email or password.'))
       }
     }
   }

@@ -13,7 +13,12 @@ export * from './generated/user/permission-controller/permission-controller';
 export * as RecruiterApi from './generated/user/recruiter-controller/recruiter-controller';
 export {
   getAll2 as getAllCandidates,
+  getMe2 as getCandidateProfile,
+  getGetMe2QueryKey as getCandidateProfileQueryKey,
   useGetAll2 as useGetAllCandidates,
+  useGetMe2 as useGetCandidateProfile,
+  useUpdate2 as useUpdateCandidate,
+  useUploadAvatar as useUploadCandidateAvatar,
 } from './generated/user/candidate-controller/candidate-controller';
 export { getMe as getRecruiterLoginUser } from './generated/user/user-controller/user-controller';
 export {

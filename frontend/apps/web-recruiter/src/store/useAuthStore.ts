@@ -32,7 +32,7 @@ function decodeJwt(token: string): Pick<AuthState, 'userId' | 'email' | 'role'> 
     return {
       userId: payload.sub ?? null,
       email: payload.email ?? null,
-      role: payload.scope?.split(' ')[0] ?? null,
+      role: payload.scope ?? null,
     }
   } catch {
     return { userId: null, email: null, role: null }

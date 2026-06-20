@@ -17,7 +17,7 @@ func (s *Server) setupRoutes() {
 	otp.POST("/verify", s.otpHandler.VerifyOTP)
 
 	// Notification Routes
-	notifications := v1.Group("/notifications")
+	notifications := v1.Group("/notifications", authMiddleware())
 	notifications.GET("", s.notiHandler.ListNotifications)
 	notifications.PATCH("/:id/read", s.notiHandler.MarkRead)
 	notifications.POST("/read-all", s.notiHandler.MarkAllRead)

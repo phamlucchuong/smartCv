@@ -54,6 +54,9 @@ run-ai:
 run-noti:
 	cd $(BACKEND)/notification-service && go run cmd/server/main.go
 
+run-noti-migrated: migrate-noti
+	cd $(BACKEND)/notification-service && go run cmd/server/main.go
+
 # ── Backend: Run all (parallel, logs to backend/logs/) ───────────────────────
 
 run-backend:

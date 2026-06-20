@@ -8,7 +8,7 @@ import {
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useAuthStore } from './useAuthStore'
+import { hasCandidateRole, useAuthStore } from './useAuthStore'
 import { type Language, type Theme, usePreferencesStore } from './usePreferencesStore'
 
 type BackendLanguage = UserModels.PreferencesSettingsLanguage
@@ -40,6 +40,7 @@ export function useCandidatePreferences() {
   const queryClient = useQueryClient()
   const userId = useAuthStore((s) => s.userId)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const role = useAuthStore((s) => s.role)
   const language = usePreferencesStore((s) => s.language)
   const theme = usePreferencesStore((s) => s.theme)
   const applyAuthenticatedPreferences = usePreferencesStore((s) => s.applyAuthenticatedPreferences)
@@ -56,30 +57,30 @@ export function useCandidatePreferences() {
 
   const settingsQuery = useGetSettings({
     query: {
-      enabled: isAuthenticated && !!userId,
+      enabled: isAuthenticated && !!userId && hasCandidateRole(role),
       queryKey: settingsQueryKey,
     },
   })
   const updatePreferencesMutation = useUpdatePreferences()
 
   React.useEffect(() => {
-    if (!isAuthenticated || !userId) {
+    if (!isAuthenticated || !userId || !hasCandidateRole(role)) {
       restoreAnonymousPreferences()
       const restoredLanguage = usePreferencesStore.getState().language
       i18n.changeLanguage(restoredLanguage === 'EN' ? 'en' : 'vi')
       queryClient.removeQueries({ queryKey: getGetSettingsQueryKey() })
     }
-  }, [isAuthenticated, queryClient, restoreAnonymousPreferences, userId])
+  }, [isAuthenticated, queryClient, restoreAnonymousPreferences, role, userId])
 
   React.useEffect(() => {
     const preferences = settingsQuery.data?.data?.preferences
-    if (!isAuthenticated || !userId || !preferences) return
+    if (!isAuthenticated || !userId || !hasCandidateRole(role) || !preferences) return
 
     const nextLanguage = toFrontendLanguage(preferences.language)
     const nextTheme = toFrontendTheme(preferences.theme)
     applyAuthenticatedPreferences({ language: nextLanguage, theme: nextTheme })
     i18n.changeLanguage(nextLanguage === 'EN' ? 'en' : 'vi')
-  }, [applyAuthenticatedPreferences, isAuthenticated, settingsQuery.data, userId])
+  }, [applyAuthenticatedPreferences, isAuthenticated, role, settingsQuery.data, userId])
 
   const status: CandidatePreferencesStatus = !isAuthenticated
     ? 'anonymous-local'

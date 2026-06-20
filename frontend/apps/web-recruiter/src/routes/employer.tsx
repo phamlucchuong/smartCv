@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
 import { useEffect } from "react";
-import { hasRecruiterRole } from "../lib/recruiterAuth";
+import { hasRecruiterRole, isAuthError } from "../lib/recruiterAuth";
 import { RecruiterApi } from "@smart-cv/api";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -51,7 +51,7 @@ function EmployerLayoutRoute() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { t } = useTranslation();
   const isGate = GATE_PATHS.some((p) => pathname.startsWith(p));
-  const { data, isLoading, isError } = RecruiterApi.useGetMe1({ query: { enabled: !isGate } });
+  const { data, isLoading, isError, error } = RecruiterApi.useGetMe1({ query: { enabled: !isGate } });
   const recruiter = data?.data;
 
   useEffect(() => {
@@ -59,9 +59,13 @@ function EmployerLayoutRoute() {
       return;
     }
 
-    if (isError || !recruiter) {
+    if (isError && isAuthError(error)) {
       signOut();
       navigate({ to: "/login", replace: true });
+      return;
+    }
+
+    if (!recruiter) {
       return;
     }
 
@@ -73,7 +77,7 @@ function EmployerLayoutRoute() {
     if (recruiter.status === "PENDING" || recruiter.status === "REJECTED") {
       navigate({ to: "/employer/pending", replace: true });
     }
-  }, [isGate, isLoading, isError, recruiter, navigate, signOut]);
+  }, [error, isGate, isLoading, isError, recruiter, navigate, signOut]);
 
   if (isGate) {
     return <Outlet />;
