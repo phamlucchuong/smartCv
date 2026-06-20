@@ -444,17 +444,34 @@ function IndexComponent() {
             <p className="col-span-3 py-8 text-center text-sm text-muted-foreground">No companies to show right now.</p>
           ) : companiesListPreview.map((company) => (
             <Link key={company.id} to="/companies/$companyId" params={{ companyId: company.id ?? '' }} className="block">
-              <Card className="elevate-card overflow-hidden border border-border bg-card h-full">
-                <div className="h-20 bg-gradient-to-r from-primary/70 to-brand-blue/70" />
-                <CardContent className="space-y-2 p-4">
-                  <div className="-mt-9 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background"><Building2 className="h-4 w-4" /></div>
-                  <h3 className="text-base font-semibold">{company.name}</h3>
-                  {company.location && (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{company.location}</p>
+              <Card className="elevate-card overflow-hidden border border-border bg-card h-full flex flex-col">
+                <div className="h-20 bg-muted overflow-hidden relative shrink-0">
+                  {company.coverImageUrl ? (
+                    <img src={company.coverImageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-primary/70 to-brand-blue/70" />
                   )}
-                  {company.industry && (
-                    <Badge variant="outline" className="text-xs">{company.industry}</Badge>
-                  )}
+                </div>
+                <CardContent className="p-4 flex-1 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="relative z-10 -mt-9 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+                      {company.logoUrl ? (
+                        <img src={company.logoUrl} alt={company.name ?? ''} className="w-full h-full object-contain" />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <h3 className="text-base font-semibold">{company.name}</h3>
+                    {company.location && (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{company.location}</p>
+                    )}
+                    {company.industry && (
+                      <Badge variant="outline" className="text-xs">{company.industry}</Badge>
+                    )}
+                  </div>
+                  <Button className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
+                    Xem thông tin
+                  </Button>
                 </CardContent>
               </Card>
             </Link>

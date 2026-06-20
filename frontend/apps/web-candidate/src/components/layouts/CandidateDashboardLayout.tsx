@@ -26,7 +26,7 @@ import {
 } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
 import { useGetMe2 } from '@smart-cv/api'
-import { useAuthStore } from '../../store/useAuthStore'
+import { hasCandidateRole, useAuthStore } from '../../store/useAuthStore'
 import { useCandidatePreferences } from '../../store/candidatePreferences'
 import { useNotificationsStore } from '../../store/useNotificationsStore'
 
@@ -55,7 +55,7 @@ export function CandidateDashboardLayout() {
     other: true,
   })
 
-  const { email, isAuthenticated, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
+  const { email, isAuthenticated, role, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
   const { theme, language, toggleTheme, toggleLanguage } = useCandidatePreferences()
   const notifications = useNotificationsStore((s) => s.notifications)
   const filter = useNotificationsStore((s) => s.filter)
@@ -65,7 +65,7 @@ export function CandidateDashboardLayout() {
   const deleteNotification = useNotificationsStore((s) => s.deleteNotification)
   const clearAll = useNotificationsStore((s) => s.clearAll)
 
-  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && (!fullName || !avatarUrl) } })
+  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && hasCandidateRole(role) && (!fullName || !avatarUrl), retry: false } })
   React.useEffect(() => {
     const name = profileData?.data?.fullName
     if (name) setFullName(name)

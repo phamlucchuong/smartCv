@@ -11,11 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
-import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/_account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
+import { Route as CompaniesIndexRouteImport } from './routes/companies/index'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
 import { Route as CompaniesCompanyIdRouteImport } from './routes/companies/$companyId'
 import { Route as AccountWishlistsRouteImport } from './routes/_account.wishlists'
@@ -37,11 +37,6 @@ const SigninRoute = SigninRouteImport.update({
   path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CompaniesRoute = CompaniesRouteImport.update({
-  id: '/companies',
-  path: '/companies',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -61,15 +56,20 @@ const JobsIndexRoute = JobsIndexRouteImport.update({
   path: '/jobs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompaniesIndexRoute = CompaniesIndexRouteImport.update({
+  id: '/companies/',
+  path: '/companies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsJobIdRoute = JobsJobIdRouteImport.update({
   id: '/jobs/$jobId',
   path: '/jobs/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompaniesCompanyIdRoute = CompaniesCompanyIdRouteImport.update({
-  id: '/$companyId',
-  path: '/$companyId',
-  getParentRoute: () => CompaniesRoute,
+  id: '/companies/$companyId',
+  path: '/companies/$companyId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AccountWishlistsRoute = AccountWishlistsRouteImport.update({
   id: '/wishlists',
@@ -115,7 +115,6 @@ const AccountApplicationsRoute = AccountApplicationsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/companies': typeof CompaniesRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/applications': typeof AccountApplicationsRoute
@@ -128,12 +127,12 @@ export interface FileRoutesByFullPath {
   '/wishlists': typeof AccountWishlistsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/companies/': typeof CompaniesIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/companies': typeof CompaniesRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/applications': typeof AccountApplicationsRoute
@@ -146,6 +145,7 @@ export interface FileRoutesByTo {
   '/wishlists': typeof AccountWishlistsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/companies': typeof CompaniesIndexRoute
   '/jobs': typeof JobsIndexRoute
 }
 export interface FileRoutesById {
@@ -153,7 +153,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_account': typeof AccountRouteWithChildren
   '/about': typeof AboutRoute
-  '/companies': typeof CompaniesRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/_account/applications': typeof AccountApplicationsRoute
@@ -166,6 +165,7 @@ export interface FileRoutesById {
   '/_account/wishlists': typeof AccountWishlistsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/companies/': typeof CompaniesIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRouteTypes {
@@ -173,7 +173,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
-    | '/companies'
     | '/signin'
     | '/signup'
     | '/applications'
@@ -186,12 +185,12 @@ export interface FileRouteTypes {
     | '/wishlists'
     | '/companies/$companyId'
     | '/jobs/$jobId'
+    | '/companies/'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
-    | '/companies'
     | '/signin'
     | '/signup'
     | '/applications'
@@ -204,13 +203,13 @@ export interface FileRouteTypes {
     | '/wishlists'
     | '/companies/$companyId'
     | '/jobs/$jobId'
+    | '/companies'
     | '/jobs'
   id:
     | '__root__'
     | '/'
     | '/_account'
     | '/about'
-    | '/companies'
     | '/signin'
     | '/signup'
     | '/_account/applications'
@@ -223,6 +222,7 @@ export interface FileRouteTypes {
     | '/_account/wishlists'
     | '/companies/$companyId'
     | '/jobs/$jobId'
+    | '/companies/'
     | '/jobs/'
   fileRoutesById: FileRoutesById
 }
@@ -230,10 +230,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRouteWithChildren
   AboutRoute: typeof AboutRoute
-  CompaniesRoute: typeof CompaniesRouteWithChildren
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
+  CompaniesCompanyIdRoute: typeof CompaniesCompanyIdRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
+  CompaniesIndexRoute: typeof CompaniesIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
 
@@ -251,13 +252,6 @@ declare module '@tanstack/react-router' {
       path: '/signin'
       fullPath: '/signin'
       preLoaderRoute: typeof SigninRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/companies': {
-      id: '/companies'
-      path: '/companies'
-      fullPath: '/companies'
-      preLoaderRoute: typeof CompaniesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -288,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/companies/': {
+      id: '/companies/'
+      path: '/companies'
+      fullPath: '/companies/'
+      preLoaderRoute: typeof CompaniesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/$jobId': {
       id: '/jobs/$jobId'
       path: '/jobs/$jobId'
@@ -297,10 +298,10 @@ declare module '@tanstack/react-router' {
     }
     '/companies/$companyId': {
       id: '/companies/$companyId'
-      path: '/$companyId'
+      path: '/companies/$companyId'
       fullPath: '/companies/$companyId'
       preLoaderRoute: typeof CompaniesCompanyIdRouteImport
-      parentRoute: typeof CompaniesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_account/wishlists': {
       id: '/_account/wishlists'
@@ -386,26 +387,15 @@ const AccountRouteChildren: AccountRouteChildren = {
 const AccountRouteWithChildren =
   AccountRoute._addFileChildren(AccountRouteChildren)
 
-interface CompaniesRouteChildren {
-  CompaniesCompanyIdRoute: typeof CompaniesCompanyIdRoute
-}
-
-const CompaniesRouteChildren: CompaniesRouteChildren = {
-  CompaniesCompanyIdRoute: CompaniesCompanyIdRoute,
-}
-
-const CompaniesRouteWithChildren = CompaniesRoute._addFileChildren(
-  CompaniesRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRouteWithChildren,
   AboutRoute: AboutRoute,
-  CompaniesRoute: CompaniesRouteWithChildren,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
+  CompaniesCompanyIdRoute: CompaniesCompanyIdRoute,
   JobsJobIdRoute: JobsJobIdRoute,
+  CompaniesIndexRoute: CompaniesIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
 }
 export const routeTree = rootRouteImport

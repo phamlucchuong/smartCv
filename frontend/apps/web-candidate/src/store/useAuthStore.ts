@@ -25,13 +25,18 @@ interface AuthState {
   setAvatarUrl: (url: string | null) => void
 }
 
+export function hasCandidateRole(role: string | null | undefined): boolean {
+  if (!role) return false
+  return role.split(' ').includes('ROLE_CANDIDATE')
+}
+
 function decodeJwt(token: string): Pick<AuthState, 'userId' | 'email' | 'role'> {
   try {
     const payload = jwtDecode<JwtPayload>(token)
     return {
       userId: payload.sub ?? null,
       email: payload.email ?? null,
-      role: payload.scope?.split(' ')[0] ?? null,
+      role: payload.scope ?? null,
     }
   } catch {
     return { userId: null, email: null, role: null }
@@ -62,4 +67,3 @@ export const useAuthStore = create<AuthState>()((set) => ({
   setFullName: (name) => set({ fullName: name }),
   setAvatarUrl: (url) => set({ avatarUrl: url }),
 }))
-
