@@ -122,7 +122,7 @@ func (h *Handler) MarkAllRead(c *echo.Context) error {
 func mapAudienceToRole(audience string) string {
 	switch audience {
 	case "web-vendor":
-		return "VENDOR"
+		return "RECRUITER"
 	case "web-admin":
 		return "ADMIN"
 	case "web-recruiter":
