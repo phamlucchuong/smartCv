@@ -49,7 +49,15 @@
       "Bash(npx playwright *)",
       "Bash(npx playwright-cli *)",
       "Bash(make run-user *)",
-      "Bash(make run-application *)"
+      "Bash(make run-application *)",
+      "Bash(pkill -f \"application_service\")",
+      "Bash(./mvnw -q spring-boot:run)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(docker exec smartCv-mongodb *)",
+      "Bash(docker cp *)",
+      "Bash(chmod +x /home/chuongpl/projects/smartCv/backend/user-service/mvnw /home/chuongpl/projects/smartCv/backend/job_service/mvnw /home/chuongpl/projects/smartCv/backend/application_service/mvnw)",
+      "Bash(./mvnw -q -o compile)",
+      "Bash(./mvnw -q compile)"
     ]
   }
 }

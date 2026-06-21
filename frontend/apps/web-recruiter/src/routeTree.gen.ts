@@ -25,11 +25,11 @@ import { Route as EmployerCvSearchRouteImport } from './routes/employer.cv-searc
 import { Route as EmployerBillingRouteImport } from './routes/employer.billing'
 import { Route as EmployerAtsRouteImport } from './routes/employer.ats'
 import { Route as EmployerAssessmentsRouteImport } from './routes/employer.assessments'
-import { Route as EmployerApplicantsRouteImport } from './routes/employer.applicants'
 import { Route as PublicPricingRouteImport } from './routes/_public.pricing'
 import { Route as PublicForEmployersRouteImport } from './routes/_public.for-employers'
 import { Route as PublicAboutRouteImport } from './routes/_public.about'
 import { Route as EmployerJobsIndexRouteImport } from './routes/employer.jobs.index'
+import { Route as EmployerApplicantsIndexRouteImport } from './routes/employer.applicants.index'
 import { Route as PublicJobsIndexRouteImport } from './routes/_public.jobs.index'
 import { Route as EmployerJobsNewRouteImport } from './routes/employer.jobs.new'
 import { Route as EmployerJobsIdRouteImport } from './routes/employer.jobs.$id'
@@ -115,11 +115,6 @@ const EmployerAssessmentsRoute = EmployerAssessmentsRouteImport.update({
   path: '/assessments',
   getParentRoute: () => EmployerRoute,
 } as any)
-const EmployerApplicantsRoute = EmployerApplicantsRouteImport.update({
-  id: '/applicants',
-  path: '/applicants',
-  getParentRoute: () => EmployerRoute,
-} as any)
 const PublicPricingRoute = PublicPricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -140,6 +135,11 @@ const EmployerJobsIndexRoute = EmployerJobsIndexRouteImport.update({
   path: '/jobs/',
   getParentRoute: () => EmployerRoute,
 } as any)
+const EmployerApplicantsIndexRoute = EmployerApplicantsIndexRouteImport.update({
+  id: '/applicants/',
+  path: '/applicants/',
+  getParentRoute: () => EmployerRoute,
+} as any)
 const PublicJobsIndexRoute = PublicJobsIndexRouteImport.update({
   id: '/jobs/',
   path: '/jobs/',
@@ -156,9 +156,9 @@ const EmployerJobsIdRoute = EmployerJobsIdRouteImport.update({
   getParentRoute: () => EmployerRoute,
 } as any)
 const EmployerApplicantsIdRoute = EmployerApplicantsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => EmployerApplicantsRoute,
+  id: '/applicants/$id',
+  path: '/applicants/$id',
+  getParentRoute: () => EmployerRoute,
 } as any)
 const PublicJobsIdRoute = PublicJobsIdRouteImport.update({
   id: '/jobs/$id',
@@ -173,7 +173,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof PublicAboutRoute
   '/for-employers': typeof PublicForEmployersRoute
   '/pricing': typeof PublicPricingRoute
-  '/employer/applicants': typeof EmployerApplicantsRouteWithChildren
   '/employer/assessments': typeof EmployerAssessmentsRoute
   '/employer/ats': typeof EmployerAtsRoute
   '/employer/billing': typeof EmployerBillingRoute
@@ -191,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/employer/jobs/$id': typeof EmployerJobsIdRoute
   '/employer/jobs/new': typeof EmployerJobsNewRoute
   '/jobs/': typeof PublicJobsIndexRoute
+  '/employer/applicants/': typeof EmployerApplicantsIndexRoute
   '/employer/jobs/': typeof EmployerJobsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -198,7 +198,6 @@ export interface FileRoutesByTo {
   '/about': typeof PublicAboutRoute
   '/for-employers': typeof PublicForEmployersRoute
   '/pricing': typeof PublicPricingRoute
-  '/employer/applicants': typeof EmployerApplicantsRouteWithChildren
   '/employer/assessments': typeof EmployerAssessmentsRoute
   '/employer/ats': typeof EmployerAtsRoute
   '/employer/billing': typeof EmployerBillingRoute
@@ -217,6 +216,7 @@ export interface FileRoutesByTo {
   '/employer/jobs/$id': typeof EmployerJobsIdRoute
   '/employer/jobs/new': typeof EmployerJobsNewRoute
   '/jobs': typeof PublicJobsIndexRoute
+  '/employer/applicants': typeof EmployerApplicantsIndexRoute
   '/employer/jobs': typeof EmployerJobsIndexRoute
 }
 export interface FileRoutesById {
@@ -227,7 +227,6 @@ export interface FileRoutesById {
   '/_public/about': typeof PublicAboutRoute
   '/_public/for-employers': typeof PublicForEmployersRoute
   '/_public/pricing': typeof PublicPricingRoute
-  '/employer/applicants': typeof EmployerApplicantsRouteWithChildren
   '/employer/assessments': typeof EmployerAssessmentsRoute
   '/employer/ats': typeof EmployerAtsRoute
   '/employer/billing': typeof EmployerBillingRoute
@@ -246,6 +245,7 @@ export interface FileRoutesById {
   '/employer/jobs/$id': typeof EmployerJobsIdRoute
   '/employer/jobs/new': typeof EmployerJobsNewRoute
   '/_public/jobs/': typeof PublicJobsIndexRoute
+  '/employer/applicants/': typeof EmployerApplicantsIndexRoute
   '/employer/jobs/': typeof EmployerJobsIndexRoute
 }
 export interface FileRouteTypes {
@@ -257,7 +257,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/for-employers'
     | '/pricing'
-    | '/employer/applicants'
     | '/employer/assessments'
     | '/employer/ats'
     | '/employer/billing'
@@ -275,6 +274,7 @@ export interface FileRouteTypes {
     | '/employer/jobs/$id'
     | '/employer/jobs/new'
     | '/jobs/'
+    | '/employer/applicants/'
     | '/employer/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -282,7 +282,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/for-employers'
     | '/pricing'
-    | '/employer/applicants'
     | '/employer/assessments'
     | '/employer/ats'
     | '/employer/billing'
@@ -301,6 +300,7 @@ export interface FileRouteTypes {
     | '/employer/jobs/$id'
     | '/employer/jobs/new'
     | '/jobs'
+    | '/employer/applicants'
     | '/employer/jobs'
   id:
     | '__root__'
@@ -310,7 +310,6 @@ export interface FileRouteTypes {
     | '/_public/about'
     | '/_public/for-employers'
     | '/_public/pricing'
-    | '/employer/applicants'
     | '/employer/assessments'
     | '/employer/ats'
     | '/employer/billing'
@@ -329,6 +328,7 @@ export interface FileRouteTypes {
     | '/employer/jobs/$id'
     | '/employer/jobs/new'
     | '/_public/jobs/'
+    | '/employer/applicants/'
     | '/employer/jobs/'
   fileRoutesById: FileRoutesById
 }
@@ -453,13 +453,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployerAssessmentsRouteImport
       parentRoute: typeof EmployerRoute
     }
-    '/employer/applicants': {
-      id: '/employer/applicants'
-      path: '/applicants'
-      fullPath: '/employer/applicants'
-      preLoaderRoute: typeof EmployerApplicantsRouteImport
-      parentRoute: typeof EmployerRoute
-    }
     '/_public/pricing': {
       id: '/_public/pricing'
       path: '/pricing'
@@ -488,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployerJobsIndexRouteImport
       parentRoute: typeof EmployerRoute
     }
+    '/employer/applicants/': {
+      id: '/employer/applicants/'
+      path: '/applicants'
+      fullPath: '/employer/applicants/'
+      preLoaderRoute: typeof EmployerApplicantsIndexRouteImport
+      parentRoute: typeof EmployerRoute
+    }
     '/_public/jobs/': {
       id: '/_public/jobs/'
       path: '/jobs'
@@ -511,10 +511,10 @@ declare module '@tanstack/react-router' {
     }
     '/employer/applicants/$id': {
       id: '/employer/applicants/$id'
-      path: '/$id'
+      path: '/applicants/$id'
       fullPath: '/employer/applicants/$id'
       preLoaderRoute: typeof EmployerApplicantsIdRouteImport
-      parentRoute: typeof EmployerApplicantsRoute
+      parentRoute: typeof EmployerRoute
     }
     '/_public/jobs/$id': {
       id: '/_public/jobs/$id'
@@ -547,19 +547,7 @@ const PublicRouteChildren: PublicRouteChildren = {
 const PublicRouteWithChildren =
   PublicRoute._addFileChildren(PublicRouteChildren)
 
-interface EmployerApplicantsRouteChildren {
-  EmployerApplicantsIdRoute: typeof EmployerApplicantsIdRoute
-}
-
-const EmployerApplicantsRouteChildren: EmployerApplicantsRouteChildren = {
-  EmployerApplicantsIdRoute: EmployerApplicantsIdRoute,
-}
-
-const EmployerApplicantsRouteWithChildren =
-  EmployerApplicantsRoute._addFileChildren(EmployerApplicantsRouteChildren)
-
 interface EmployerRouteChildren {
-  EmployerApplicantsRoute: typeof EmployerApplicantsRouteWithChildren
   EmployerAssessmentsRoute: typeof EmployerAssessmentsRoute
   EmployerAtsRoute: typeof EmployerAtsRoute
   EmployerBillingRoute: typeof EmployerBillingRoute
@@ -571,13 +559,14 @@ interface EmployerRouteChildren {
   EmployerSetupRoute: typeof EmployerSetupRoute
   EmployerVerificationRoute: typeof EmployerVerificationRoute
   EmployerIndexRoute: typeof EmployerIndexRoute
+  EmployerApplicantsIdRoute: typeof EmployerApplicantsIdRoute
   EmployerJobsIdRoute: typeof EmployerJobsIdRoute
   EmployerJobsNewRoute: typeof EmployerJobsNewRoute
+  EmployerApplicantsIndexRoute: typeof EmployerApplicantsIndexRoute
   EmployerJobsIndexRoute: typeof EmployerJobsIndexRoute
 }
 
 const EmployerRouteChildren: EmployerRouteChildren = {
-  EmployerApplicantsRoute: EmployerApplicantsRouteWithChildren,
   EmployerAssessmentsRoute: EmployerAssessmentsRoute,
   EmployerAtsRoute: EmployerAtsRoute,
   EmployerBillingRoute: EmployerBillingRoute,
@@ -589,8 +578,10 @@ const EmployerRouteChildren: EmployerRouteChildren = {
   EmployerSetupRoute: EmployerSetupRoute,
   EmployerVerificationRoute: EmployerVerificationRoute,
   EmployerIndexRoute: EmployerIndexRoute,
+  EmployerApplicantsIdRoute: EmployerApplicantsIdRoute,
   EmployerJobsIdRoute: EmployerJobsIdRoute,
   EmployerJobsNewRoute: EmployerJobsNewRoute,
+  EmployerApplicantsIndexRoute: EmployerApplicantsIndexRoute,
   EmployerJobsIndexRoute: EmployerJobsIndexRoute,
 }
 

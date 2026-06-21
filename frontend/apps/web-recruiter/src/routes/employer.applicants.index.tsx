@@ -3,20 +3,20 @@ import {
   useGetMyJobs,
   useGetByJobId,
   useUpdateStatus,
-  useGetById2,
+  useGetCandidateByUserId,
   getGetByJobIdQueryKey,
 } from "@smart-cv/api";
 import type { ApplicationModels } from "@smart-cv/api";
 import { AIScoreRing } from "@/components/ui-kit/AIScoreRing";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { Button } from "@smart-cv/ui";
-import { Search, Download, List, Kanban, Briefcase } from "lucide-react";
+import { Search, Download, List, Kanban, Briefcase, Mail, Phone, MapPin, Calendar, Award } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/useAuthStore";
 import { useQueryClient } from "@tanstack/react-query";
 
-export const Route = createFileRoute("/employer/applicants")({
+export const Route = createFileRoute("/employer/applicants/")({
   head: () => ({ meta: [{ title: "Ứng viên" }] }),
   component: ApplicantsPage,
 });
@@ -49,7 +49,7 @@ function ApplicationKanbanCard({
   onDragStart: (e: React.DragEvent, id: string, fromStatus: string) => void;
   statusOverride?: string;
 }) {
-  const { data: candidateData } = useGetById2(application.candidateId ?? "", {
+  const { data: candidateData } = useGetCandidateByUserId(application.candidateId ?? "", {
     query: { enabled: !!application.candidateId, staleTime: 60_000 },
   });
   const candidate = candidateData?.data;
@@ -59,42 +59,91 @@ function ApplicationKanbanCard({
     <div
       draggable
       onDragStart={(e) => onDragStart(e, application.id ?? "", effectiveStatus)}
-      className="card-surface p-3.5 cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-200 border border-border/50 hover:border-primary/30 space-y-2 group"
+      className="card-surface p-4 cursor-grab active:cursor-grabbing hover:shadow-xl transition-all duration-300 border border-border/50 hover:border-primary/40 space-y-3 group rounded-xl bg-card"
     >
-      <div className="flex items-start justify-between gap-1.5">
-        <Link
-          to="/employer/applicants/$id"
-          params={{ id: application.id ?? "" }}
-          className="font-semibold text-sm hover:text-primary line-clamp-1 flex-1 transition-colors"
-        >
-          {candidate?.fullName ?? "..."}
-        </Link>
-        <AIScoreRing score={application.aiScore ?? 0} size={30} thickness={3} />
+      {/* Header with Name & AI Score */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5 flex-1 min-w-0">
+          <Link
+            to="/employer/applicants/$id"
+            params={{ id: application.id ?? "" }}
+            className="font-semibold text-sm hover:text-primary line-clamp-1 block transition-colors text-foreground"
+          >
+            {candidate?.fullName ?? "..."}
+          </Link>
+          <div className="text-xs text-muted-foreground font-medium line-clamp-1">
+            {candidate?.title ?? "Chưa cập nhật tiêu đề"}
+          </div>
+        </div>
+        <AIScoreRing score={application.aiScore ?? 0} size={32} thickness={3} />
       </div>
-      <div className="text-xs text-muted-foreground line-clamp-1">
-        {candidate?.title ?? "—"}
+
+      {/* Applied Job Info */}
+      {application.jobTitle && (
+        <div className="flex items-center gap-1.5 text-xs text-primary/90 bg-primary/5 border border-primary/10 px-2 py-1 rounded-md">
+          <Briefcase className="size-3.5 flex-shrink-0" />
+          <span className="font-medium line-clamp-1">{application.jobTitle}</span>
+        </div>
+      )}
+
+      {/* Contact & Location Info */}
+      <div className="space-y-1.5 text-[11px] text-muted-foreground border-t border-border/30 pt-2">
+        {candidate?.email && (
+          <div className="flex items-center gap-1.5">
+            <Mail className="size-3 flex-shrink-0" />
+            <span className="truncate">{candidate.email}</span>
+          </div>
+        )}
+        {candidate?.phone && (
+          <div className="flex items-center gap-1.5">
+            <Phone className="size-3 flex-shrink-0" />
+            <span>{candidate.phone}</span>
+          </div>
+        )}
+        {candidate?.address && (
+          <div className="flex items-center gap-1.5">
+            <MapPin className="size-3 flex-shrink-0" />
+            <span className="truncate">{candidate.address}</span>
+          </div>
+        )}
+        {candidate?.yearsOfExperience != null && (
+          <div className="flex items-center gap-1.5">
+            <Award className="size-3 flex-shrink-0" />
+            <span>Kinh nghiệm: {candidate.yearsOfExperience} năm</span>
+          </div>
+        )}
       </div>
+
+      {/* Skills */}
       {(candidate?.skills ?? []).length > 0 && (
         <div className="flex flex-wrap gap-1 pt-1">
-          {(candidate?.skills ?? []).slice(0, 2).map((s) => (
+          {(candidate?.skills ?? []).slice(0, 4).map((s) => (
             <span
               key={s}
-              className="text-[9px] bg-primary/5 text-primary border border-primary/15 px-1.5 py-0.5 rounded font-medium"
+              className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-md font-medium"
             >
               {s}
             </span>
           ))}
+          {(candidate?.skills ?? []).length > 4 && (
+            <span className="text-[10px] bg-secondary/50 text-muted-foreground px-1.5 py-0.5 rounded-md font-medium">
+              +{(candidate?.skills ?? []).length - 4}
+            </span>
+          )}
         </div>
       )}
+
+      {/* Footer Info */}
       <div className="pt-2 flex items-center justify-between border-t border-border/30 text-[10px] text-muted-foreground">
-        <span>
+        <span className="flex items-center gap-1">
+          <Calendar className="size-3" />
           {application.appliedAt
             ? new Date(application.appliedAt).toLocaleDateString("vi-VN")
             : "—"}
         </span>
         {application.aiScore != null && (
           <span className="font-semibold bg-success/10 text-success border border-success/20 px-1.5 py-0.5 rounded">
-            AI: {application.aiScore}%
+            Match: {application.aiScore}%
           </span>
         )}
       </div>
@@ -103,7 +152,7 @@ function ApplicationKanbanCard({
 }
 
 function ApplicationListRow({ application }: { application: AppItem }) {
-  const { data: candidateData } = useGetById2(application.candidateId ?? "", {
+  const { data: candidateData } = useGetCandidateByUserId(application.candidateId ?? "", {
     query: { enabled: !!application.candidateId, staleTime: 60_000 },
   });
   const candidate = candidateData?.data;
@@ -162,7 +211,7 @@ function ApplicantsPage() {
   const queryClient = useQueryClient();
 
   const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
-  const [selectedJobId, setSelectedJobId] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("Tất cả trạng thái");
   const [selectedScore, setSelectedScore] = useState("Mọi điểm số");
   const [searchQuery, setSearchQuery] = useState("");
@@ -309,7 +358,7 @@ function ApplicantsPage() {
           onChange={(e) => setSelectedJobId(e.target.value)}
           className="h-9 rounded-md border border-input bg-background text-sm px-3 cursor-pointer min-w-[200px]"
         >
-          <option value="">Chọn tin tuyển</option>
+          <option value="all">Tất cả tin tuyển</option>
           {myJobs.map((j) => (
             <option key={j.id} value={j.id ?? ""}>
               {j.title ?? j.id}
@@ -337,14 +386,7 @@ function ApplicantsPage() {
         </select>
       </div>
 
-      {!selectedJobId ? (
-        <div className="card-surface p-16 text-center flex flex-col items-center gap-3">
-          <Briefcase className="size-10 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">
-            Chọn tin tuyển để xem danh sách ứng viên
-          </p>
-        </div>
-      ) : isAppsLoading ? (
+      {isAppsLoading ? (
         <div className="grid gap-4 grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <div

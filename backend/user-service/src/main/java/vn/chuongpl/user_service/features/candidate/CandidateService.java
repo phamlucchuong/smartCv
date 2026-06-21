@@ -62,13 +62,15 @@ public class CandidateService {
 
     public CandidateResponse getById(String id) {
         Candidate candidate = candidateRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        User user = userRepository.findById(candidate.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        // Tolerate a missing user record (consistent with getAll); the candidate
+        // profile is still viewable even if its user link is dangling.
+        User user = userRepository.findById(candidate.getUserId()).orElse(null);
         return candidateMapper.toCandidateResponse(candidate, user);
     }
 
     public CandidateResponse getByUserId(String userId) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.findById(userId).orElse(null);
         return candidateMapper.toCandidateResponse(candidate, user);
     }
 

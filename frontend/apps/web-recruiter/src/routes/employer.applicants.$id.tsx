@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useGetById, useGetById2, useUpdateStatus } from "@smart-cv/api";
+import { useGetById, useGetCandidateByUserId, useUpdateStatus, getGetByIdQueryKey } from "@smart-cv/api";
 import type { ApplicationModels } from "@smart-cv/api";
 import { AIScoreRing } from "@/components/ui-kit/AIScoreRing";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { AIInsightBox } from "@/components/ui-kit/AIInsightBox";
 import { SkillGapCard } from "@/components/ui-kit/SkillGapCard";
-import { Button } from "@smart-cv/ui";
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from "@smart-cv/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@smart-cv/ui";
-import { Mail, Phone, MapPin, FileText, Sparkles, Copy } from "lucide-react";
+import { Mail, Phone, MapPin, FileText, Sparkles, Copy, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/employer/applicants/$id")({
   head: () => ({ meta: [{ title: "Chi tiết ứng viên" }] }),
@@ -33,16 +34,27 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
   WITHDRAWN: "Đã rút",
 };
 
+const VALID_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
+  PENDING: ["REVIEWING"],
+  REVIEWING: ["ACCEPTED", "REJECTED"],
+  ACCEPTED: [],
+  REJECTED: [],
+  WITHDRAWN: [],
+};
+
 function CandidateDetail() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
   const [questions, setQuestions] = useState<string[] | null>(null);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const { data: appData, isLoading: appLoading } =
     useGetById<ApplicationModels.ApiResponseApplicationDetailResponse>(id);
   const application = appData?.data;
 
-  const { data: candidateData, isLoading: candidateLoading } = useGetById2(
+  const { data: candidateData, isLoading: candidateLoading } = useGetCandidateByUserId(
     application?.candidateId ?? "",
     { query: { enabled: !!application?.candidateId } },
   );
@@ -50,21 +62,48 @@ function CandidateDetail() {
 
   const updateStatusMutation = useUpdateStatus();
 
-  const handleStatusChange = (newStatus: ApplicationStatus) => {
+  const status = (application?.status ?? "PENDING") as ApplicationStatus;
+  const validTransitions = VALID_TRANSITIONS[status];
+  const canReject = validTransitions.includes("REJECTED");
+
+  const doStatusChange = (newStatus: ApplicationStatus, reason?: string) => {
     updateStatusMutation.mutate(
       {
         id,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: { status: newStatus as any },
+        data: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          status: newStatus as any,
+          rejectionReason: reason,
+        },
       },
       {
         onSuccess: () => {
           toast.success(`Đã chuyển sang "${STATUS_LABELS[newStatus]}"`);
           setShowStatusPicker(false);
+          queryClient.invalidateQueries({ queryKey: getGetByIdQueryKey(id) });
         },
-        onError: () => toast.error("Không thể cập nhật trạng thái"),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => toast.error(err?.response?.data?.message ?? "Không thể cập nhật trạng thái"),
       },
     );
+  };
+
+  const handleStatusChange = (newStatus: ApplicationStatus) => {
+    if (newStatus === "REJECTED") {
+      setRejectDialogOpen(true);
+    } else {
+      doStatusChange(newStatus);
+    }
+  };
+
+  const handleConfirmReject = () => {
+    if (!rejectionReason.trim()) {
+      toast.error("Vui lòng nhập lý do từ chối");
+      return;
+    }
+    doStatusChange("REJECTED", rejectionReason.trim());
+    setRejectDialogOpen(false);
+    setRejectionReason("");
   };
 
   const generateQuestions = () => {
@@ -97,10 +136,40 @@ function CandidateDetail() {
     );
   }
 
-  const status = (application.status ?? "PENDING") as ApplicationStatus;
   const score = application.aiScore ?? 0;
+  const aiStatus = application.aiStatus as string | undefined;
+  const isPending = updateStatusMutation.isPending;
 
   return (
+    <>
+    <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Từ chối ứng viên</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="rejection-reason">Lý do từ chối <span className="text-destructive">*</span></Label>
+          <Input
+            id="rejection-reason"
+            placeholder="Nhập lý do từ chối để thông báo cho ứng viên..."
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Hủy</Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirmReject}
+            disabled={isPending || !rejectionReason.trim()}
+          >
+            {isPending ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
+            Xác nhận từ chối
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <div className="space-y-5">
       <div className="card-surface p-6 flex flex-wrap items-center gap-5">
         <div className="size-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
@@ -115,32 +184,41 @@ function CandidateDetail() {
         </div>
         <AIScoreRing score={score} size={88} />
         <div className="flex flex-col gap-2">
-          <div className="relative">
-            <Button onClick={() => setShowStatusPicker((v) => !v)}>
-              Chuyển stage
+          {validTransitions.length > 0 && (
+            <div className="relative">
+              <Button
+                disabled={isPending}
+                onClick={() => setShowStatusPicker((v) => !v)}
+              >
+                {isPending ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
+                Chuyển stage
+              </Button>
+              {showStatusPicker && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg p-2 flex flex-col gap-1 min-w-[160px]">
+                  {validTransitions.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
+                      className="text-left px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <Button variant="outline" disabled>Hẹn phỏng vấn</Button>
+          {canReject && (
+            <Button
+              variant="ghost"
+              className="text-destructive"
+              disabled={isPending}
+              onClick={() => setRejectDialogOpen(true)}
+            >
+              Từ chối
             </Button>
-            {showStatusPicker && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg p-2 flex flex-col gap-1 min-w-[160px]">
-                {STATUS_COLUMNS.filter((s) => s !== status).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusChange(s)}
-                    className="text-left px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors cursor-pointer"
-                  >
-                    {STATUS_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <Button variant="outline">Hẹn phỏng vấn</Button>
-          <Button
-            variant="ghost"
-            className="text-danger"
-            onClick={() => handleStatusChange("REJECTED")}
-          >
-            Từ chối
-          </Button>
+          )}
         </div>
       </div>
 
@@ -227,45 +305,59 @@ function CandidateDetail() {
         </TabsContent>
 
         <TabsContent value="ai" className="mt-5 grid lg:grid-cols-3 gap-4">
-          <div className="card-surface p-5 lg:col-span-2 space-y-4">
-            <h3 className="font-semibold">Chi tiết Matching Score</h3>
-            <div className="flex items-center gap-6">
-              <AIScoreRing score={score} size={120} thickness={10} />
-              <div className="flex-1 space-y-2 text-sm text-muted-foreground">
-                <div>
-                  Kỹ năng phù hợp:{" "}
-                  {(application.matchedSkills ?? []).join(", ") || "—"}
-                </div>
-                <div>
-                  Kỹ năng thiếu:{" "}
-                  {(application.missingSkills ?? []).join(", ") || "—"}
-                </div>
-              </div>
+          {aiStatus === "PENDING" || aiStatus == null ? (
+            <div className="card-surface p-8 lg:col-span-3 flex flex-col items-center gap-3 text-muted-foreground">
+              <Loader2 className="size-8 animate-spin text-primary" />
+              <p className="text-sm">AI đang phân tích CV và JD, vui lòng chờ...</p>
             </div>
-            {application.coverLetter && (
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Thư giới thiệu</h4>
-                <p className="text-sm text-muted-foreground">
-                  {application.coverLetter}
-                </p>
+          ) : aiStatus === "FAILED" ? (
+            <div className="card-surface p-8 lg:col-span-3 flex flex-col items-center gap-3 text-destructive">
+              <AlertCircle className="size-8" />
+              <p className="text-sm">Phân tích AI thất bại. Vui lòng liên hệ quản trị viên.</p>
+            </div>
+          ) : (
+            <>
+              <div className="card-surface p-5 lg:col-span-2 space-y-4">
+                <h3 className="font-semibold">Chi tiết Matching Score</h3>
+                <div className="flex items-center gap-6">
+                  <AIScoreRing score={score} size={120} thickness={10} />
+                  <div className="flex-1 space-y-2 text-sm text-muted-foreground">
+                    <div>
+                      Kỹ năng phù hợp:{" "}
+                      {(application.matchedSkills ?? []).join(", ") || "—"}
+                    </div>
+                    <div>
+                      Kỹ năng thiếu:{" "}
+                      {(application.missingSkills ?? []).join(", ") || "—"}
+                    </div>
+                  </div>
+                </div>
+                {application.coverLetter && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Thư giới thiệu</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {application.coverLetter}
+                    </p>
+                  </div>
+                )}
+                <AIInsightBox title="AI Recommendation">
+                  <div className="mb-2">
+                    <StatusBadge
+                      status={score >= 70 ? "Đạt chuẩn" : "Cần xem xét"}
+                    />
+                  </div>
+                  {(application.missingSkills ?? []).length > 0
+                    ? `Ứng viên cần bổ sung: ${application.missingSkills!.join(", ")}.`
+                    : "Ứng viên đáp ứng đầy đủ yêu cầu kỹ năng."}
+                </AIInsightBox>
               </div>
-            )}
-            <AIInsightBox title="AI Recommendation">
-              <div className="mb-2">
-                <StatusBadge
-                  status={score >= 70 ? "Đạt chuẩn" : "Cần xem xét"}
-                />
-              </div>
-              {(application.missingSkills ?? []).length > 0
-                ? `Ứng viên cần bổ sung: ${application.missingSkills!.join(", ")}.`
-                : "Ứng viên đáp ứng đầy đủ yêu cầu kỹ năng."}
-            </AIInsightBox>
-          </div>
-          <SkillGapCard
-            matched={application.matchedSkills ?? []}
-            missing={application.missingSkills ?? []}
-            suggested={[]}
-          />
+              <SkillGapCard
+                matched={application.matchedSkills ?? []}
+                missing={application.missingSkills ?? []}
+                suggested={[]}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="test" className="mt-5 card-surface p-5">
@@ -317,5 +409,6 @@ function CandidateDetail() {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 }

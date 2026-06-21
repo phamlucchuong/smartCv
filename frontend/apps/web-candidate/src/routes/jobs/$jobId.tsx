@@ -17,6 +17,7 @@ import {
   MapPin,
   Users,
   X,
+  Upload,
 } from 'lucide-react'
 import {
   useGetJobById,
@@ -28,7 +29,11 @@ import {
   useRemove,
   useGetByRecruiterId,
   useListCvs,
+  getListCvsQueryKey,
+  AXIOS_INSTANCE,
 } from '@smart-cv/api'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { hasCandidateRole, useAuthStore } from '../../store/useAuthStore'
 
 export const Route = createFileRoute('/jobs/$jobId')({
@@ -696,6 +701,7 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
   const isCandidate = isAuthenticated && hasCandidateRole(role)
   const [coverLetter, setCoverLetter] = React.useState('')
   const [selectedCvUrl, setSelectedCvUrl] = React.useState('')
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const { data: cvsData, isLoading: cvsLoading } = useListCvs({
     query: { enabled: isCandidate },
@@ -711,6 +717,40 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
       }
     }
   }, [cvList, selectedCvUrl])
+
+  const queryClient = useQueryClient()
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      return AXIOS_INSTANCE.post('/api/candidates/cv/upload', form, {
+        transformRequest: [
+          (data, headers) => {
+            if (headers) delete (headers as Record<string, unknown>)['Content-Type']
+            return data
+          },
+        ],
+      })
+    },
+    onSuccess: () => {
+      toast.success('Tải lên CV thành công!')
+      queryClient.invalidateQueries({ queryKey: getListCvsQueryKey() })
+    },
+    onError: () => toast.error('Tải lên thất bại. Vui lòng thử lại.'),
+  })
+
+  const handleUpload = (file: File | null) => {
+    if (!file) return
+    if (file.type !== 'application/pdf') {
+      toast.error('Chỉ chấp nhận file định dạng PDF')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File CV tối đa 5MB')
+      return
+    }
+    uploadMutation.mutate(file)
+  }
 
   const submitMutation = useSubmit()
 
@@ -736,13 +776,37 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
           {cvsLoading ? (
             <p className="text-sm text-muted-foreground py-4 text-center">Đang tải thông tin...</p>
           ) : cvList.length === 0 ? (
-            <div className="text-center space-y-3 py-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground text-center">
                 Bạn chưa tải lên CV. Vui lòng tải CV lên trước khi ứng tuyển.
               </p>
-              <Link to="/cv" onClick={onClose} className="inline-block text-primary text-sm hover:underline">
-                Tải lên CV →
-              </Link>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                disabled={uploadMutation.isPending}
+                onChange={(e) => handleUpload(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+              <div
+                className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed border-primary/20 bg-primary/[0.02] p-6 text-center rounded-xl transition-all cursor-pointer hover:border-primary/45 hover:bg-primary/[0.04]`}
+                onClick={() => !uploadMutation.isPending && fileInputRef.current?.click()}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Chọn file PDF để tải lên
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Định dạng PDF • Tối đa 5MB
+                  </p>
+                </div>
+              </div>
+              {uploadMutation.isPending && (
+                <p className="text-xs text-muted-foreground text-center animate-pulse">Đang tải lên và xử lý...</p>
+              )}
             </div>
           ) : (
             <>

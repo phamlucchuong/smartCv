@@ -20,6 +20,7 @@ export {
   useUpdate2 as useUpdateCandidate,
   useUploadAvatar as useUploadCandidateAvatar,
   useUpdatePreferences1 as useUpdateCandidatePreferences,
+  useGetByUserId1 as useGetCandidateByUserId,
 } from './generated/user/candidate-controller/candidate-controller';
 export { getMe as getRecruiterLoginUser } from './generated/user/user-controller/user-controller';
 export {

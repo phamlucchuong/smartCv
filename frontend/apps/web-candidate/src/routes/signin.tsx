@@ -96,18 +96,22 @@ function SignInComponent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email || !password) {
-      setError('Please enter both email and password.')
+      const msg = 'Please enter both email and password.'
+      setError(msg)
+      toast.error(msg)
       return
     }
     setError('')
     try {
       await attemptLogin(email, password)
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { code?: number; message?: string } } }
+      const e = err as any
       if (e?.response?.data?.code === 3003) {
         openOtpPanel()
       } else {
-        setError(e instanceof Error ? e.message : (e?.response?.data?.message ?? 'Invalid email or password.'))
+        const errorMsg = e?.response?.data?.message ?? e?.message ?? 'Invalid email or password.'
+        setError(errorMsg)
+        toast.error(errorMsg)
       }
     }
   }
