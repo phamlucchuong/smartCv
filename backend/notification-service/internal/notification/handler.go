@@ -148,7 +148,9 @@ func (h *Handler) SubscribeFCMToken(c *echo.Context) error {
 		return pkg.JSONError(c, http.StatusBadRequest, pkg.CodeBadRequest, "missing token")
 	}
 
-	audience := req.Audience
+	// Always derive audience from the middleware context (set from X-User-Scope by the gateway).
+	// Never trust the client-supplied req.Audience — it could be forged to store tokens under another audience.
+	audience, _ := c.Get("audience").(string)
 	if audience == "" {
 		audience = "web-user"
 	}
@@ -176,7 +178,7 @@ func (h *Handler) UnsubscribeFCMToken(c *echo.Context) error {
 		return pkg.JSONError(c, http.StatusBadRequest, pkg.CodeBadRequest, "missing token")
 	}
 
-	audience := req.Audience
+	audience, _ := c.Get("audience").(string)
 	if audience == "" {
 		audience = "web-user"
 	}

@@ -58,6 +58,51 @@ type JobModerationEventMessage struct {
 	ModerationNote string `json:"moderationNote,omitempty"`
 }
 
+type CvAnalysisDoneMessage struct {
+	UserID   string `json:"userId"`
+	CvID     string `json:"cvId"`
+	Filename string `json:"filename"`
+}
+
+func (c *Consumer) ListenCvAnalysisEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("cv.analysis.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("cv.analysis.done.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+	if err = ch.QueueBind(queue.Name, "cv.analysis.done", "cv.analysis.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg CvAnalysisDoneMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal cv analysis done event", "error", err)
+				continue
+			}
+			c.logger.Info("processing cv analysis done event", "userId", msg.UserID, "cvId", msg.CvID)
+			c.notiSvc.NotifyCvAnalysisDone(context.Background(), msg.UserID, msg.Filename)
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on cv.analysis.done.queue")
+	return nil
+}
+
 func (c *Consumer) Listen() error {
 	ch, err := c.conn.Channel()
 	if err != nil {
@@ -199,6 +244,33 @@ func (c *Consumer) handleApplicationEvent(msg ApplicationEventMessage) {
 	if err := c.notiSvc.SendApplicationResultEmail(ctx, msg); err != nil {
 		c.logger.Error("failed to send application result email", "applicationId", msg.ApplicationID, "error", err)
 	}
+
+	title, body := applicationPushContent(msg.NewStatus, msg.JobTitle, msg.RejectionReason)
+	data := map[string]string{
+		"applicationId": msg.ApplicationID,
+		"jobId":         msg.JobID,
+		"jobTitle":      msg.JobTitle,
+		"status":        msg.NewStatus,
+	}
+	c.notiSvc.NotifyApplicationStatusChanged(ctx, msg.CandidateID, title, body, data)
+}
+
+func applicationPushContent(status, jobTitle, rejectionReason string) (title, body string) {
+	switch status {
+	case "ACCEPTED":
+		title = "Application Accepted 🎉"
+		body = "Your application for \"" + jobTitle + "\" has been accepted!"
+	case "REJECTED":
+		title = "Application Update"
+		body = "Your application for \"" + jobTitle + "\" was not selected."
+		if rejectionReason != "" {
+			body += " Reason: " + rejectionReason
+		}
+	default:
+		title = "Application Status Changed"
+		body = "Your application for \"" + jobTitle + "\" is now " + status + "."
+	}
+	return
 }
 
 func (c *Consumer) ListenRecruiterEvents() error {
