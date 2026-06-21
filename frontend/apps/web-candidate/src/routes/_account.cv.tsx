@@ -9,9 +9,11 @@ import {
   getListCvsQueryKey, AXIOS_INSTANCE,
 } from '@smart-cv/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { onMessage } from 'firebase/messaging'
 import { useAuthStore } from '../store/useAuthStore'
 import { usePreferencesStore } from '../store/usePreferencesStore'
 import { CvAnalysisPanel } from '../components/cv/CvAnalysisPanel'
+import { messaging } from '../lib/firebase'
 
 export const Route = createFileRoute('/_account/cv')({
   component: MyCVPage,
@@ -65,6 +67,23 @@ function MyCVPage() {
     },
   })
   const queryClient = useQueryClient()
+
+  // When the tab is open, Firebase suppresses background push — listen for foreground messages instead.
+  React.useEffect(() => {
+    if (!messaging) return
+    const unsubscribe = onMessage(messaging, (payload) => {
+      if (payload.data?.type === 'CV_ANALYSIS_DONE') {
+        const filename = payload.data.filename ?? ''
+        toast.success(
+          lang === 'VI'
+            ? `CV "${filename}" đã được phân tích xong!`
+            : `CV "${filename}" analysis is complete!`
+        )
+        queryClient.invalidateQueries({ queryKey: getListCvsQueryKey() })
+      }
+    })
+    return unsubscribe
+  }, [lang, queryClient])
 
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
   const [userSelected, setUserSelected] = React.useState<string | null>(null)

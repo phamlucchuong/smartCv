@@ -41,6 +41,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      firebase:
+        specifier: ^12.15.0
+        version: 12.15.0
       js-cookie:
         specifier: ^3.0.8
         version: 3.0.8
@@ -235,6 +238,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      firebase:
+        specifier: ^12.15.0
+        version: 12.15.0
       js-cookie:
         specifier: ^3.0.5
         version: 3.0.8

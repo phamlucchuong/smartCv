@@ -98,6 +98,25 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(recruiterRejectedQueue()).to(recruiterExchange()).with(RECRUITER_REJECTED_KEY);
     }
 
+    public static final String CV_ANALYSIS_EXCHANGE = "cv.analysis.exchange";
+    public static final String CV_ANALYSIS_DONE_QUEUE = "cv.analysis.done.queue";
+    public static final String CV_ANALYSIS_DONE_KEY = "cv.analysis.done";
+
+    @Bean
+    public DirectExchange cvAnalysisExchange() {
+        return new DirectExchange(CV_ANALYSIS_EXCHANGE);
+    }
+
+    @Bean
+    public Queue cvAnalysisDoneQueue() {
+        return new Queue(CV_ANALYSIS_DONE_QUEUE, true);
+    }
+
+    @Bean
+    public Binding cvAnalysisDoneBinding() {
+        return BindingBuilder.bind(cvAnalysisDoneQueue()).to(cvAnalysisExchange()).with(CV_ANALYSIS_DONE_KEY);
+    }
+
     @Bean
     public MessageConverter converter() {
         return new Jackson2JsonMessageConverter();

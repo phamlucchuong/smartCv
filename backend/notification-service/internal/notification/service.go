@@ -50,6 +50,12 @@ type ServiceInterface interface {
 	HandleRecruiterRejected(ctx context.Context, msg RecruiterStatusEventMessage) error
 	HandleJobApproved(ctx context.Context, msg JobModerationEventMessage) error
 	HandleJobRejected(ctx context.Context, msg JobModerationEventMessage) error
+
+	// Application status push notification
+	NotifyApplicationStatusChanged(ctx context.Context, candidateID, title, body string, data map[string]string)
+
+	// CV analysis done push notification
+	NotifyCvAnalysisDone(ctx context.Context, userID, filename string)
 }
 
 // Service provides high-level notification methods.
@@ -396,6 +402,38 @@ func (s *Service) NotifyOrderPlaced(ctx context.Context, userID string, orderID 
 	}, audienceForRecipientRole("USER"))
 }
 
+// NotifyApplicationStatusChanged persists a notification and sends an FCM push to the candidate.
+func (s *Service) NotifyApplicationStatusChanged(ctx context.Context, candidateID, title, body string, data map[string]string) {
+	jsonData, _ := json.Marshal(data)
+	if err := s.CreateNotification(ctx, candidateID, "USER", title, body, "APPLICATION_STATUS", jsonData); err != nil {
+		s.logger.Error("failed to persist application status notification", "candidateID", candidateID, "err", err)
+	}
+	s.sendWebpushToUser(ctx, candidateID, "/applications", data, audienceForRecipientRole("USER"))
+}
+
+// NotifyCvAnalysisDone persists a notification and sends an FCM push to the candidate after CV analysis completes.
+func (s *Service) NotifyCvAnalysisDone(ctx context.Context, userID, filename string) {
+	title := "CV Analysis Complete 🎉"
+	body := fmt.Sprintf("Your CV \"%s\" has been analyzed. View your results now.", filename)
+	data := map[string]string{
+		"type":     "CV_ANALYSIS_DONE",
+		"url":      "/cv",
+		"filename": filename,
+	}
+	jsonData, _ := json.Marshal(data)
+	if err := s.CreateNotification(ctx, userID, "USER", title, body, "CV_ANALYSIS_DONE", jsonData); err != nil {
+		s.logger.Error("failed to persist cv analysis done notification", "userID", userID, "err", err)
+	}
+	s.sendWebpushToUser(ctx, userID, "/cv", map[string]string{
+		"title":    title,
+		"body":     body,
+		"url":      "/cv",
+		"type":     "CV_ANALYSIS_DONE",
+		"filename": filename,
+	}, audienceForRecipientRole("USER"))
+	s.syncFirestoreUnreadCount(userID, "USER")
+}
+
 func (s *Service) sendWebpushToUser(ctx context.Context, userID string, url string, data map[string]string, audience string) {
 	if userID == "" || s.fcmClient == nil || !isSupportedAudience(audience) {
 		return
@@ -534,12 +572,12 @@ func (s *Service) updateFirestoreSignal(userID string, signalType string, data m
 
 func audienceForRecipientRole(role string) string {
 	switch role {
-	case "VENDOR":
+	case "VENDOR", "RECRUITER":
+		// Tokens are stored under "web-vendor" by audienceFromScope (ROLE_RECRUITER → web-vendor).
+		// Both VENDOR and RECRUITER map to the same recruiter audience string.
 		return "web-vendor"
 	case "ADMIN":
 		return "web-admin"
-	case "RECRUITER":
-		return "web-recruiter"
 	default:
 		return "web-user"
 	}
@@ -547,7 +585,7 @@ func audienceForRecipientRole(role string) string {
 
 func isSupportedAudience(audience string) bool {
 	switch audience {
-	case "web-user", "web-vendor", "web-admin", "web-recruiter":
+	case "web-user", "web-vendor", "web-admin":
 		return true
 	default:
 		return false

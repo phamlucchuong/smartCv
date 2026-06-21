@@ -4,12 +4,29 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import tailwindcss from '@tailwindcss/vite'
 import { loadEnv } from 'vite'
 import path from 'path'
+import { copyFileSync, mkdirSync, existsSync } from 'fs'
+
+function copyFirebaseCompatPlugin() {
+  return {
+    name: 'copy-firebase-compat',
+    buildStart() {
+      const firebaseDir = path.resolve(__dirname, 'node_modules/firebase')
+      const destDir = path.resolve(__dirname, 'public/firebase')
+      if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
+      for (const file of ['firebase-app-compat.js', 'firebase-messaging-compat.js']) {
+        copyFileSync(path.join(firebaseDir, file), path.join(destDir, file))
+      }
+    },
+  }
+}
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, __dirname, '')
+  const envDir = path.resolve(__dirname, '../../')
+  const env = loadEnv(mode, envDir, '')
 
   return {
-    plugins: [TanStackRouterVite(), react(), tailwindcss()],
+    envDir,
+    plugins: [TanStackRouterVite(), react(), tailwindcss(), copyFirebaseCompatPlugin()],
     define: {
       __SMART_CV_API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:8080'),
     },

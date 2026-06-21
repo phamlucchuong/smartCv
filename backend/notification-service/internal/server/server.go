@@ -69,8 +69,8 @@ func New(cfg *config.Config, log *slog.Logger, gormDB *gorm.DB, rdb *redis.Clien
 	s.notiSvc = notification.NewService(
 		repo,
 		log,
-		"", // FCM Project ID
-		"", // FCM Service Account JSON
+		cfg.FCMProjectID,
+		cfg.FCMServiceAccountJSON,
 		otpSvc,
 		emailSvc,
 		smsSvc,
@@ -125,6 +125,12 @@ func (s *Server) Start(ctx context.Context) error {
 		go func() {
 			if err := s.consumer.ListenJobModerationEvents(); err != nil {
 				s.log.Error("failed to start job moderation event consumer", slog.Any("error", err))
+			}
+		}()
+
+		go func() {
+			if err := s.consumer.ListenCvAnalysisEvents(); err != nil {
+				s.log.Error("failed to start cv analysis event consumer", slog.Any("error", err))
 			}
 		}()
 	}

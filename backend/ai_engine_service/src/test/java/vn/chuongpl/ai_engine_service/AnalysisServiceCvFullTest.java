@@ -94,6 +94,115 @@ class AnalysisServiceCvFullTest {
     }
 
     @Test
+    void analyzeCv_accepts_skill_objects_from_llm_response() {
+        CvInfoResponse cvInfo = new CvInfoResponse(CV_ID, CV_URL, "cv.pdf", USER_ID);
+        when(userClient.getCvInfo(CV_ID)).thenReturn(cvInfo);
+        when(cvTextExtractor.resolveCvText(null, CV_URL)).thenReturn(CV_TEXT);
+
+        when(promptBuilder.buildExtractJobTargetPrompt(any())).thenReturn("extract prompt");
+        when(modelRouter.call(anyString(), eq("extract prompt")))
+                .thenReturn("{\"targetPosition\":\"Back-end Developer Intern\",\"targetDomain\":\"Tech\"}");
+
+        when(promptBuilder.buildAnalyzePrompt(any())).thenReturn("analyze prompt");
+        when(modelRouter.call(anyString(), eq("analyze prompt")))
+                .thenReturn("{\"jobTitle\":\"Back-end Developer Intern\",\"matchScore\":78,\"scoreLabel\":\"Good\","
+                        + "\"summary\":\"Strong internship-level match\","
+                        + "\"matchedSkills\":[{\"skill\":\"Java\",\"evidence\":\"Built APIs\"}],"
+                        + "\"missingSkills\":[],"
+                        + "\"extraSkills\":[{\"skill\":\"React.js\",\"evidence\":\"Frontend project\"}],"
+                        + "\"recommendations\":[{\"priority\":\"high\",\"area\":\"Impact\",\"advice\":\"Add metrics\"}]}");
+
+        when(promptBuilder.buildImproveStructuredPrompt(any())).thenReturn("improve prompt");
+        when(modelRouter.call(anyString(), eq("improve prompt")))
+                .thenReturn("{\"strengths\":[],\"weaknesses\":[],\"tips\":[]}");
+
+        doNothing().when(userClient).updateCvAnalysis(anyString(), anyString(), anyString());
+
+        CvFullAnalysisResponse result = analysisService.analyzeCv(
+                new CvFullAnalysisRequest(CV_ID, null), USER_ID);
+
+        assertThat(result.matchScore()).isEqualTo(78);
+        assertThat(result.matchedSkills()).containsExactly("Java");
+        assertThat(result.extraSkills()).containsExactly("React.js");
+        assertThat(result.extractedSkills()).containsExactly("Java", "React.js");
+    }
+
+    @Test
+    void analyzeCv_accepts_actual_llm_payload_with_wrapping_text() {
+        CvInfoResponse cvInfo = new CvInfoResponse(CV_ID, CV_URL, "cv.pdf", USER_ID);
+        when(userClient.getCvInfo(CV_ID)).thenReturn(cvInfo);
+        when(cvTextExtractor.resolveCvText(null, CV_URL)).thenReturn(CV_TEXT);
+
+        when(promptBuilder.buildExtractJobTargetPrompt(any())).thenReturn("extract prompt");
+        when(modelRouter.call(anyString(), eq("extract prompt")))
+                .thenReturn("{\"targetPosition\":\"Back-end Developer Intern\",\"targetDomain\":\"Tech\"}");
+
+        when(promptBuilder.buildAnalyzePrompt(any())).thenReturn("analyze prompt");
+        when(modelRouter.call(anyString(), eq("analyze prompt")))
+                .thenReturn("""
+                        Here is the analysis result:
+                        {
+                          "jobTitle": "Back-end Developer Intern",
+                          "matchScore": 78,
+                          "scoreLabel": "Good",
+                          "summary": "This is a strong internship-level match. You already show hands-on back-end experience with Golang, Java, .NET, SQL Server, PostgreSQL, Git, and API development through multiple projects, which aligns well with a back-end intern role. The main gap is that the job description is very sparse, so your biggest improvement lever is to make your back-end impact clearer with concise metrics, architecture details, and stronger evidence of testing, deployment, or teamwork.",
+                          "matchedSkills": [
+                            {
+                              "skill": "Back-end development",
+                              "evidence": "Multiple projects where you built APIs, database logic, authentication, and server-side features."
+                            },
+                            {
+                              "skill": "Golang",
+                              "evidence": "Listed in technical skills and used in the Dental Smile project."
+                            }
+                          ],
+                          "missingSkills": [],
+                          "extraSkills": [
+                            {
+                              "skill": "React.js",
+                              "evidence": "Listed in technical skills and used in projects, but not required for a back-end intern role."
+                            },
+                            {
+                              "skill": "Spring Boot",
+                              "evidence": "Used in the IT Jobs project."
+                            },
+                            {
+                              "skill": "Postman",
+                              "evidence": "Listed in technical skills."
+                            }
+                          ],
+                          "recommendations": [
+                            {
+                              "priority": "high",
+                              "area": "CV positioning",
+                              "advice": "Move your strongest back-end stack to the top of the CV."
+                            },
+                            {
+                              "priority": "medium",
+                              "area": "Experience clarity",
+                              "advice": "Clarify your role in each project, including Women’s Shop."
+                            }
+                          ]
+                        }
+                        """);
+
+        when(promptBuilder.buildImproveStructuredPrompt(any())).thenReturn("improve prompt");
+        when(modelRouter.call(anyString(), eq("improve prompt")))
+                .thenReturn("{\"strengths\":[],\"weaknesses\":[],\"tips\":[]}");
+
+        doNothing().when(userClient).updateCvAnalysis(anyString(), anyString(), anyString());
+
+        CvFullAnalysisResponse result = analysisService.analyzeCv(
+                new CvFullAnalysisRequest(CV_ID, null), USER_ID);
+
+        assertThat(result.matchScore()).isEqualTo(78);
+        assertThat(result.matchedSkills()).containsExactly("Back-end development", "Golang");
+        assertThat(result.extraSkills()).containsExactly("React.js", "Spring Boot", "Postman");
+        assertThat(result.extractedSkills()).containsExactly(
+                "Back-end development", "Golang", "React.js", "Spring Boot", "Postman");
+    }
+
+    @Test
     void analyzeCv_throws_UNAUTHORIZED_when_user_does_not_own_cv() {
         CvInfoResponse cvInfo = new CvInfoResponse(CV_ID, CV_URL, "cv.pdf", "other-user");
         when(userClient.getCvInfo(CV_ID)).thenReturn(cvInfo);

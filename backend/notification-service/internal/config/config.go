@@ -30,6 +30,10 @@ type Config struct {
 	RabbitMQPort     string `mapstructure:"RABBITMQ_PORT"`
 	RabbitMQUser     string `mapstructure:"RABBITMQ_USER"`
 	RabbitMQPassword string `mapstructure:"RABBITMQ_PASSWORD"`
+
+	// Firebase Cloud Messaging configuration for browser push notifications.
+	FCMProjectID          string `mapstructure:"FCM_PROJECT_ID"`
+	FCMServiceAccountJSON string `mapstructure:"FCM_SERVICE_ACCOUNT_JSON"`
 }
 
 func Load() (*Config, error) {

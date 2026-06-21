@@ -1,6 +1,7 @@
 package vn.chuongpl.ai_engine_service.features.analysis;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ import vn.chuongpl.ai_engine_service.integration.user.CvInfoResponse;
 import vn.chuongpl.ai_engine_service.integration.user.UserClient;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -200,11 +202,56 @@ public class AnalysisService {
     private <T> T parse(String raw, Class<T> clazz) {
         try {
             String normalized = extractJson(raw);
+            if (clazz == CvAnalysisResponse.class) {
+                JsonNode payload = mapper.readTree(normalized);
+                normalizeSkillArrays(payload, "matchedSkills");
+                normalizeSkillArrays(payload, "missingSkills");
+                normalizeSkillArrays(payload, "extraSkills");
+                return clazz.cast(mapper.treeToValue(payload, CvAnalysisResponse.class));
+            }
             return mapper.readValue(normalized, clazz);
         } catch (Exception e) {
-            log.error("Failed to parse AI response: {}", raw);
+            log.error("Failed to parse AI response: {}. Cause: {}", raw, e.getMessage(), e);
             throw new AppException(ErrorCode.AI_PROCESSING_FAILED);
         }
+    }
+
+    private void normalizeSkillArrays(JsonNode payload, String fieldName) {
+        if (!(payload instanceof com.fasterxml.jackson.databind.node.ObjectNode objectNode)) {
+            return;
+        }
+
+        JsonNode field = objectNode.get(fieldName);
+        if (field == null || !field.isArray()) {
+            return;
+        }
+
+        List<String> normalized = new ArrayList<>();
+        field.forEach(item -> {
+            String value = extractSkillName(item);
+            if (value != null && !value.isBlank()) {
+                normalized.add(value);
+            }
+        });
+        objectNode.set(fieldName, mapper.valueToTree(normalized));
+    }
+
+    private String extractSkillName(JsonNode item) {
+        if (item == null || item.isNull()) {
+            return null;
+        }
+        if (item.isTextual()) {
+            return item.asText();
+        }
+        JsonNode skill = item.get("skill");
+        if (skill != null && skill.isTextual()) {
+            return skill.asText();
+        }
+        JsonNode name = item.get("name");
+        if (name != null && name.isTextual()) {
+            return name.asText();
+        }
+        return null;
     }
 
     private String extractJson(String raw) {
@@ -213,7 +260,21 @@ public class AnalysisService {
             trimmed = trimmed.replaceFirst("^```json", "").replaceFirst("^```", "");
             trimmed = trimmed.substring(0, trimmed.lastIndexOf("```"));
         }
-        return trimmed.trim();
+
+        String candidate = trimmed.trim();
+        int objectStart = candidate.indexOf('{');
+        int objectEnd = candidate.lastIndexOf('}');
+        if (objectStart >= 0 && objectEnd > objectStart) {
+            return candidate.substring(objectStart, objectEnd + 1).trim();
+        }
+
+        int arrayStart = candidate.indexOf('[');
+        int arrayEnd = candidate.lastIndexOf(']');
+        if (arrayStart >= 0 && arrayEnd > arrayStart) {
+            return candidate.substring(arrayStart, arrayEnd + 1).trim();
+        }
+
+        return candidate;
     }
 
     private String nvl(String value) {
