@@ -20,6 +20,7 @@ import vn.chuongpl.user_service.features.user.UserRepository;
 import vn.chuongpl.user_service.features.candidate.dto.CvInfoResponse;
 import vn.chuongpl.user_service.integration.job.JobClient;
 import vn.chuongpl.user_service.integration.job.JobSummary;
+import vn.chuongpl.user_service.integration.notification.CvAnalysisDonePublisher;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ public class CandidateService {
     CandidateMapper candidateMapper;
     JobClient jobClient;
     S3Service s3Service;
+    CvAnalysisDonePublisher cvAnalysisDonePublisher;
 
     public CandidateResponse create(CandidateRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -420,13 +422,18 @@ public class CandidateService {
     public void updateCvAnalysis(String cvId, String analysisResult, CvAnalysisStatus status) {
         Candidate candidate = candidateRepository.findByCvId(cvId)
                 .orElseThrow(() -> new AppException(ErrorCode.CV_NOT_FOUND));
+        final String[] filenameHolder = {null};
         candidate.getCvs().stream()
                 .filter(c -> cvId.equals(c.getId()))
                 .findFirst()
                 .ifPresent(cv -> {
                     cv.setAnalysisResult(analysisResult);
                     cv.setAnalysisStatus(status);
+                    filenameHolder[0] = cv.getFilename();
                 });
         candidateRepository.save(candidate);
+        if (status == CvAnalysisStatus.DONE && filenameHolder[0] != null) {
+            cvAnalysisDonePublisher.publish(candidate.getUserId(), cvId, filenameHolder[0]);
+        }
     }
 }
