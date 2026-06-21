@@ -25,14 +25,11 @@ import vn.chuongpl.application_service.integration.ai.AiScoringPublisher;
 import vn.chuongpl.application_service.integration.notification.NotificationPublisher;
 import vn.chuongpl.application_service.integration.user.UserClient;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Function;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
@@ -79,6 +76,7 @@ public class ApplicationService {
 
         Application saved = applicationRepository.save(app);
         aiScoringPublisher.publishScoringRequest(saved);
+        notificationPublisher.publishNewApplication(saved);
         return applicationMapper.toResponse(saved);
     }
 
@@ -93,10 +91,7 @@ public class ApplicationService {
         if (isAdmin) return applicationMapper.toDetailResponse(app);
 
         if (isRecruiter) {
-            String recruiterId = userClient.resolveRecruiterId(userId);
-            if (recruiterId == null || !app.getRecruiterId().equals(recruiterId)) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
+            if (!app.getRecruiterId().equals(userId)) throw new AppException(ErrorCode.UNAUTHORIZED);
             return applicationMapper.toDetailResponse(app);
         }
 
@@ -104,48 +99,31 @@ public class ApplicationService {
         return applicationMapper.toResponse(app);
     }
 
-    public PageResponse<ApplicationDetailResponse> getByJobId(String jobId, String userId, boolean isAdmin, int page, int size) {
-        String recruiterId = isAdmin ? null : userClient.resolveRecruiterId(userId);
-        Page<Application> results;
-        if ("all".equalsIgnoreCase(jobId)) {
-            if (isAdmin) {
-                results = applicationRepository.findAllByDeletedFalse(buildPageable(page, size));
-            } else {
-                results = applicationRepository.findByRecruiterIdAndDeletedFalse(recruiterId, buildPageable(page, size));
-            }
-        } else {
-            results = applicationRepository.findByJobIdAndDeletedFalse(jobId, buildPageable(page, size));
-            if (!isAdmin) {
-                results.getContent().stream()
-                        .filter(a -> recruiterId == null || !a.getRecruiterId().equals(recruiterId))
-                        .findFirst()
-                        .ifPresent(a -> {
-                            throw new AppException(ErrorCode.UNAUTHORIZED);
-                        });
-            }
+    public PageResponse<ApplicationDetailResponse> getByJobId(String jobId, String recruiterId, boolean isAdmin, int page, int size) {
+        Page<Application> results = applicationRepository.findByJobIdAndDeletedFalse(jobId, buildPageable(page, size));
+
+        if (!isAdmin) {
+            results.getContent().stream()
+                    .filter(a -> !a.getRecruiterId().equals(recruiterId))
+                    .findFirst()
+                    .ifPresent(a -> {
+                        throw new AppException(ErrorCode.UNAUTHORIZED);
+                    });
         }
 
         return toPage(results, applicationMapper::toDetailResponse, page, size);
     }
 
-    public ApplicationDetailResponse updateStatus(String id, ApplicationStatusUpdateRequest request, String userId, boolean isAdmin) {
+    public ApplicationDetailResponse updateStatus(String id, ApplicationStatusUpdateRequest request, String recruiterId, boolean isAdmin) {
         Application app = findActiveById(id);
 
-        log.info("[updateStatus] appId={} currentStatus={} requestStatus={} rejectionReason=[{}]",
-                id, app.getStatus(), request.getStatus(), request.getRejectionReason());
-
-        if (!isAdmin) {
-            String recruiterId = userClient.resolveRecruiterId(userId);
-            if (recruiterId == null || !app.getRecruiterId().equals(recruiterId)) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-        }
+        if (!isAdmin && !app.getRecruiterId().equals(recruiterId)) throw new AppException(ErrorCode.UNAUTHORIZED);
 
         validateRecruiterTransition(app.getStatus(), request.getStatus());
 
         if (request.getStatus() == ApplicationStatus.REJECTED
                 && (request.getRejectionReason() == null || request.getRejectionReason().isBlank())) {
-            throw new AppException(ErrorCode.APPLICATION_REJECTION_REASON_REQUIRED);
+            throw new AppException(ErrorCode.APPLICATION_INVALID_TRANSITION);
         }
 
         applicationMapper.updateStatus(app, request);
