@@ -210,9 +210,7 @@ public class AuthService {
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
-        Date expirityTime = (isRefresh)
-                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS).toEpochMilli())
-                : signedJWT.getJWTClaimsSet().getExpirationTime();
+        Date expirityTime = signedJWT.getJWTClaimsSet().getExpirationTime();
 
         boolean verify = signedJWT.verify(verifier);
 
@@ -260,16 +258,20 @@ public class AuthService {
         var signedJwt = verifyToken(token, true);
 
         var expirationTime = signedJwt.getJWTClaimsSet().getExpirationTime();
-        jwtBlacklistService.addTokenToBlacklist(token, (expirationTime.getTime() - System.currentTimeMillis()) / 1000);
+        long remainingTtlSeconds = Math.max(0, (expirationTime.getTime() - System.currentTimeMillis()) / 1000);
+        if (remainingTtlSeconds > 0) {
+            jwtBlacklistService.addTokenToBlacklist(token, remainingTtlSeconds);
+        }
 
         var userId = signedJwt.getJWTClaimsSet().getSubject();
         var user = userService.getById(userId);
 
+        var accessToken = generateToken(user, VALID_DURATION);
         var refreshToken = generateToken(user, LONG_REFRESHABLE_DURATION);
 
         return AuthResponse.builder()
-                .token(refreshToken)
-                .refreshToken(token)
+                .token(accessToken)
+                .refreshToken(refreshToken)
                 .authenticated(true)
                 .build();
     }

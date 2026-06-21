@@ -6,6 +6,8 @@ declare const __SMART_CV_API_BASE_URL__: string | undefined;
 const ACCESS_COOKIE = 'smart_cv_token';
 const REFRESH_COOKIE = 'smart_cv_refresh';
 const DEFAULT_API_BASE_URL = 'http://localhost:8080';
+const ACCESS_COOKIE_DAYS = 1;
+const REFRESH_COOKIE_DAYS = 1;
 
 function getApiBaseUrl(): string {
   if (typeof __SMART_CV_API_BASE_URL__ === 'string' && __SMART_CV_API_BASE_URL__.length > 0) {
@@ -140,8 +142,12 @@ AXIOS_INSTANCE.interceptors.response.use(
     try {
       const res = await AXIOS_INSTANCE.post('/user/api/auth/refresh', { refreshToken });
       const newToken: string = res.data?.data?.token ?? res.data?.data?.accessToken;
+      const newRefreshToken: string = res.data?.data?.refreshToken ?? refreshToken;
       if (!newToken) throw new Error('No token in refresh response');
-      setCookieRaw(ACCESS_COOKIE, newToken, 1);
+      setCookieRaw(ACCESS_COOKIE, newToken, ACCESS_COOKIE_DAYS);
+      if (newRefreshToken) {
+        setCookieRaw(REFRESH_COOKIE, newRefreshToken, REFRESH_COOKIE_DAYS);
+      }
       processQueue(null, newToken);
       original.headers = { ...original.headers, Authorization: `Bearer ${newToken}` };
       return AXIOS_INSTANCE(original);

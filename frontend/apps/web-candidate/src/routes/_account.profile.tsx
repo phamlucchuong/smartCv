@@ -300,13 +300,7 @@ function ProfilePage() {
   const queryClient = useQueryClient()
   const updateCandidateMutation = useUpdateCandidate()
   const updateUserMutation = useUpdateUser()
-  const uploadAvatarMutation = useUploadCandidateAvatar({
-    request: {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    },
-  })
+  const uploadAvatarMutation = useUploadCandidateAvatar()
 
   React.useEffect(() => { document.title = t('page_title_profile') }, [t])
 
@@ -545,13 +539,10 @@ function ProfilePage() {
     if (!file.type.startsWith('image/')) { toast.error(lang === 'VI' ? 'Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP)' : 'Only image files are supported'); return }
     if (file.size > 5 * 1024 * 1024) { toast.error(lang === 'VI' ? 'Ảnh phải nhỏ hơn 5MB' : 'Image must be smaller than 5MB'); return }
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     const toastId = toast.loading(lang === 'VI' ? 'Đang tải ảnh lên...' : 'Uploading avatar...')
 
     uploadAvatarMutation.mutate(
-      { data: formData as unknown as UserModels.UploadAvatarBody },
+      { data: { file } },
       {
         onSuccess: (res) => {
           const newUrl = res.data
