@@ -64,6 +64,14 @@ type CvAnalysisDoneMessage struct {
 	Filename string `json:"filename"`
 }
 
+type RecruiterPendingEventMessage struct {
+	RecruiterID    string   `json:"recruiterId"`
+	RecruiterEmail string   `json:"recruiterEmail"`
+	CompanyName    string   `json:"companyName"`
+	AdminUserIDs   []string `json:"adminUserIds"`
+	OccurredAt     string   `json:"occurredAt"`
+}
+
 func (c *Consumer) ListenCvAnalysisEvents() error {
 	ch, err := c.conn.Channel()
 	if err != nil {
@@ -251,6 +259,7 @@ func (c *Consumer) handleApplicationEvent(msg ApplicationEventMessage) {
 		"jobId":         msg.JobID,
 		"jobTitle":      msg.JobTitle,
 		"status":        msg.NewStatus,
+		"url":           "/applications",
 	}
 	c.notiSvc.NotifyApplicationStatusChanged(ctx, msg.CandidateID, title, body, data)
 }
@@ -401,4 +410,84 @@ func (c *Consumer) handleJobModerationEvent(msg JobModerationEventMessage) {
 	if err != nil {
 		c.logger.Error("failed to handle job moderation event", "jobId", msg.JobID, "eventType", msg.EventType, "error", err)
 	}
+}
+
+func (c *Consumer) ListenApplicationSubmittedEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("application.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("application.submitted.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = ch.QueueBind(queue.Name, "application.submitted", "application.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg ApplicationEventMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal application submitted event", "error", err)
+				continue
+			}
+			c.logger.Info("received application submitted event", "applicationId", msg.ApplicationID, "recruiterId", msg.RecruiterID)
+			c.notiSvc.NotifyNewApplicant(context.Background(), msg.RecruiterID, msg.ApplicationID, msg.JobTitle, msg.JobID)
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on application.submitted.queue")
+	return nil
+}
+
+func (c *Consumer) ListenRecruiterPendingEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("recruiter.notification.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("recruiter.pending.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = ch.QueueBind(queue.Name, "recruiter.pending", "recruiter.notification.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg RecruiterPendingEventMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal recruiter pending event", "error", err)
+				continue
+			}
+			c.logger.Info("received recruiter pending event", "recruiterId", msg.RecruiterID, "company", msg.CompanyName)
+			c.notiSvc.NotifyAdminNewRecruiterRequest(context.Background(), msg)
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on recruiter.pending.queue")
+	return nil
 }
