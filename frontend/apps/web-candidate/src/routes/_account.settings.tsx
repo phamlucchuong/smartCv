@@ -14,6 +14,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
 import { useCandidatePreferences } from '../store/candidatePreferences'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 
 export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,
@@ -39,11 +40,11 @@ function SettingsPage() {
   const me = meData?.data
 
   const queryClient = useQueryClient()
-  const updateNotifMutation     = useUpdateNotifications()
-  const updatePrivacyMutation   = useUpdatePrivacy()
-  const changePasswordMutation  = useChangeMyPassword()
-  const updateUserMutation      = useUpdateUser()
-  const deleteAccountMutation   = useDeleteMyAccount()
+  const updateNotifMutation = useUpdateNotifications()
+  const updatePrivacyMutation = useUpdatePrivacy()
+  const changePasswordMutation = useChangeMyPassword()
+  const updateUserMutation = useUpdateUser()
+  const deleteAccountMutation = useDeleteMyAccount()
 
   const [activeSection, setActiveSection] = React.useState<SectionKey>('account')
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false)
@@ -191,17 +192,24 @@ function SettingsPage() {
         setNotifications({
           jobRecommendations: settingsPayload.notifications?.emailJobSuggestions ?? false,
           applicationUpdates: settingsPayload.notifications?.emailApplicationUpdates ?? false,
-          newMessages:        settingsPayload.notifications?.pushNotifications ?? false,
-          promotionalEmails:  settingsPayload.notifications?.marketingEmails ?? false,
+          newMessages: settingsPayload.notifications?.pushNotifications ?? false,
+          promotionalEmails: settingsPayload.notifications?.marketingEmails ?? false,
         })
         setPrivacy({
-          publicProfile:        settingsPayload.privacy?.showCvToRecruiters ?? false,
+          publicProfile: settingsPayload.privacy?.showCvToRecruiters ?? false,
           showSalaryExpectation: settingsPayload.privacy?.showContactInfo ?? false,
           activityStatus: false,
         })
       })
     }
   }, [settingsPayload])
+
+  const { subscribe, unsubscribe, initPushSubscription, currentPermission } = usePushNotifications()
+
+  React.useEffect(() => { initPushSubscription() }, [])
+
+  const [pushPermDialog, setPushPermDialog] = React.useState<'pre-prompt' | 'blocked' | null>(null)
+  const [isSubscribing, setIsSubscribing] = React.useState(false)
 
   const handleNotifToggle = (key: keyof typeof notifications) => {
     const next = { ...notifications, [key]: !notifications[key] }
@@ -213,6 +221,59 @@ function SettingsPage() {
         onError: () => { setNotifications(notifications); toast.error('Failed to update notifications') },
       }
     )
+  }
+
+  const doSubscribe = async () => {
+    setIsSubscribing(true)
+    try {
+      await subscribe()
+      handleNotifToggle('newMessages')
+      setPushPermDialog(null)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('Push subscription failed:', msg)
+      if (currentPermission() === 'denied') {
+        setPushPermDialog('blocked')
+      } else if (msg === 'Messaging unavailable') {
+        setPushPermDialog(null)
+        toast.error(
+          lang === 'VI'
+            ? 'Firebase chưa được cấu hình. Vui lòng liên hệ quản trị viên.'
+            : 'Firebase is not configured. Please contact the administrator.'
+        )
+      } else {
+        setPushPermDialog(null)
+        toast.error(
+          lang === 'VI'
+            ? `Đăng ký thông báo thất bại: ${msg}`
+            : `Failed to subscribe to notifications: ${msg}`
+        )
+      }
+    } finally {
+      setIsSubscribing(false)
+    }
+  }
+
+  const handlePushToggle = async () => {
+    if (!notifications.newMessages) {
+      const perm = currentPermission()
+      if (perm === 'denied') {
+        setPushPermDialog('blocked')
+        return
+      }
+      if (perm === 'granted') {
+        await doSubscribe()
+        return
+      }
+      setPushPermDialog('pre-prompt')
+    } else {
+      try {
+        await unsubscribe()
+      } catch (err) {
+        console.error('Push unsubscription failed:', err)
+      }
+      handleNotifToggle('newMessages')
+    }
   }
 
   const handlePrivacyToggle = (key: keyof Omit<typeof privacy, 'activityStatus'>) => {
@@ -341,7 +402,7 @@ function SettingsPage() {
                 <h2 className="mb-4 text-xl font-semibold text-foreground">Notification Preferences</h2>
                 <ToggleRow label="Job Recommendations" subLabel="Receive weekly curated job suggestions" checked={notifications.jobRecommendations} onToggle={() => handleNotifToggle('jobRecommendations')} />
                 <ToggleRow label="Application Updates" subLabel="Get notified when employers view your profile" checked={notifications.applicationUpdates} onToggle={() => handleNotifToggle('applicationUpdates')} />
-                <ToggleRow label="New Messages" subLabel="Notifications for recruiter messages" checked={notifications.newMessages} onToggle={() => handleNotifToggle('newMessages')} />
+                <ToggleRow label="New Messages" subLabel="Notifications for new messages" checked={notifications.newMessages} onToggle={handlePushToggle} />
                 <ToggleRow label="Promotional Emails" subLabel="Tips, resources and SmartCV updates" checked={notifications.promotionalEmails} onToggle={() => handleNotifToggle('promotionalEmails')} />
               </CardContent>
             </Card>
@@ -351,7 +412,6 @@ function SettingsPage() {
                 <h2 className="mb-4 text-xl font-semibold text-foreground">Privacy Settings</h2>
                 <ToggleRow label="Share CV with Recruiters" subLabel="Allow recruiters to view your CV" checked={privacy.publicProfile} onToggle={() => handlePrivacyToggle('publicProfile')} />
                 <ToggleRow label="Show Contact Info" subLabel="Display your contact information on profile" checked={privacy.showSalaryExpectation} onToggle={() => handlePrivacyToggle('showSalaryExpectation')} />
-                <ToggleRow label="Activity Status" subLabel="Show when you were last active" checked={privacy.activityStatus} onToggle={() => setPrivacy((p) => ({ ...p, activityStatus: !p.activityStatus }))} />
               </CardContent>
             </Card>
           </div>
@@ -378,6 +438,79 @@ function SettingsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Push notification permission pre-prompt */}
+      <Dialog open={pushPermDialog === 'pre-prompt'} onOpenChange={(open) => { if (!open) setPushPermDialog(null) }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              {lang === 'VI' ? 'Cho phép thông báo trình duyệt' : 'Allow Browser Notifications'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {lang === 'VI'
+                ? 'SmartCV cần quyền thông báo từ trình duyệt để gửi cảnh báo tin nhắn mới đến bạn ngay cả khi bạn không mở trang web.'
+                : 'SmartCV needs browser notification permission to deliver new message alerts even when you\'re not on the page.'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {lang === 'VI'
+                ? 'Nhấn "Cho phép" và sau đó chấp nhận trong hộp thoại trình duyệt.'
+                : 'Click "Allow" then accept in the browser prompt.'}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPushPermDialog(null)}>
+              {lang === 'VI' ? 'Hủy' : 'Cancel'}
+            </Button>
+            <Button onClick={doSubscribe} disabled={isSubscribing}>
+              {isSubscribing
+                ? (lang === 'VI' ? 'Đang xử lý...' : 'Processing...')
+                : (lang === 'VI' ? 'Cho phép' : 'Allow')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Push notification blocked dialog */}
+      <Dialog open={pushPermDialog === 'blocked'} onOpenChange={(open) => { if (!open) setPushPermDialog(null) }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-destructive" />
+              {lang === 'VI' ? 'Thông báo đã bị chặn' : 'Notifications Blocked'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {lang === 'VI'
+                ? 'Trình duyệt của bạn đang chặn thông báo từ SmartCV. Để nhận tin nhắn mới, hãy cấp lại quyền theo hướng dẫn dưới đây.'
+                : 'Your browser is blocking notifications from SmartCV. To receive new message alerts, re-enable permission as follows.'}
+            </p>
+            <ol className="text-sm text-muted-foreground space-y-1 list-decimal pl-4">
+              {lang === 'VI' ? (
+                <>
+                  <li>Nhấn vào biểu tượng khóa <span className="font-mono text-xs bg-muted px-1 rounded">🔒</span> trên thanh địa chỉ</li>
+                  <li>Tìm mục <strong>Thông báo</strong> và chọn <strong>Cho phép</strong></li>
+                  <li>Tải lại trang và bật lại tùy chọn này</li>
+                </>
+              ) : (
+                <>
+                  <li>Click the lock icon <span className="font-mono text-xs bg-muted px-1 rounded">🔒</span> in the address bar</li>
+                  <li>Find <strong>Notifications</strong> and set it to <strong>Allow</strong></li>
+                  <li>Reload the page and toggle this setting again</li>
+                </>
+              )}
+            </ol>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setPushPermDialog(null)}>
+              {lang === 'VI' ? 'Đã hiểu' : 'Got it'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={otpDialog.isOpen} onOpenChange={(open) => setOtpDialog((prev) => ({ ...prev, isOpen: open }))}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
@@ -391,7 +524,7 @@ function SettingsPage() {
             {!otpDialog.otpSent ? (
               <>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {lang === 'VI' 
+                  {lang === 'VI'
                     ? `Hệ thống sẽ gửi mã OTP xác thực đến thông tin liên hệ mới/hiện tại của bạn: `
                     : `We will send a verification OTP to the following address/phone: `}
                   <strong className="text-foreground">{otpDialog.contact}</strong>
@@ -400,12 +533,12 @@ function SettingsPage() {
                   <Button variant="outline" onClick={() => setOtpDialog((prev) => ({ ...prev, isOpen: false }))}>
                     {lang === 'VI' ? 'Hủy' : 'Cancel'}
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleSendOtp}
                     disabled={sendOtpMutation.isPending}
                   >
-                    {sendOtpMutation.isPending 
-                      ? (lang === 'VI' ? 'Đang gửi...' : 'Sending...') 
+                    {sendOtpMutation.isPending
+                      ? (lang === 'VI' ? 'Đang gửi...' : 'Sending...')
                       : (lang === 'VI' ? 'Gửi mã OTP' : 'Send OTP')}
                   </Button>
                 </div>
@@ -422,19 +555,19 @@ function SettingsPage() {
                   <label className="text-xs font-semibold text-muted-foreground">
                     {lang === 'VI' ? 'Nhập mã OTP (6 chữ số)' : 'Enter OTP Code (6 digits)'}
                   </label>
-                  <Input 
-                    type="text" 
-                    maxLength={6} 
-                    className="text-center tracking-[0.25em] font-mono text-lg" 
-                    value={otpDialog.otpCode} 
-                    onChange={(e) => setOtpDialog((prev) => ({ ...prev, otpCode: e.target.value.replace(/\D/g, '') }))} 
+                  <Input
+                    type="text"
+                    maxLength={6}
+                    className="text-center tracking-[0.25em] font-mono text-lg"
+                    value={otpDialog.otpCode}
+                    onChange={(e) => setOtpDialog((prev) => ({ ...prev, otpCode: e.target.value.replace(/\D/g, '') }))}
                   />
                 </div>
                 <div className="flex justify-between items-center pt-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-xs" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
                     disabled={sendOtpMutation.isPending}
                     onClick={handleSendOtp}
                   >
@@ -444,12 +577,12 @@ function SettingsPage() {
                     <Button variant="outline" onClick={() => setOtpDialog((prev) => ({ ...prev, isOpen: false }))}>
                       {lang === 'VI' ? 'Hủy' : 'Cancel'}
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleVerifyAndSubmit}
                       disabled={verifyOtpMutation.isPending || changePasswordMutation.isPending || updateUserMutation.isPending}
                     >
-                      {verifyOtpMutation.isPending 
-                        ? (lang === 'VI' ? 'Đang xác thực...' : 'Verifying...') 
+                      {verifyOtpMutation.isPending
+                        ? (lang === 'VI' ? 'Đang xác thực...' : 'Verifying...')
                         : (lang === 'VI' ? 'Xác nhận & Lưu' : 'Verify & Save')}
                     </Button>
                   </div>

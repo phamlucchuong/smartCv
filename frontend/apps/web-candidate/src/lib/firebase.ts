@@ -21,8 +21,8 @@ if (!getApps().length) {
 let messaging: Messaging | null = null
 try {
   messaging = getMessaging(app)
-} catch {
-  // Messaging is unavailable in non-browser environments (SSR, service worker setup phase).
+} catch (err) {
+  console.error('[Firebase] getMessaging failed:', err)
 }
 
 export { app, messaging, firebaseConfig }
