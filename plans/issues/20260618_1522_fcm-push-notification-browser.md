@@ -1,98 +1,103 @@
 # FCM Browser Push Notifications for Candidate / Recruiter / Admin
 
+**Updated:** 2026-06-21 — reflects current code state; items already implemented are marked ✅.
+
 ## Overview
 
-Implement end-to-end Firebase Cloud Messaging (FCM) push notifications so that users on all three web apps (candidate, recruiter, admin) can opt in to browser push alerts. The backend infrastructure is mostly scaffolded but not wired; the frontend has no Firebase SDK, no service worker, and no permission flow at all.
+Implement end-to-end Firebase Cloud Messaging (FCM) push notifications across all three web apps (candidate, recruiter, admin). The backend service and frontend packages are partially scaffolded; this issue covers the remaining wiring and a pre-existing audience-string mismatch that silently prevents recruiter pushes from reaching their targets.
 
-The feature has four parts:
-
-1. **Backend: wire FCM credentials from env** — `notification-service` initializes Firebase with empty strings; no push is ever sent.
-2. **Backend: fix auth and audience for subscribe endpoints** — auth middleware is commented out and `SubscribeFCMToken` hardcodes audience to `"web-user"`.
-3. **Frontend: install Firebase SDK + service worker** — no Firebase package in any frontend app.
-4. **Frontend: push permission request + subscribe/unsubscribe flow** — the "Push Notifications" toggle in Settings is a pure DB preference with no browser permission request.
+Remaining work falls into four groups:
+1. **Backend: wire FCM credentials from env** — `notification-service` passes empty strings; `s.fcmClient` is always nil.
+2. **Backend: fix recruiter audience mismatch** — `audienceFromScope` stores recruiter tokens under `"web-vendor"` but `audienceForRecipientRole` queries for `"web-recruiter"`; recruiter push is silently dropped.
+3. **Frontend: install Firebase SDK + service workers** — web-recruiter and web-admin have no Firebase; no app has a service worker.
+4. **Frontend: push permission flow + real notifications pages** — candidate/recruiter notifications pages redirect instead of showing data; admin popover uses fake seed data; no app auto-resubscribes on load.
 
 ---
 
-## Current behavior
+## Current state
 
-| Layer | What exists | What is broken |
+| Layer | What exists | What is still missing |
 |---|---|---|
-| `notification-service` config | `config.Config` has no FCM fields | `server.go:72-73` passes `""` for both `fcmProjectID` and `fcmServiceAccountJSON` → `s.fcmClient` is always nil → every `sendWebpushToUser` call returns immediately without sending anything |
-| `notification-service` auth | `// s.setupMiddleware()` commented out at `server.go:88` | No middleware reads the gateway-forwarded `X-User-Id` header → `c.Get("user_id")` is always `""` → handlers always return 401 in the best case, save wrong data in the worst |
-| `notification-service` audience — subscribe | `SubscribeFCMToken` hardcodes `audience = "web-user"` in service + handler | Recruiter/admin tokens saved under `"web-user"` → `sendWebpushToUser("web-vendor")` finds zero tokens → push never reaches recruiters or admins |
-| `notification-service` audience — unsubscribe (stub) | `UnsubscribeFCMToken` handler (`handler.go:158-174`) validates input and returns 200 immediately | The service layer is **never called** — no token is ever deleted from the database; calling `DELETE /fcm/unsubscribe` silently does nothing |
-| `notification-service` unsubscribe BOLA | Service `UnsubscribeFCMToken` deletes by token string alone | No `user_id` constraint → any authenticated user who knows another user's FCM token string can delete it; fix requires `WHERE token = ? AND audience = ? AND user_id = ?` |
-| Gateway audience header | Gateway `AuthenticationFilter` sets `X-User-Id`, `X-Role`, `X-Email` | `X-Audience` is never forwarded → notification middleware cannot derive audience from a header that doesn't exist; must be derived from `X-Role` in notification service middleware |
-| DB migration | `V001-create-notifications-table.up.sql` is 0 bytes | `notification_fcm_tokens` table only exists if GORM auto-migrate runs; no explicit migration |
-| Application events | `consumer.handleApplicationEvent` calls `SendApplicationResultEmail` only | No FCM push is sent when a candidate's application is accepted or rejected |
-| Frontend SDK | Firebase not in any `package.json` | Cannot call `messaging.getToken()` or register a service worker |
-| Frontend SW | No `firebase-messaging-sw.js` in any `public/` directory | Background push messages cannot be received |
-| Frontend permission (candidate) | Settings toggle `pushNotifications` calls `PUT /user/api/candidates/settings` only | Browser `Notification.permission` is never requested; no FCM token is generated or registered |
-| Frontend permission (recruiter) | `employer.settings.tsx` has no notification toggle at all | No push preferences or permission flow exists in the recruiter app |
-| Frontend notifications (candidate) | `_account.notifications.tsx` is a static placeholder | No API call, no unread count, no list |
-| Frontend notifications (recruiter) | `employer.notifications.tsx` renders hardcoded fake items | Three hardcoded i18n entries with static timestamps are displayed as if they were real notifications |
-| Frontend notifications (admin) | No notifications route exists in `web-admin` | Must be created from scratch |
+| `notification-service` config | SMTP, Twilio, RabbitMQ fields | No `FCM_PROJECT_ID` or `FCM_SERVICE_ACCOUNT_JSON` fields |
+| `notification-service` server | `NewService(repo, log, "", "", ...)` | Wire credentials from config |
+| `notification-service` auth middleware | ✅ `middleware.go` fully written; `authMiddleware()` applied at `/notifications` route group in `routes.go` | — |
+| `notification-service` audience mapping | `audienceFromScope` uses `"web-vendor"` for recruiters | `audienceForRecipientRole` uses `"web-recruiter"` — mismatch silently breaks recruiter push |
+| `notification-service` FCM handler | Handler reads `req.Audience` first, falling back to middleware context | Should always use context audience (set by middleware from `X-User-Scope`); client must not send audience |
+| `notification-service` subscribe/unsubscribe | ✅ Both fully implemented; BOLA fix (`DeleteFCMTokenByTokenAudienceAndUser`) in place | — |
+| `notification-service` consumer | `handleApplicationEvent` sends email only | No FCM push for application accepted/rejected |
+| Firebase SDK (go) | ✅ `firebase.google.com/go/v4` in `go.mod` | Not usable until credentials are wired |
+| Firebase SDK (web-candidate) | ✅ `firebase ^12.15.0` in `package.json`; `src/lib/firebase.ts` initializes `FirebaseApp` + `Messaging` | No `public/firebase-messaging-sw.js` |
+| Firebase SDK (web-recruiter) | Not installed | Install + create `src/lib/firebase.ts` + service worker |
+| Firebase SDK (web-admin) | Not installed | Install + create `src/lib/firebase.ts` + service worker |
+| `notification-hooks.ts` | ✅ `useNotificationsList`, `useMarkNotificationRead`, `useMarkAllNotificationsRead` — auto re-exported via `export * from './notification-hooks'` in `index.ts` | No FCM subscribe/unsubscribe helpers |
+| Settings push toggle (candidate) | `_account.settings.tsx` "New Messages" row calls `handleNotifToggle` | Never calls `Notification.requestPermission()` or FCM `getToken()`; no auto-resubscribe on load |
+| Settings push section (recruiter) | `employer.settings.tsx` has no push section | Add push notification section |
+| Notifications page (candidate) | `_account.notifications.tsx` redirects to `/profile` | Replace with real API using `useNotificationsList` |
+| Notifications page (recruiter) | `employer.notifications.tsx` redirects to `/employer` | Replace with real API |
+| Notifications popover (admin) | `AdminLayout.tsx` `NotificationPopover` reads from `useNotificationsStore` (Zustand, fake seed) | Wire API data while keeping UI-only state (`filter`, optimistic dismiss) |
 
 ---
 
 ## Reproduction steps
 
-1. Enable "New Messages" toggle in Settings (web-candidate).
-2. Trigger an application accepted event from the recruiter side.
-3. Observe: no browser notification appears; no FCM push is sent; `notification-service` log shows FCM client is nil.
+1. Enable "New Messages" toggle in Settings (web-candidate) — observe: DB preference updates but browser `Notification.permission` is never requested, no FCM token registered.
+2. Accept or reject an application from the recruiter side — observe: candidate gets email, no browser push.
+3. Open `/employer/notifications` — observe: immediate redirect to `/employer`.
+4. Subscribe to push from web-recruiter (future) — observe: token saved under `"web-vendor"` but `HandleRecruiterApproved` queries `"web-recruiter"` → push silently dropped.
 
 ---
 
 ## Expected behavior
 
-1. After the user turns on "Push Notifications" in Settings, the browser permission dialog appears.
-2. If granted: Firebase SDK obtains an FCM registration token and `POST /notification/api/notifications/fcm/subscribe` is called with the token and the correct audience.
-3. When a significant event occurs (application accepted/rejected, new job suggestion, CV analysis complete), the user receives a browser push notification even if the tab is closed.
-4. If the user revokes permission or toggles the switch off, the token is deleted via `DELETE /notification/api/notifications/fcm/unsubscribe`.
-5. The `/notifications` page shows the persisted notification history fetched from `GET /notification/api/notifications`.
+1. Candidate/recruiter "Push Notifications" toggle in Settings calls `Notification.requestPermission()`; if granted, Firebase SDK obtains an FCM token and `POST /notification/api/notifications/fcm/subscribe` is called.
+2. On app mount, if `Notification.permission === 'granted'` but no local token is stored, the app silently re-registers without showing a dialog.
+3. When an application is accepted or rejected, the candidate receives a browser push even with the tab closed.
+4. `/employer/notifications` and `/_account/notifications` show real notification history from `GET /notification/api/notifications`.
+5. The admin `NotificationPopover` shows real notifications from the same endpoint.
+6. Toggling push off or revoking permission calls `DELETE /notification/api/notifications/fcm/unsubscribe` and removes the token.
 
 ---
 
 ## Impact scope
 
 Backend:
-- [x] api-gateway
-- [ ] user-service
-- [ ] job_service
-- [ ] application_service
-- [ ] ai_engine_service
-- [x] notification-service
+- [x] api-gateway — already forwards `X-User-Id` and `X-User-Scope`
+- [ ] notification-service — credentials, audience fix, consumer FCM push
 
 Frontend:
-- [x] web-candidate
-- [x] web-recruiter
-- [x] web-admin
-- [ ] packages/ui
-- [x] packages/api
-- [ ] packages/i18n
+- [x] web-candidate — Firebase SDK installed, `firebase.ts` exists
+- [ ] web-recruiter — Firebase not installed
+- [ ] web-admin — Firebase not installed
+- [ ] packages/api — FCM subscribe/unsubscribe helpers missing
 
 ---
 
 ## Related code
 
-| Location | Relevance |
-|---|---|
-| `backend/notification-service/internal/server/server.go:88` | `// s.setupMiddleware()` — auth middleware commented out |
-| `backend/notification-service/internal/server/server.go:72-73` | FCM credentials passed as `""` inside `NewService` call |
-| `backend/notification-service/internal/config/config.go` | No `FCM_PROJECT_ID` or `FCM_SERVICE_ACCOUNT_JSON` fields |
-| `backend/notification-service/internal/notification/service.go:SubscribeFCMToken` | Hardcodes `audience = "web-user"` |
-| `backend/notification-service/internal/notification/service.go:UnsubscribeFCMToken` | Hardcodes `audience = "web-user"` in `DeleteFCMTokenByTokenAndAudience` call; also missing `user_id` scope (security gap) |
-| `backend/notification-service/internal/notification/service.go:ServiceInterface` | `SubscribeFCMToken` and `UnsubscribeFCMToken` signatures must be updated when adding audience param |
-| `backend/notification-service/internal/notification/model.go:FCMToken` | `audience` field and `NewFCMToken` helper exist and are correct |
-| `backend/notification-service/internal/notification/consumer.go:handleApplicationEvent` | Calls `SendApplicationResultEmail` only; no FCM push |
-| `backend/notification-service/internal/server/routes.go` | Subscribe/unsubscribe and firebase-token endpoints exist |
-| `backend/notification-service/migrations/V001-create-notifications-table.up.sql` | Empty file (0 bytes) |
-| `backend/api-gateway/src/main/resources/application.yaml` | FCM subscribe IS behind gateway JWT (correct); gateway forwards `X-User-Id`, `X-Role`, `X-Email` but NOT `X-Audience` |
-| `frontend/apps/web-candidate/src/routes/_account.settings.tsx:106` | `pushNotifications` toggle calls `updateNotifMutation` only |
-| `frontend/apps/web-candidate/src/routes/_account.notifications.tsx` | Empty placeholder — no API call |
-| `frontend/apps/web-recruiter/src/routes/employer.notifications.tsx` | Shows hardcoded fake notifications (i18n keys with static timestamps) — no API call |
-| `frontend/apps/web-recruiter/src/routes/employer.settings.tsx` | Settings stub — no notification toggle at all (different from candidate) |
-| `frontend/packages/api/src/generated/...` | No `subscribeFcmToken` or `unsubscribeFcmToken` hooks generated yet |
+| Location | Status | Relevance |
+|---|---|---|
+| `backend/notification-service/internal/config/config.go` | ❌ | Add `FCM_PROJECT_ID` + `FCM_SERVICE_ACCOUNT_JSON` fields |
+| `backend/notification-service/internal/server/server.go:69-77` | ❌ | Replace `""` with `cfg.FCMProjectID` / `cfg.FCMServiceAccountJSON` |
+| `backend/notification-service/internal/server/middleware.go` | ✅ | `authMiddleware` + `audienceFromScope` — fully implemented |
+| `backend/notification-service/internal/server/routes.go:20` | ✅ | `Group("/notifications", authMiddleware())` applied |
+| `backend/notification-service/internal/notification/service.go:audienceForRecipientRole` | ❌ | Returns `"web-recruiter"` for `"RECRUITER"` — must be changed to `"web-vendor"` |
+| `backend/notification-service/internal/notification/handler.go:SubscribeFCMToken` | ❌ | Currently reads `req.Audience` before context; must always use context audience |
+| `backend/notification-service/internal/notification/service.go:SubscribeFCMToken` | ✅ | Properly saves token with derived audience |
+| `backend/notification-service/internal/notification/service.go:UnsubscribeFCMToken` | ✅ | Scoped delete (user_id + audience + token) |
+| `backend/notification-service/internal/notification/consumer.go:handleApplicationEvent` | ❌ | Add FCM push after email send |
+| `frontend/apps/web-candidate/src/lib/firebase.ts` | ✅ | `FirebaseApp` + `Messaging` initialized |
+| `frontend/apps/web-candidate/public/` | ❌ | No `firebase-messaging-sw.js` |
+| `frontend/apps/web-recruiter/src/lib/firebase.ts` | ❌ | Absent |
+| `frontend/apps/web-recruiter/public/` | ❌ | No service worker |
+| `frontend/apps/web-admin/src/lib/firebase.ts` | ❌ | Absent |
+| `frontend/apps/web-admin/public/` | ❌ | No service worker |
+| `frontend/packages/api/src/notification-hooks.ts` | ✅ | List / mark-read hooks done; add FCM helpers here |
+| `frontend/apps/web-candidate/src/routes/_account.settings.tsx` | ❌ | "New Messages" toggle does not call permission API |
+| `frontend/apps/web-candidate/src/routes/_account.notifications.tsx` | ❌ | Redirects to `/profile` |
+| `frontend/apps/web-recruiter/src/routes/employer.settings.tsx` | ❌ | No push section |
+| `frontend/apps/web-recruiter/src/routes/employer.notifications.tsx` | ❌ | Redirects to `/employer` |
+| `frontend/apps/web-admin/src/components/layouts/AdminLayout.tsx` | ❌ | Wire `NotificationPopover` to real API |
+| `frontend/apps/web-admin/src/store/useNotificationsStore.ts` | ❌ | Replace fake seed with API; keep UI-only `filter` + optimistic dismiss |
 
 ---
 
@@ -100,9 +105,9 @@ Frontend:
 
 ### 1. Backend — wire FCM credentials
 
-**`config/config.go`** — add fields:
+**`config/config.go`** — add two fields:
 ```go
-FCMProjectID         string `mapstructure:"FCM_PROJECT_ID"`
+FCMProjectID          string `mapstructure:"FCM_PROJECT_ID"`
 FCMServiceAccountJSON string `mapstructure:"FCM_SERVICE_ACCOUNT_JSON"`
 ```
 
@@ -116,204 +121,226 @@ s.notiSvc = notification.NewService(
 )
 ```
 
-**`.env.example`** — add:
+**`.env.example`** (backend root) — add:
 ```
 FCM_PROJECT_ID=your-firebase-project-id
+# Inline the service account JSON as a single-line string (no newlines).
+# Never commit the actual credentials. Add .env to .gitignore if not already there.
 FCM_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 ```
 
-### 2. Backend — re-enable authentication middleware
+> **Security note:** The service account JSON grants Firebase project-wide access. Use a dedicated key with only `firebase.messaging` and `cloudmessaging.messages.create` IAM roles (not the default editor key). In production, prefer Workload Identity Federation / `GOOGLE_APPLICATION_CREDENTIALS` pointing to a file rather than inlining JSON.
 
-`// s.setupMiddleware()` is commented out at `server.go:88`. The API gateway's `AuthenticationFilter` forwards `X-User-Id`, `X-Role`, and `X-Email` headers on authenticated requests; there is NO `X-Audience` header.
+---
 
-Implement `setupMiddleware()` and uncomment it. The middleware must:
-1. Read `X-User-Id` from the request header and set it on the echo context as `"user_id"`.
-2. Derive audience from `X-Role` and set it on the context as `"audience"`.
+### 2. Backend — fix recruiter audience mismatch
+
+There are two functions in the service that map roles to audience strings, and they disagree on the recruiter value:
+
+| Function | Location | Current recruiter value |
+|---|---|---|
+| `audienceFromScope` | `server/middleware.go:34` | `"web-vendor"` (correct — used for token storage) |
+| `audienceForRecipientRole` | `service.go` | `"web-recruiter"` (wrong — used for token lookup) |
+
+Because tokens are stored with `"web-vendor"` but queried with `"web-recruiter"`, no recruiter FCM push is ever delivered.
+
+**Fix:** Change `audienceForRecipientRole("RECRUITER")` to return `"web-vendor"`. Also update `isSupportedAudience` to replace `"web-recruiter"` with `"web-vendor"`.
 
 ```go
-func authMiddleware() echo.MiddlewareFunc {
-    return func(next echo.HandlerFunc) echo.HandlerFunc {
-        return func(c echo.Context) error {
-            userID := c.Request().Header.Get("X-User-Id")
-            role := c.Request().Header.Get("X-Role")
-            if userID == "" {
-                return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
-            }
-            c.Set("user_id", userID)
-            c.Set("audience", audienceFromRole(role)) // "web-user" / "web-vendor" / "web-admin"
-            return next(c)
-        }
-    }
-}
-
-func audienceFromRole(role string) string {
+func audienceForRecipientRole(role string) string {
     switch strings.ToUpper(role) {
-    case "RECRUITER": return "web-vendor"
-    case "ADMIN":     return "web-admin"
-    default:          return "web-user"
+    case "RECRUITER":
+        return "web-vendor"   // was "web-recruiter"
+    case "ADMIN":
+        return "web-admin"
+    default:
+        return "web-user"
     }
 }
-```
 
-Apply this middleware only to `/notification/api/notifications/**` routes (not to `/notification/api/otp/**` which are public).
-
-### 3. Backend — fix `SubscribeFCMToken` and `UnsubscribeFCMToken`
-
-**3a. Update `ServiceInterface` and both method signatures to include `audience`:**
-
-```go
-// ServiceInterface
-SubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error
-UnsubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error
-```
-
-**3b. Fix `SubscribeFCMToken` implementation:**
-```go
-func (s *Service) SubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error {
-    tok := NewFCMToken(userID, token, audience)
-    return s.repo.SaveFCMToken(ctx, &tok)
+func isSupportedAudience(audience string) bool {
+    switch audience {
+    case "web-user", "web-vendor", "web-admin":   // was "web-recruiter"
+        return true
+    }
+    return false
 }
 ```
 
-**3c. Fix `UnsubscribeFCMToken` — the handler is currently a stub that never calls the service.** Implement the full call chain:
+---
 
-In `handler.go` — replace the early `return pkg.JSONOK(c, nil)` with the actual service call:
+### 3. Backend — fix SubscribeFCMToken handler to always use context audience
+
+The current handler reads `req.Audience` from the request body, falling back to the middleware context only if `req.Audience` is empty. This lets the client override the server-derived audience, which breaks the audience guarantee.
+
+**Fix in `handler.go:SubscribeFCMToken`** — ignore `req.Audience`; always use the context audience:
 ```go
-func (h *Handler) UnsubscribeFCMToken(c echo.Context) error {
+func (h *Handler) SubscribeFCMToken(c *echo.Context) error {
     userID, _ := c.Get("user_id").(string)
-    if userID == "" { return pkg.JSONError(c, 401, ...) }
     audience, _ := c.Get("audience").(string)
-    if audience == "" { audience = "web-user" }
+    if userID == "" || audience == "" {
+        return pkg.JSONError(c, http.StatusUnauthorized, pkg.CodeUnauthorized, "unauthorized")
+    }
     var req FCMSubscribeRequest
-    if err := c.Bind(&req); err != nil || req.Token == "" { return pkg.JSONError(c, 400, ...) }
-    if err := h.notifSvc.UnsubscribeFCMToken(c.Request().Context(), userID, req.Token, audience); err != nil {
-        return pkg.JSONError(c, 500, ...)
+    if err := c.Bind(&req); err != nil || req.Token == "" {
+        return pkg.JSONError(c, http.StatusBadRequest, pkg.CodeBadRequest, "token required")
+    }
+    if err := h.notifSvc.SubscribeFCMToken(c.Request().Context(), userID, req.Token, audience); err != nil {
+        h.logger.Error("failed to save fcm token", "userID", userID, "err", err)
+        return pkg.JSONError(c, http.StatusInternalServerError, pkg.CodeInternalError, "subscribe failed")
     }
     return pkg.JSONOK(c, nil)
 }
 ```
 
-In `service.go`:
+---
+
+### 4. Backend — send FCM push for application events
+
+**Add a private helper in `consumer.go`** (or a shared file):
 ```go
-func (s *Service) UnsubscribeFCMToken(ctx context.Context, userID string, token string, audience string) error {
-    return s.repo.DeleteFCMTokenByTokenAudienceAndUser(ctx, token, audience, userID)
+func applicationPushContent(status, jobTitle, rejectionReason string) (title, body string) {
+    switch strings.ToUpper(status) {
+    case "ACCEPTED":
+        title = "Application Accepted 🎉"
+        body = fmt.Sprintf("Your application for \"%s\" has been accepted!", jobTitle)
+    case "REJECTED":
+        title = "Application Update"
+        body = fmt.Sprintf("Your application for \"%s\" was not selected.", jobTitle)
+        if rejectionReason != "" {
+            body += " Reason: " + rejectionReason
+        }
+    default:
+        title = "Application Status Changed"
+        body = fmt.Sprintf("Your application for \"%s\" is now %s.", jobTitle, status)
+    }
+    return
 }
 ```
 
-**3d. Fix the BOLA vulnerability — scope delete to `user_id`:**
-
-Add a new repository method and update the interface:
+**Add to `ServiceInterface` in `service.go`:**
 ```go
-// Repository interface — add:
-DeleteFCMTokenByTokenAudienceAndUser(ctx context.Context, token string, audience string, userID string) error
+NotifyApplicationStatusChanged(ctx context.Context, candidateID, title, body string, data map[string]string)
+```
 
-// Implementation:
-func (r *repository) DeleteFCMTokenByTokenAudienceAndUser(ctx context.Context, token, audience, userID string) error {
-    return r.db.WithContext(ctx).
-        Where("token = ? AND audience = ? AND user_id = ?", token, audience, userID).
-        Delete(&FCMToken{}).Error
+**Add implementation in `service.go`:**
+```go
+func (s *Service) NotifyApplicationStatusChanged(ctx context.Context, candidateID, title, body string, data map[string]string) {
+    _ = s.repo.CreateNotification(ctx, candidateID, "USER", title, body, "APPLICATION_STATUS", dataToJSON(data))
+    s.sendWebpushToUser(ctx, candidateID, "/applications", data, "web-user")
 }
 ```
 
-The old `DeleteFCMTokenByTokenAndAudience` can remain for the auto-cleanup path (invalid token removal in `sendWebpushToUser` does NOT need user scoping because it is an internal operation on an already-known token).
-
-Audience mapping (consistent with existing `audienceForRecipientRole`):
-- `web-candidate` calls → `audience = "web-user"`
-- `web-recruiter` calls → `audience = "web-vendor"`
-- `web-admin` calls → `audience = "web-admin"`
-
-### 4. Backend — add DB migration
-
-Write `V001-create-notifications-table.up.sql` with both tables:
-
-```sql
-CREATE TABLE IF NOT EXISTS notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    recipient_role VARCHAR(20) NOT NULL,
-    type VARCHAR(50) DEFAULT 'SYSTEM',
-    title VARCHAR(200) NOT NULL,
-    body TEXT NOT NULL,
-    data JSONB,
-    is_read BOOLEAN DEFAULT FALSE,
-    read_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_role ON notifications(user_id, recipient_role);
-CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE is_read = FALSE;
-
-CREATE TABLE IF NOT EXISTS notification_fcm_tokens (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    audience VARCHAR(20) NOT NULL DEFAULT 'web-user',
-    token TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (token, audience)
-);
-CREATE INDEX IF NOT EXISTS idx_notification_fcm_tokens_user_id_audience
-    ON notification_fcm_tokens(user_id, audience);
-```
-
-Also write `V001-create-notifications-table.down.sql`:
-```sql
-DROP TABLE IF EXISTS notification_fcm_tokens;
-DROP TABLE IF EXISTS notifications;
-```
-
-### 5. Backend — send FCM push for application events
-
-In `consumer.handleApplicationEvent`, after sending the email, also call the notification service to persist and push:
-
+**Update `handleApplicationEvent` in `consumer.go`:**
 ```go
 func (c *Consumer) handleApplicationEvent(msg ApplicationEventMessage) {
-    // existing: send email
-    if err := c.notiSvc.SendApplicationResultEmail(ctx, msg); err != nil { ... }
+    if msg.CandidateEmail == "" {
+        c.logger.Warn("application event missing candidateEmail, skipping", "applicationId", msg.ApplicationID)
+        return
+    }
+    ctx := context.Background()
 
-    // new: persist notification + send FCM push to candidate
-    title, body := buildApplicationNotificationContent(msg.NewStatus, msg.JobTitle, msg.RejectionReason)
-    data, _ := json.Marshal(map[string]string{
+    if err := c.notiSvc.SendApplicationResultEmail(ctx, msg); err != nil {
+        c.logger.Error("failed to send application result email", "applicationId", msg.ApplicationID, "error", err)
+    }
+
+    title, body := applicationPushContent(msg.NewStatus, msg.JobTitle, msg.RejectionReason)
+    data := map[string]string{
         "applicationId": msg.ApplicationID,
         "jobId":         msg.JobID,
         "jobTitle":      msg.JobTitle,
         "status":        msg.NewStatus,
-    })
-    _ = c.notiSvc.CreateNotification(ctx, msg.CandidateID, "USER", title, body, "APPLICATION_STATUS", data)
-    c.notiSvc.NotifyApplicationStatusChanged(ctx, msg.CandidateID, msg.ApplicationID, msg.JobTitle, msg.NewStatus)
+    }
+    c.notiSvc.NotifyApplicationStatusChanged(ctx, msg.CandidateID, title, body, data)
 }
 ```
 
-Add `NotifyApplicationStatusChanged(ctx, candidateID, applicationID, jobTitle, status string)` to `ServiceInterface` and `Service`, following the same pattern as `NotifyNewOrder`.
+> **Known limitation:** `ch.Consume` uses `autoAck: true` — if the push or email call panics, the message is lost. Switching to manual ack + dead-letter queue is a separate infrastructure task and out of scope here.
 
-### 6. Frontend — install Firebase and add service worker (all 3 apps)
+---
 
-**Install SDK** (pnpm workspace root):
-```bash
-pnpm add firebase
-```
-Or per-app if preferred.
+### 5. Frontend — add FCM helpers to `packages/api`
 
-**Add service worker** to each app's `public/firebase-messaging-sw.js`:
-```js
-importScripts('https://www.gstatic.com/firebasejs/10.x.x/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.x.x/firebase-messaging-compat.js');
+Add to **`notification-hooks.ts`** (new functions at the end of the file; no change to `index.ts` needed — `export * from './notification-hooks'` already re-exports everything):
 
-firebase.initializeApp({
-  apiKey: self.FIREBASE_API_KEY,
-  projectId: self.FIREBASE_PROJECT_ID,
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID,
-  appId: self.FIREBASE_APP_ID,
-});
-
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const { title, body, url } = payload.data ?? {};
-  self.registration.showNotification(title ?? 'SmartCV', {
-    body: body ?? '',
-    icon: '/icon-192.png',
-    data: { url },
+```ts
+export const subscribeFcmToken = (token: string): Promise<unknown> =>
+  customInstance({
+    url: '/notification/api/notifications/fcm/subscribe',
+    method: 'POST',
+    data: { token },
+    // audience is derived server-side from X-User-Scope — do NOT send it from the client
   });
+
+export const unsubscribeFcmToken = (token: string): Promise<unknown> =>
+  customInstance({
+    url: '/notification/api/notifications/fcm/unsubscribe',
+    method: 'DELETE',
+    data: { token },
+  });
+```
+
+---
+
+### 6. Frontend — install Firebase and create `firebase.ts` for web-recruiter and web-admin
+
+```bash
+pnpm --filter web-recruiter add firebase
+pnpm --filter web-admin add firebase
+```
+
+Create `src/lib/firebase.ts` in **web-recruiter** and **web-admin** — identical copy of `web-candidate/src/lib/firebase.ts`.
+
+Add to `.env.example` of **each of the three apps** (web-candidate may be missing `VITE_FIREBASE_VAPID_KEY` and `VITE_FIREBASE_MEASUREMENT_ID` — verify):
+```
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MEASUREMENT_ID=
+VITE_FIREBASE_VAPID_KEY=
+```
+
+---
+
+### 7. Frontend — service workers (all 3 apps)
+
+Create `public/firebase-messaging-sw.js` in **each of the three apps**. Do **not** use `importScripts` from a CDN — bundle the Firebase compat scripts locally to avoid CDN dependency and version skew. After building the app, copy the compat scripts from `node_modules/firebase/`:
+
+```
+public/
+  firebase-messaging-sw.js         ← the worker
+  firebase/
+    firebase-app-compat.js         ← copied from node_modules/firebase/compat/app/index.js (or UMD build)
+    firebase-messaging-compat.js   ← copied from node_modules/firebase/compat/messaging/index.js
+```
+
+Alternatively, use a Vite plugin (e.g. `vite-plugin-pwa`) to generate the service worker. The simplest manual approach:
+
+**`public/firebase-messaging-sw.js`:**
+```js
+// Config is sent via postMessage from the main thread after the SW activates.
+// The SW listens for FIREBASE_CONFIG before initializing Firebase.
+let firebaseApp;
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'FIREBASE_CONFIG' && !firebaseApp) {
+    importScripts('/firebase/firebase-app-compat.js');
+    importScripts('/firebase/firebase-messaging-compat.js');
+    firebaseApp = firebase.initializeApp(event.data.config);
+    const messaging = firebase.messaging();
+    messaging.onBackgroundMessage((payload) => {
+      const { title = 'SmartCV', body = '', url } = payload.data ?? {};
+      self.registration.showNotification(title, {
+        body,
+        icon: '/favicon.svg',
+        data: { url },
+      });
+    });
+    event.source?.postMessage({ type: 'FIREBASE_CONFIG_ACK' });
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -323,123 +350,324 @@ self.addEventListener('notificationclick', (event) => {
 });
 ```
 
-Add env vars to each app's `.env.example`:
-```
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_FIREBASE_VAPID_KEY=
-```
+Add a `postbuild` script (or Vite plugin) to copy the compat scripts from `node_modules` into `public/firebase/`.
 
-### 7. Frontend — `usePushNotifications` hook
+---
 
-Create `frontend/apps/web-candidate/src/hooks/usePushNotifications.ts` (duplicate for recruiter with `AUDIENCE = 'web-vendor'` and admin with `AUDIENCE = 'web-admin'`):
+### 8. Frontend — `usePushNotifications` hook (per app)
+
+Create `src/hooks/usePushNotifications.ts` in each of the three apps.
+
+The hook must handle:
+- First-install race: wait for the service worker to activate and acknowledge the config before calling `getToken`.
+- Token recovery: if permission is already `'granted'` but no token in localStorage, silently re-register.
 
 ```ts
-import { getMessaging, getToken, deleteToken } from 'firebase/messaging'
-import { AXIOS_INSTANCE } from '@smart-cv/api'
+import { getToken, deleteToken } from 'firebase/messaging';
+import { messaging, firebaseConfig } from '@/lib/firebase';
+import { subscribeFcmToken, unsubscribeFcmToken } from '@smart-cv/api';
 
-const FCM_TOKEN_KEY = 'smartcv_fcm_token'
+const FCM_TOKEN_KEY = 'smartcv_fcm_token';
+
+async function activateServiceWorker(): Promise<ServiceWorkerRegistration> {
+  const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+  // Wait for the SW to reach the active state (handles first-install case).
+  if (reg.installing || reg.waiting) {
+    await new Promise<void>((resolve) => {
+      const sw = reg.installing ?? reg.waiting!;
+      sw.addEventListener('statechange', function handler() {
+        if (sw.state === 'activated') {
+          sw.removeEventListener('statechange', handler);
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Send config and wait for ACK before proceeding.
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('SW config timeout')), 5000);
+    navigator.serviceWorker.addEventListener('message', function handler(event) {
+      if (event.data?.type === 'FIREBASE_CONFIG_ACK') {
+        clearTimeout(timeout);
+        navigator.serviceWorker.removeEventListener('message', handler);
+        resolve();
+      }
+    });
+    reg.active!.postMessage({ type: 'FIREBASE_CONFIG', config: firebaseConfig });
+  });
+
+  return reg;
+}
 
 export function usePushNotifications() {
-  const subscribe = async (): Promise<string> => {
-    const permission = await Notification.requestPermission()
-    if (permission !== 'granted') throw new Error('Permission denied')
+  const subscribe = async (): Promise<void> => {
+    if (!messaging) throw new Error('Messaging unavailable');
 
-    const messaging = getMessaging()
-    const token = await getToken(messaging, { vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY })
-    await AXIOS_INSTANCE.post('/notification/api/notifications/fcm/subscribe', { token })
-    localStorage.setItem(FCM_TOKEN_KEY, token) // persist for unsubscribe
-    return token
-  }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') throw new Error('Permission denied');
+
+    const reg = await activateServiceWorker();
+    const token = await getToken(messaging, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: reg,
+    });
+    await subscribeFcmToken(token);
+    localStorage.setItem(FCM_TOKEN_KEY, token);
+  };
 
   const unsubscribe = async (): Promise<void> => {
-    const token = localStorage.getItem(FCM_TOKEN_KEY)
-    if (!token) return
-    const messaging = getMessaging()
-    await deleteToken(messaging)
-    await AXIOS_INSTANCE.delete('/notification/api/notifications/fcm/unsubscribe', { data: { token } })
-    localStorage.removeItem(FCM_TOKEN_KEY)
-  }
+    const token = localStorage.getItem(FCM_TOKEN_KEY);
+    if (!token || !messaging) return;
+    await deleteToken(messaging);
+    await unsubscribeFcmToken(token);
+    localStorage.removeItem(FCM_TOKEN_KEY);
+  };
 
-  return { subscribe, unsubscribe }
+  // Call on app mount: silently re-registers if permission was granted but token is missing.
+  const initPushSubscription = async (): Promise<void> => {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'granted') return;
+    if (localStorage.getItem(FCM_TOKEN_KEY)) return; // token already registered
+    if (!messaging) return;
+    try {
+      const reg = await activateServiceWorker();
+      const token = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: reg,
+      });
+      await subscribeFcmToken(token);
+      localStorage.setItem(FCM_TOKEN_KEY, token);
+    } catch {
+      // Silently ignore — push works on next explicit subscribe
+    }
+  };
+
+  const currentPermission = (): NotificationPermission =>
+    typeof Notification !== 'undefined' ? Notification.permission : 'default';
+
+  return { subscribe, unsubscribe, initPushSubscription, currentPermission };
 }
 ```
 
-### 8. Frontend — wire Settings push toggle to permission flow
+---
 
-**web-candidate** (`_account.settings.tsx`): intercept the "New Messages" toggle only — the other three toggles (`jobRecommendations`, `applicationUpdates`, `promotionalEmails`) continue to use the existing `handleNotifToggle` unchanged.
+### 9. Frontend — wire candidate Settings push toggle
+
+**`_account.settings.tsx`** — add auto-init on mount and replace "New Messages" toggle handler:
 
 ```tsx
-const { subscribe, unsubscribe } = usePushNotifications()
+import { toast } from 'sonner';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+
+// Inside the component:
+const { subscribe, unsubscribe, initPushSubscription, currentPermission } = usePushNotifications();
+
+React.useEffect(() => { initPushSubscription(); }, []);
 
 const handlePushToggle = async () => {
   if (!notifications.newMessages) {
-    // turning ON
-    if (Notification.permission === 'denied') {
-      toast.error('Browser notifications are blocked. Please allow them in your browser settings.')
-      return
+    if (currentPermission() === 'denied') {
+      toast.error('Browser notifications are blocked. Allow them in your browser settings and try again.');
+      return;
     }
     try {
-      await subscribe()
-      handleNotifToggle('newMessages') // persist DB preference
+      await subscribe();
+      handleNotifToggle('newMessages'); // persist DB preference after FCM token registered
     } catch {
-      toast.error('Could not enable push notifications')
+      toast.error('Could not enable push notifications.');
     }
   } else {
-    // turning OFF
-    await unsubscribe()
-    handleNotifToggle('newMessages')
+    await unsubscribe();
+    handleNotifToggle('newMessages');
   }
+};
+```
+
+Replace `onToggle={() => handleNotifToggle('newMessages')}` on the "New Messages" `ToggleRow` with `onToggle={handlePushToggle}`.
+
+Optionally show permission state as sub-label: `"Allowed"` / `"Blocked"` / `"Not set"`.
+
+---
+
+### 10. Frontend — add push notification section to recruiter Settings
+
+**`employer.settings.tsx`** — add imports and a push card after the existing sections:
+
+```tsx
+import { toast } from 'sonner';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+
+// Inside the component:
+const { subscribe, unsubscribe, initPushSubscription, currentPermission } = usePushNotifications();
+const [pushEnabled, setPushEnabled] = React.useState(
+  () => localStorage.getItem('smartcv_fcm_token') !== null
+);
+
+React.useEffect(() => {
+  initPushSubscription().then(() => {
+    setPushEnabled(localStorage.getItem('smartcv_fcm_token') !== null);
+  });
+}, []);
+
+const handlePushToggle = async () => {
+  if (!pushEnabled) {
+    if (currentPermission() === 'denied') {
+      toast.error('Browser notifications are blocked.');
+      return;
+    }
+    try {
+      await subscribe();
+      setPushEnabled(true);
+      toast.success('Push notifications enabled.');
+    } catch {
+      toast.error('Could not enable push notifications.');
+    }
+  } else {
+    await unsubscribe();
+    setPushEnabled(false);
+    toast.success('Push notifications disabled.');
+  }
+};
+```
+
+Add a "Push Notifications" card (same `ToggleRow` pattern as candidate settings) that uses `pushEnabled` / `handlePushToggle`.
+
+---
+
+### 11. Frontend — candidate and recruiter notifications pages
+
+Both pages currently redirect. Replace with a real implementation using the hooks from `@smart-cv/api`.
+
+**Common page structure:**
+```tsx
+function NotificationsPage() {
+  const [page, setPage] = React.useState(1);
+  const { data, isLoading } = useNotificationsList({ page, pageSize: 20 });
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
+
+  const items = data?.data?.items ?? [];
+  const meta = data?.data?.meta;
+  const unreadCount = data?.data?.unreadCount ?? 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h1>Notifications {unreadCount > 0 && <span>({unreadCount} unread)</span>}</h1>
+        <Button disabled={unreadCount === 0} onClick={() => markAllRead.mutate()}>
+          Mark all as read
+        </Button>
+      </div>
+      {isLoading && <Spinner />}
+      {!isLoading && items.length === 0 && <EmptyState message="No notifications yet." />}
+      {items.map((item) => (
+        <NotificationCard
+          key={item.id}
+          item={item}
+          onClick={() => !item.isRead && markRead.mutate(item.id)}
+        />
+      ))}
+      {meta && meta.page < meta.totalPages && (
+        <Button variant="outline" onClick={() => setPage((p) => p + 1)}>Load more</Button>
+      )}
+    </div>
+  );
 }
 ```
 
-Show a sub-label showing current browser permission state: `"Allowed"` / `"Blocked"` / `"Not set"`.
+Apply this to `_account.notifications.tsx` (web-candidate) and `employer.notifications.tsx` (web-recruiter).
 
-**web-recruiter** (`employer.settings.tsx`): The recruiter settings page has no notification toggle at all. Add the "Push Notifications" section alongside the existing settings, wired to the same `usePushNotifications` hook but with `AUDIENCE = 'web-vendor'` and calling the recruiter's settings update endpoint.
+---
 
-### 9. Frontend — implement notifications pages (all 3 apps)
+### 12. Frontend — wire web-admin notification popover to real API
 
-All three apps need a real notifications page. The implementation is the same pattern; differences are only in audience and route path.
+**`AdminLayout.tsx`** — replace `useNotificationsStore` reads with API hooks. Keep local `filter` and dismissal state since the API has no delete endpoint:
 
-**web-candidate** (`_account.notifications.tsx`): replace static placeholder.
-**web-recruiter** (`employer.notifications.tsx`): replace fake hardcoded items with real data.
-**web-admin**: create a new notifications route from scratch.
-
-Common implementation:
 ```tsx
-const { data } = useQuery({
-  queryKey: ['notifications', page],
-  queryFn: () => AXIOS_INSTANCE.get('/notification/api/notifications', { params: { page, pageSize: 20 } }),
-})
+import { useNotificationsList, useMarkNotificationRead, useMarkAllNotificationsRead } from '@smart-cv/api';
+import type { NotificationItem } from '@smart-cv/ui';
+
+// Keep only UI-only state in local state, not in a persisted store:
+const [filter, setFilter] = React.useState<NotificationFilter>('all');
+const [dismissed, setDismissed] = React.useState<Set<string>>(new Set());
+
+const { data } = useNotificationsList({ pageSize: 20 });
+const markRead = useMarkNotificationRead();
+const markAllRead = useMarkAllNotificationsRead();
+
+const apiItems: NotificationItem[] = (data?.data?.items ?? [])
+  .filter((item) => !dismissed.has(item.id))
+  .map((item) => ({
+    id: item.id,
+    title: item.title,
+    message: item.body,
+    createdAt: item.createdAt,
+    read: item.isRead,
+    tone: 'info' as const,  // API has no tone field; default to 'info'
+  }));
+
+const unreadCount = data?.data?.unreadCount ?? 0;
 ```
 
-Show: unread count badge in the header, notification cards with title/body/date, "Mark all as read" button, empty state when list is empty.
+Pass `apiItems` to `NotificationPopover` in place of the previous store data. The `deleteNotification` action becomes `(id) => setDismissed((prev) => new Set(prev).add(id))` — optimistic local hide until next query refetch.
 
-### 10. Frontend — Firestore real-time unread count (optional, enhances UX)
+**`useNotificationsStore.ts`** — delete the file after migrating all usages in `AdminLayout.tsx`.
 
-Subscribe to Firestore `notifications/{userId}` doc using the firebase-token from `GET /notification/api/notifications/firebase-token`. Update the bell icon badge in the dashboard header when `unreadCount` changes. Without this, the badge only updates on page refresh. This requires Firestore to be enabled in the Firebase project.
+---
+
+### 13. Frontend — admin push notifications (simple enable button)
+
+Without a subscription UI, admin users will never receive push notifications. Add a minimal "Enable push notifications" button in the `AdminLayout` header (next to the bell icon):
+
+```tsx
+const { subscribe, initPushSubscription, currentPermission } = usePushNotifications();
+const [pushEnabled, setPushEnabled] = React.useState(
+  () => localStorage.getItem('smartcv_fcm_token') !== null
+);
+
+React.useEffect(() => {
+  initPushSubscription().then(() => {
+    setPushEnabled(localStorage.getItem('smartcv_fcm_token') !== null);
+  });
+}, []);
+
+// In the header JSX — only show if not already enabled:
+{!pushEnabled && currentPermission() !== 'denied' && (
+  <Button size="sm" variant="ghost" onClick={() => subscribe().then(() => setPushEnabled(true)).catch(() => {})}>
+    Enable notifications
+  </Button>
+)}
+```
 
 ---
 
 ## Implementation order
 
-1. Backend: FCM credentials in config → FCM client initializes
-2. Backend: re-enable auth middleware (reads `X-User-Id` + derives audience from `X-Role`)
-3. Backend: fix `SubscribeFCMToken` and `UnsubscribeFCMToken` — audience param, stub fix, BOLA fix, ServiceInterface + Repository updates
-4. Backend: DB migration file
-5. Frontend: Firebase SDK + service worker + env vars (all 3 apps)
-6. Frontend: `usePushNotifications` hook per app
-7. Frontend: wire Settings push toggle + permission UI (candidate + recruiter)
-8. Backend: push for application events
-9. Frontend: notifications pages (candidate update, recruiter replace fake data, admin create route)
-10. Frontend: Firestore real-time unread count (optional)
+| # | Task | Parallel with |
+|---|---|---|
+| 1 | `config.go` + `server.go`: wire FCM credentials | 2, 5 |
+| 2 | `service.go`: fix `audienceForRecipientRole` + `isSupportedAudience` | 1, 5 |
+| 3 | `handler.go`: fix `SubscribeFCMToken` to use context audience | after 2 |
+| 4 | `service.go` + `consumer.go`: add `NotifyApplicationStatusChanged` | after 2 |
+| 5 | `notification-hooks.ts`: add `subscribeFcmToken` / `unsubscribeFcmToken` | 1, 2 |
+| 6 | Install firebase in web-recruiter + web-admin; create `firebase.ts` in both | 5 |
+| 7 | Add `firebase-messaging-sw.js` + local compat scripts to all 3 `public/` dirs | 6 |
+| 8 | Create `usePushNotifications` hook in all 3 apps | after 5, 7 |
+| 9 | Wire candidate Settings push toggle (`_account.settings.tsx`) | after 8 |
+| 10 | Add recruiter push section (`employer.settings.tsx`) | after 8 |
+| 11 | Implement notifications page (`_account.notifications.tsx`) | after 5 |
+| 12 | Implement notifications page (`employer.notifications.tsx`) | after 5 |
+| 13 | Wire admin popover to real API + delete fake store | after 5 |
+| 14 | Add admin "Enable notifications" button | after 8 |
+
+---
 
 ## Notes
 
-- Firebase credentials (project ID, service account JSON, VAPID key) require a Firebase project to be set up. Create one at `console.firebase.google.com`, enable Cloud Messaging, and download the service account key.
-- The VAPID key is a separate web push certificate key generated in Firebase Console → Project Settings → Cloud Messaging → Web configuration.
-- `web-recruiter` uses audience `"web-vendor"` (matching `audienceForRecipientRole("VENDOR")` in the service). If this should be `"web-recruiter"` for clarity, update `audienceForRecipientRole` accordingly.
-- Background push (service worker) requires the site to be served over HTTPS in production; localhost works in development.
-- Firestore real-time feature (step 10) requires Firestore to be enabled in the Firebase project and `firebaseAuthClient` to be functional.
+- **Firebase project setup:** Go to `console.firebase.google.com`, enable Cloud Messaging, download the service account JSON (restricted key — see security note in step 1), and copy the VAPID key from Project Settings → Cloud Messaging → Web configuration.
+- **Audience consistency:** After this fix, the canonical audience strings are `"web-user"` (candidate), `"web-vendor"` (recruiter), `"web-admin"` (admin). These match `audienceFromScope` in `middleware.go`. Any new push call must use these values or the `audienceForRecipientRole` helper after it is fixed.
+- **Token stale cleanup:** Tokens are cleaned up lazily — when FCM returns `not-registered`, `DeleteFCMTokenByTokenAndAudience` removes the row. Multi-device support (a user subscribed from multiple browsers) works correctly; there is no per-user token cap.
+- **Background push requires HTTPS** in production. Localhost works in Chrome during development.
+- **`autoAck: true` in consumer:** Application event messages are auto-acknowledged before the handler completes. If SMTP or FCM fails, the event is silently lost. Switching to manual ack + dead-letter queue is a separate task and out of scope here.
