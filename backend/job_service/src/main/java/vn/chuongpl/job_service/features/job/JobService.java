@@ -48,13 +48,16 @@ public class JobService {
     @Value("${app.job-default-page-size:10}")
     int defaultPageSize;
 
-    public JobResponse createJob(JobCreateRequest request, String recruiterId) {
-        var recruiterStatus = userServiceClient.getRecruiterStatus(recruiterId);
-        if (!recruiterStatus.isApproved()) {
+    public JobResponse createJob(JobCreateRequest request, String userId) {
+        var profile = userServiceClient.getRecruiterProfile(userId);
+        if (!profile.isApproved()) {
+            throw new AppException(ErrorCode.RECRUITER_NOT_APPROVED);
+        }
+        if (profile.recruiterId() == null) {
             throw new AppException(ErrorCode.RECRUITER_NOT_APPROVED);
         }
         Job job = jobMapper.toJob(request);
-        prepareDraft(job, recruiterId);
+        prepareDraft(job, profile.recruiterId());
         assertUniqueTitleForCreate(job);
         return jobMapper.toJobResponse(jobRepository.save(job));
     }
@@ -86,8 +89,18 @@ public class JobService {
         return toPageResponse(jobs);
     }
 
-    public PageResponse<JobResponse> getMyJobs(String recruiterId, int page, int size) {
+    public PageResponse<JobResponse> getMyJobs(String userId, int page, int size) {
         expireOverduePublishedJobs();
+        String recruiterId = userServiceClient.resolveRecruiterId(userId);
+        if (recruiterId == null) {
+            return PageResponse.<JobResponse>builder()
+                    .items(List.of())
+                    .total(0)
+                    .page(page > 0 ? page : 1)
+                    .pageSize(size > 0 ? size : defaultPageSize)
+                    .totalPages(0)
+                    .build();
+        }
         Pageable pageable = buildPageable(page, size, "createdAt", "desc");
         Page<Job> jobs = jobRepository.findByRecruiterIdAndDeletedFalse(recruiterId, pageable);
         return toPageResponse(jobs);
@@ -452,7 +465,9 @@ public class JobService {
     }
 
     private void assertOwner(Job job, String userId, boolean isAdmin) {
-        if (!isAdmin && !job.getRecruiterId().equals(userId)) {
+        if (isAdmin) return;
+        String recruiterId = userServiceClient.resolveRecruiterId(userId);
+        if (recruiterId == null || !job.getRecruiterId().equals(recruiterId)) {
             throw new AppException(ErrorCode.JOB_NOT_OWNER);
         }
     }

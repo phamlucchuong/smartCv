@@ -191,6 +191,7 @@ function EmployerJobsPage() {
   const { data, isLoading, isError, refetch } = useGetMyJobs({ page, size: 10 });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [search, status]);
 

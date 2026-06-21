@@ -41,14 +41,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
   user: initUser(),
 
   setAuth: ({ token, refreshToken }) => {
-    Cookies.set(ACCESS_COOKIE, token, { sameSite: 'strict' })
-    Cookies.set(REFRESH_COOKIE, refreshToken, { sameSite: 'strict' })
+    Cookies.set(ACCESS_COOKIE, token, { expires: 1, path: '/', sameSite: 'Lax' })
+    Cookies.set(REFRESH_COOKIE, refreshToken, { expires: 1, path: '/', sameSite: 'Lax' })
     set({ user: decodeUser(token) })
   },
 
   clearAuth: () => {
-    Cookies.remove(ACCESS_COOKIE)
-    Cookies.remove(REFRESH_COOKIE)
+    Cookies.remove(ACCESS_COOKIE, { path: '/' })
+    Cookies.remove(REFRESH_COOKIE, { path: '/' })
     set({ user: null })
   },
 }))

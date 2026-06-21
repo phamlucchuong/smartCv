@@ -61,8 +61,8 @@ public class CompanyService {
         return CompanyResponse.from(recruiter);
     }
 
-    public CompanyResponse getByRecruiterId(String userId) {
-        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+    public CompanyResponse getByRecruiterId(String recruiterId) {
+        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(recruiterId)
                 .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
         return CompanyResponse.from(recruiter);
@@ -79,8 +79,9 @@ public class CompanyService {
     }
 
     public List<JobSummary> getCompanyJobs(String companyId) {
+        // Jobs are keyed by Recruiter.id (== companyId), no longer by userId.
         return recruiterRepository.findByIdAndDeletedFalse(companyId)
-                .map(r -> jobClient.getJobsByRecruiter(r.getUserId()))
+                .map(r -> jobClient.getJobsByRecruiter(r.getId()))
                 .orElse(List.of());
     }
 

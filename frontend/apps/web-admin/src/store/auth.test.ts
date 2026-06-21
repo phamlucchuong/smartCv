@@ -35,8 +35,8 @@ describe('useAuthStore', () => {
 
     useAuthStore.getState().clearAuth()
 
-    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_token')
-    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_refresh')
+    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_token', { path: '/' })
+    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_refresh', { path: '/' })
     expect(useAuthStore.getState().user).toBeNull()
   })
 

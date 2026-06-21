@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   signIn: (accessToken, refreshToken) => {
     Cookies.set(ACCESS_COOKIE, accessToken, { expires: 1, path: '/', sameSite: 'Lax' })
-    Cookies.set(REFRESH_COOKIE, refreshToken, { expires: 7, path: '/', sameSite: 'Lax' })
+    Cookies.set(REFRESH_COOKIE, refreshToken, { expires: 1, path: '/', sameSite: 'Lax' })
     set({ ...decodeJwt(accessToken), fullName: null, avatarUrl: null, isAuthenticated: true })
   },
 

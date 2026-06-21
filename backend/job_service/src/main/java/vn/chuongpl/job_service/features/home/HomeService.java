@@ -172,9 +172,15 @@ public class HomeService {
             UserServiceClient.CompanyData companyData = userServiceClient.getCompanyData(recruiterId);
             if (companyData != null) {
                 resp.setCompanyId(companyData.id());
+                if (companyData.name() != null) {
+                    resp.setName(companyData.name());
+                }
                 resp.setLogoUrl(companyData.logoUrl());
                 resp.setCoverImageUrl(companyData.coverImageUrl());
                 resp.setIndustry(companyData.industry());
+                if (companyData.location() != null) {
+                    resp.setLocation(companyData.location());
+                }
             }
             companies.add(resp);
         }

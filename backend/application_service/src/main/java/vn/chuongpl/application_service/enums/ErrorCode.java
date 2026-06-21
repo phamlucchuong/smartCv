@@ -13,6 +13,7 @@ public enum ErrorCode {
     APPLICATION_ALREADY_EXISTS(7002, "You have already applied for this job"),
     APPLICATION_STATUS_TERMINAL(7003, "Application is already in a terminal state"),
     APPLICATION_INVALID_TRANSITION(7004, "Invalid status transition"),
+    APPLICATION_REJECTION_REASON_REQUIRED(7008, "Rejection reason is required when rejecting an application"),
     JOB_NOT_FOUND(7005, "Job not found"),
     JOB_NOT_ACCEPTING_APPLICATIONS(7006, "This job is not accepting applications"),
     JOB_SERVICE_UNAVAILABLE(7007, "Job service is currently unavailable"),
