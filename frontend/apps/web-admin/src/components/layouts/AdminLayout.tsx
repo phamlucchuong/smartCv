@@ -6,8 +6,7 @@ import { useAuthStore } from '@/store/auth'
 import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
 import type { NotificationItem, NotificationFilter } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { useGetMe, useNotificationsList, useMarkNotificationRead, useMarkAllNotificationsRead } from '@smart-cv/api'
-import { usePushNotifications } from '../../hooks/usePushNotifications'
+import { useNotificationsList, useMarkNotificationRead, useMarkAllNotificationsRead } from '@smart-cv/api'
 
 export function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -26,25 +25,13 @@ export function AdminLayout() {
     platform: true,
   })
   const user = useAuthStore((s) => s.user)
-  const { data: meData } = useGetMe({ query: { enabled: !!user } })
-  const me = meData?.data
-  const displayName = me?.fullName || user?.email || 'Admin'
-  const displayRole = 'Administrator'
-
   const clearAuth = useAuthStore((s) => s.clearAuth)
+
   const [filter, setFilter] = useState<NotificationFilter>('all')
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const { data: notifData } = useNotificationsList({ pageSize: 20 })
   const markReadMutation = useMarkNotificationRead()
   const markAllReadMutation = useMarkAllNotificationsRead()
-  const { subscribe, initPushSubscription, currentPermission } = usePushNotifications()
-  const [pushEnabled, setPushEnabled] = useState(() => localStorage.getItem('smartcv_fcm_token') !== null)
-
-  useEffect(() => {
-    initPushSubscription().then(() => {
-      setPushEnabled(localStorage.getItem('smartcv_fcm_token') !== null)
-    })
-  }, [])
 
   const notifications: NotificationItem[] = (notifData?.data?.items ?? [])
     .filter((item) => !dismissed.has(item.id))
@@ -55,6 +42,7 @@ export function AdminLayout() {
       createdAt: item.createdAt,
       read: item.isRead,
       tone: 'info' as const,
+      url: item.data?.url,
     }))
 
   const markAsRead = (id: string) => markReadMutation.mutate(id)
@@ -62,14 +50,18 @@ export function AdminLayout() {
   const deleteNotification = (id: string) => setDismissed((prev) => new Set(prev).add(id))
   const clearAll = () => setDismissed(new Set((notifData?.data?.items ?? []).map((i) => i.id)))
 
+  const unreadCount = notifData?.data?.unreadCount ?? notifications.filter((n) => !n.read).length
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
   const toggleLanguage = () => {
     const nextLanguage = language === 'EN' ? 'VI' : 'EN'
     localStorage.setItem('smartcv_lang', nextLanguage.toLowerCase())
     i18n.changeLanguage(nextLanguage.toLowerCase())
   }
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark'
@@ -77,6 +69,7 @@ export function AdminLayout() {
       return next
     })
   }
+
   const navGroups = useMemo(() => ([
     {
       key: 'overview',
@@ -111,7 +104,6 @@ export function AdminLayout() {
       ],
     },
   ]), [t])
-  const unreadCount = notifData?.data?.unreadCount ?? notifications.filter((n) => !n.read).length
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -195,16 +187,6 @@ export function AdminLayout() {
             >
               {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
-            {!pushEnabled && currentPermission() !== 'denied' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs"
-                onClick={() => subscribe().then(() => setPushEnabled(true)).catch(() => {})}
-              >
-                Enable notifications
-              </Button>
-            )}
             <NotificationPopover
               notifications={notifications}
               unreadCount={unreadCount}
@@ -214,6 +196,10 @@ export function AdminLayout() {
               onDelete={deleteNotification}
               onMarkAllRead={markAllAsRead}
               onClearAll={clearAll}
+              onClickNotification={(id, url) => {
+                markAsRead(id)
+                if (url) window.location.href = url
+              }}
               locale={language === 'VI' ? 'vi-VN' : 'en-US'}
               triggerClassName="text-foreground hover:bg-accent"
               labels={{
@@ -236,14 +222,13 @@ export function AdminLayout() {
                 <button
                   className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-accent cursor-pointer text-left leading-tight"
                 >
-                  <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold animate-in fade-in zoom-in duration-200 shrink-0">
-                    {displayName.slice(0, 1).toUpperCase()}
+                  <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
+                    {(user?.email ?? 'A').slice(0, 1).toUpperCase()}
                   </div>
-                  <div className="text-left">
-                    <div className="text-sm font-medium">{displayName}</div>
-                    <div className="text-xs text-muted-foreground">{displayRole}</div>
+                  <div className="hidden md:block text-left">
+                    <div className="text-sm font-medium">{user?.email ?? 'Admin SmartCV'}</div>
+                    <div className="text-xs text-muted-foreground">{t('admin_account_actions')}</div>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">

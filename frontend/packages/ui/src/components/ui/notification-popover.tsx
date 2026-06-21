@@ -25,6 +25,7 @@ export interface NotificationItem {
   createdAt: string
   read: boolean
   tone?: NotificationTone
+  url?: string
 }
 
 interface NotificationLabels {
@@ -55,6 +56,7 @@ interface NotificationPopoverProps {
   locale?: string
   triggerClassName?: string
   panelClassName?: string
+  onClickNotification?: (id: string, url?: string) => void
 }
 
 const toneClasses: Record<NotificationTone, string> = {
@@ -91,6 +93,7 @@ export function NotificationPopover({
   locale = "en-US",
   triggerClassName,
   panelClassName,
+  onClickNotification,
 }: NotificationPopoverProps) {
   const [open, setOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -221,10 +224,12 @@ export function NotificationPopover({
                     tabIndex={0}
                     onClick={() => {
                       if (!notification.read) onMarkRead(notification.id)
+                      onClickNotification?.(notification.id, notification.url)
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         if (!notification.read) onMarkRead(notification.id)
+                        onClickNotification?.(notification.id, notification.url)
                       }
                     }}
                     className={cn(

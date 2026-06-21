@@ -9,6 +9,7 @@ export interface NotificationApiItem {
   type: string;
   title: string;
   body: string;
+  data?: Record<string, string>;
   isRead: boolean;
   readAt?: string;
   createdAt: string;
