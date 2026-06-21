@@ -101,3 +101,18 @@ export const useMarkAllNotificationsRead = () => {
     },
   });
 };
+
+// Audience is always derived server-side from X-User-Scope — do not send it from the client.
+export const subscribeFcmToken = (token: string): Promise<unknown> =>
+  customInstance({
+    url: '/notification/api/notifications/fcm/subscribe',
+    method: 'POST',
+    data: { token },
+  });
+
+export const unsubscribeFcmToken = (token: string): Promise<unknown> =>
+  customInstance({
+    url: '/notification/api/notifications/fcm/unsubscribe',
+    method: 'DELETE',
+    data: { token },
+  });
