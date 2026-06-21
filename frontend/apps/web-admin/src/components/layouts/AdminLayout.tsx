@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
+import type { NotificationItem, NotificationFilter } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { useNotificationsStore } from '@/store/useNotificationsStore'
-import { useGetMe } from '@smart-cv/api'
+import { useGetMe, useNotificationsList, useMarkNotificationRead, useMarkAllNotificationsRead } from '@smart-cv/api'
+import { usePushNotifications } from '../../hooks/usePushNotifications'
 
 export function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -31,13 +32,36 @@ export function AdminLayout() {
   const displayRole = 'Administrator'
 
   const clearAuth = useAuthStore((s) => s.clearAuth)
-  const notifications = useNotificationsStore((s) => s.notifications)
-  const filter = useNotificationsStore((s) => s.filter)
-  const setFilter = useNotificationsStore((s) => s.setFilter)
-  const markAsRead = useNotificationsStore((s) => s.markAsRead)
-  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead)
-  const deleteNotification = useNotificationsStore((s) => s.deleteNotification)
-  const clearAll = useNotificationsStore((s) => s.clearAll)
+  const [filter, setFilter] = useState<NotificationFilter>('all')
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const { data: notifData } = useNotificationsList({ pageSize: 20 })
+  const markReadMutation = useMarkNotificationRead()
+  const markAllReadMutation = useMarkAllNotificationsRead()
+  const { subscribe, initPushSubscription, currentPermission } = usePushNotifications()
+  const [pushEnabled, setPushEnabled] = useState(() => localStorage.getItem('smartcv_fcm_token') !== null)
+
+  useEffect(() => {
+    initPushSubscription().then(() => {
+      setPushEnabled(localStorage.getItem('smartcv_fcm_token') !== null)
+    })
+  }, [])
+
+  const notifications: NotificationItem[] = (notifData?.data?.items ?? [])
+    .filter((item) => !dismissed.has(item.id))
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      message: item.body,
+      createdAt: item.createdAt,
+      read: item.isRead,
+      tone: 'info' as const,
+    }))
+
+  const markAsRead = (id: string) => markReadMutation.mutate(id)
+  const markAllAsRead = () => markAllReadMutation.mutate()
+  const deleteNotification = (id: string) => setDismissed((prev) => new Set(prev).add(id))
+  const clearAll = () => setDismissed(new Set((notifData?.data?.items ?? []).map((i) => i.id)))
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
@@ -87,7 +111,7 @@ export function AdminLayout() {
       ],
     },
   ]), [t])
-  const unreadCount = notifications.filter((notification) => !notification.read).length
+  const unreadCount = notifData?.data?.unreadCount ?? notifications.filter((n) => !n.read).length
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -171,6 +195,16 @@ export function AdminLayout() {
             >
               {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
+            {!pushEnabled && currentPermission() !== 'denied' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs"
+                onClick={() => subscribe().then(() => setPushEnabled(true)).catch(() => {})}
+              >
+                Enable notifications
+              </Button>
+            )}
             <NotificationPopover
               notifications={notifications}
               unreadCount={unreadCount}
