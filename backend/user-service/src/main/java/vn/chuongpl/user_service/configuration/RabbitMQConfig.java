@@ -57,6 +57,8 @@ public class RabbitMQConfig {
     public static final String RECRUITER_REJECTED_QUEUE = "recruiter.rejected.queue";
     public static final String RECRUITER_APPROVED_KEY = "recruiter.approved";
     public static final String RECRUITER_REJECTED_KEY = "recruiter.rejected";
+    public static final String RECRUITER_PENDING_QUEUE = "recruiter.pending.queue";
+    public static final String RECRUITER_PENDING_KEY = "recruiter.pending";
 
     @Bean
     public Queue jobSuggestionsQueue() {
@@ -89,6 +91,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue recruiterPendingQueue() {
+        return new Queue(RECRUITER_PENDING_QUEUE, true);
+    }
+
+    @Bean
     public Binding recruiterApprovedBinding() {
         return BindingBuilder.bind(recruiterApprovedQueue()).to(recruiterExchange()).with(RECRUITER_APPROVED_KEY);
     }
@@ -96,6 +103,11 @@ public class RabbitMQConfig {
     @Bean
     public Binding recruiterRejectedBinding() {
         return BindingBuilder.bind(recruiterRejectedQueue()).to(recruiterExchange()).with(RECRUITER_REJECTED_KEY);
+    }
+
+    @Bean
+    public Binding recruiterPendingBinding() {
+        return BindingBuilder.bind(recruiterPendingQueue()).to(recruiterExchange()).with(RECRUITER_PENDING_KEY);
     }
 
     public static final String CV_ANALYSIS_EXCHANGE = "cv.analysis.exchange";

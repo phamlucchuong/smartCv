@@ -7,7 +7,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import vn.chuongpl.user_service.configuration.RabbitMQConfig;
+import vn.chuongpl.user_service.dtos.message.RecruiterPendingEventMessage;
 import vn.chuongpl.user_service.dtos.message.RecruiterStatusEventMessage;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterStatusRequest;
@@ -21,6 +24,7 @@ import vn.chuongpl.user_service.features.recruiter.RecruiterService;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -90,6 +94,7 @@ class RecruiterServiceTest {
         User user = User.builder().id("u1").build();
         when(userRepository.findById("u1")).thenReturn(Optional.of(user));
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
+        when(userRepository.findByRoles_NameIn(any(), any())).thenReturn(new PageImpl<>(List.of()));
 
         recruiterService.submitForApproval("u1");
 
@@ -107,6 +112,7 @@ class RecruiterServiceTest {
         User user = User.builder().id("u1").build();
         when(userRepository.findById("u1")).thenReturn(Optional.of(user));
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
+        when(userRepository.findByRoles_NameIn(any(), any())).thenReturn(new PageImpl<>(List.of()));
 
         recruiterService.submitForApproval("u1");
 
@@ -150,6 +156,52 @@ class RecruiterServiceTest {
 
         AppException ex = assertThrows(AppException.class, () -> recruiterService.submitForApproval("u1"));
         assertEquals(ErrorCode.RECRUITER_PROFILE_INCOMPLETE, ex.getErrorCode());
+    }
+
+    @Test
+    void submitForApproval_shouldPublishPendingEventWithAdminIds() {
+        Recruiter recruiter = fullRecruiter("r1", "u1", RecruiterStatus.DRAFT);
+        when(recruiterRepository.findByUserIdAndDeletedFalse("u1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.save(any())).thenReturn(recruiter);
+        User user = User.builder().id("u1").email("recruiter@acme.com").build();
+        when(userRepository.findById("u1")).thenReturn(Optional.of(user));
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
+
+        User admin1 = User.builder().id("admin1").build();
+        User admin2 = User.builder().id("admin2").build();
+        when(userRepository.findByRoles_NameIn(eq(List.of("ADMIN")), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(admin1, admin2)));
+
+        recruiterService.submitForApproval("u1");
+
+        ArgumentCaptor<RecruiterPendingEventMessage> captor = ArgumentCaptor.forClass(RecruiterPendingEventMessage.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq(RabbitMQConfig.RECRUITER_EXCHANGE),
+                eq(RabbitMQConfig.RECRUITER_PENDING_KEY),
+                captor.capture());
+        RecruiterPendingEventMessage event = captor.getValue();
+        assertEquals("r1", event.getRecruiterId());
+        assertEquals("recruiter@acme.com", event.getRecruiterEmail());
+        assertEquals("ACME Corp", event.getCompanyName());
+        assertTrue(event.getAdminUserIds().contains("admin1"));
+        assertTrue(event.getAdminUserIds().contains("admin2"));
+        assertNotNull(event.getOccurredAt());
+    }
+
+    @Test
+    void submitForApproval_shouldNotPublishEventWhenNoAdminsExist() {
+        Recruiter recruiter = fullRecruiter("r1", "u1", RecruiterStatus.DRAFT);
+        when(recruiterRepository.findByUserIdAndDeletedFalse("u1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.save(any())).thenReturn(recruiter);
+        User user = User.builder().id("u1").email("recruiter@acme.com").build();
+        when(userRepository.findById("u1")).thenReturn(Optional.of(user));
+        when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
+        when(userRepository.findByRoles_NameIn(any(), any())).thenReturn(new PageImpl<>(List.of()));
+
+        recruiterService.submitForApproval("u1");
+
+        verify(rabbitTemplate, never()).convertAndSend(
+                anyString(), anyString(), any(RecruiterPendingEventMessage.class));
     }
 
     // ── updateStatus ─────────────────────────────────────────────────────────

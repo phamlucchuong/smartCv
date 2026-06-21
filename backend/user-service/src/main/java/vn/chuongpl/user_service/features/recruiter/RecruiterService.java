@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.user_service.configuration.RabbitMQConfig;
 import vn.chuongpl.user_service.dtos.PageResponse;
+import vn.chuongpl.user_service.dtos.message.RecruiterPendingEventMessage;
 import vn.chuongpl.user_service.dtos.message.RecruiterStatusEventMessage;
 import vn.chuongpl.user_service.dtos.request.QuotaDeltaRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
@@ -248,6 +249,24 @@ public class RecruiterService {
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+
+        List<String> adminIds = userRepository
+                .findByRoles_NameIn(List.of("ADMIN"), Pageable.unpaged())
+                .stream().map(User::getId).toList();
+        if (!adminIds.isEmpty()) {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.RECRUITER_EXCHANGE,
+                    RabbitMQConfig.RECRUITER_PENDING_KEY,
+                    RecruiterPendingEventMessage.builder()
+                            .recruiterId(recruiter.getId())
+                            .recruiterEmail(user.getEmail())
+                            .companyName(recruiter.getCompanyName())
+                            .adminUserIds(adminIds)
+                            .occurredAt(LocalDateTime.now())
+                            .build()
+            );
+        }
+
         return response;
     }
 
