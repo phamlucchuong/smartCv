@@ -95,7 +95,7 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
     {
       key: "hiring",
       label: t("recruiter_sidebar_group_hiring"),
-      items: nav.filter((item) => ["/employer/company-verification", "/employer/jobs", "/employer/applicants", "/employer/ats-board"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/verification", "/employer/company-verification", "/employer/jobs", "/employer/applicants"].includes(item.to)),
     },
     {
       key: "intelligence",
@@ -105,7 +105,7 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
     {
       key: "account",
       label: t("recruiter_sidebar_group_account"),
-      items: nav.filter((item) => ["/employer/billing", "/employer/notifications", "/employer/settings"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/profile", "/employer/billing", "/employer/notifications", "/employer/settings"].includes(item.to)),
     },
   ].filter((group) => group.items.length > 0)), [nav, role, t]);
 

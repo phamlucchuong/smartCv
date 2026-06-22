@@ -3,7 +3,7 @@ import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard,
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
-import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
+import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@smart-cv/ui'
 import type { NotificationItem, NotificationFilter } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { useNotificationsList, useMarkNotificationRead, useMarkAllNotificationsRead } from '@smart-cv/api'
@@ -61,6 +61,8 @@ export function AdminLayout() {
     localStorage.setItem('smartcv_lang', nextLanguage.toLowerCase())
     i18n.changeLanguage(nextLanguage.toLowerCase())
   }
+
+
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -219,19 +221,18 @@ export function AdminLayout() {
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-accent cursor-pointer text-left leading-tight"
-                >
-                  <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold">
-                    {(user?.email ?? 'A').slice(0, 1).toUpperCase()}
+                <button className="hover:bg-accent flex items-center gap-2 rounded-lg px-1.5 py-1">
+                  <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold">
+                    {user?.email?.charAt(0).toUpperCase() ?? '?'}
                   </div>
-                  <div className="hidden md:block text-left">
-                    <div className="text-sm font-medium">{user?.email ?? 'Admin SmartCV'}</div>
-                    <div className="text-xs text-muted-foreground">{t('admin_account_actions')}</div>
+                  <div className="hidden text-left leading-tight md:block">
+                    <div className="text-sm font-medium">{user?.email?.split('@')[0] ?? 'Account'}</div>
                   </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>{t('account_my_profile')}</DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
                     clearAuth()
@@ -239,8 +240,7 @@ export function AdminLayout() {
                   }}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('account_sign_out')}
+                  <LogOut className="mr-2 size-4" /> {t('account_sign_out')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

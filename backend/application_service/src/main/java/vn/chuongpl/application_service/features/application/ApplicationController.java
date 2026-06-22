@@ -110,6 +110,17 @@ public class ApplicationController {
                 .build();
     }
 
+    @GetMapping("/recruiter")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<PageResponse<ApplicationDetailResponse>> getMyJobsApplications(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<PageResponse<ApplicationDetailResponse>>builder()
+                .data(applicationService.getByRecruiterId(userId, page, size))
+                .build();
+    }
+
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<ApplicationDetailResponse>> getAll(@RequestParam(defaultValue = "1") int page,

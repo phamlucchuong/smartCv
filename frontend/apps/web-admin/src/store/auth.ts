@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 
-const ACCESS_COOKIE = 'smart_cv_token'
-const REFRESH_COOKIE = 'smart_cv_refresh'
+const ACCESS_COOKIE = 'smart_cv_a_token'
+const REFRESH_COOKIE = 'smart_cv_a_refresh'
 
 interface AuthUser {
   id: string

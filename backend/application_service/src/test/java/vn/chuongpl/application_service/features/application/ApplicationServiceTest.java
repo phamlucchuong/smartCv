@@ -79,7 +79,7 @@ class ApplicationServiceTest {
 
         applicationService.submit(request, "candidate-1");
 
-        verify(notificationPublisher).publishNewApplication(saved);
+        verify(notificationPublisher).publishNewApplication(eq(saved), any());
     }
 
     @Test

@@ -6,6 +6,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 import vn.chuongpl.job_service.enums.ExperienceLevel;
 import vn.chuongpl.job_service.enums.JobModerationStatus;
@@ -24,7 +25,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Document(collection = "jobs")
 public class Job {
-    @MongoId
+    @MongoId(FieldType.STRING)
     String id;
     @Field("recruiter_id")
     String recruiterId;

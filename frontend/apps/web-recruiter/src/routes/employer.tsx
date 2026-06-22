@@ -14,7 +14,7 @@ const GATE_PATHS = ["/employer/setup", "/employer/pending"];
 
 export const Route = createFileRoute("/employer")({
   beforeLoad: ({ location }) => {
-    const token = Cookies.get("smart_cv_token");
+    const token = Cookies.get("smart_cv_r_token");
     if (!token || !hasRecruiterRole(token)) {
       throw redirect({ to: "/login" });
     }
@@ -39,7 +39,10 @@ export const Route = createFileRoute("/employer")({
       return result;
     } catch (err) {
       if ((err as { isRedirect?: boolean })?.isRedirect) throw err;
-      throw redirect({ to: "/login", replace: true });
+      // Only redirect to login for true authentication failure (session expired)
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401) throw redirect({ to: "/login", replace: true });
+      throw err;
     }
   },
   component: EmployerLayoutRoute,
@@ -96,7 +99,6 @@ function EmployerLayoutRoute() {
     { to: "/employer/verification", label: t("recruiter_nav_verification"), icon: ShieldCheck },
     { to: "/employer/jobs", label: t("recruiter_nav_jobs"), icon: Briefcase },
     { to: "/employer/applicants", label: t("recruiter_nav_applicants"), icon: Users },
-    { to: "/employer/ats", label: t("recruiter_nav_ats"), icon: Trello },
     { to: "/employer/cv-search", label: t("recruiter_nav_cv_search"), icon: Search },
     { to: "/employer/assessments", label: t("recruiter_nav_assessments"), icon: ClipboardCheck },
     { to: "/employer/profile", label: t("recruiter_nav_profile"), icon: Building2 },

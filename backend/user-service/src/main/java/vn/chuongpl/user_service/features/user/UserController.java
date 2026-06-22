@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -53,7 +52,6 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    @PostAuthorize("returnObject.data.id == authentication.name")
     public ApiResponse<UserResponse> getMe(@AuthenticationPrincipal String userId) {
         return ApiResponse.<UserResponse>builder().message("Lay thong người dùng hien tai thành công").data(userService.getUserById(userId)).build();
     }

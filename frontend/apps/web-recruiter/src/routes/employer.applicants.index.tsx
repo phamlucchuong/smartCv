@@ -2,9 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   useGetMyJobs,
   useGetByJobId,
+  useGetRecruiterApplications,
   useUpdateStatus,
   useGetCandidateByUserId,
   getGetByJobIdQueryKey,
+  getRecruiterApplicationsQueryKey,
 } from "@smart-cv/api";
 import type { ApplicationModels } from "@smart-cv/api";
 import { AIScoreRing } from "@/components/ui-kit/AIScoreRing";
@@ -222,12 +224,23 @@ function ApplicantsPage() {
   });
   const myJobs = myJobsData?.data?.items ?? [];
 
-  const { data: applicationsData, isLoading: isAppsLoading } = useGetByJobId(
+  const isAllSelected = selectedJobId === "all";
+
+  const { data: allApplicationsData, isLoading: isAllAppsLoading } = useGetRecruiterApplications(
+    { page: 1, size: 200 },
+    { query: { enabled: isRecruiter && isAllSelected } },
+  );
+
+  const { data: jobApplicationsData, isLoading: isJobAppsLoading } = useGetByJobId(
     selectedJobId,
     { page: 1, size: 50 },
-    { query: { enabled: !!selectedJobId } },
+    { query: { enabled: !isAllSelected && !!selectedJobId } },
   );
-  const applications = applicationsData?.data?.items ?? [];
+
+  const isAppsLoading = isAllSelected ? isAllAppsLoading : isJobAppsLoading;
+  const applications = isAllSelected
+    ? (allApplicationsData?.data?.items ?? [])
+    : (jobApplicationsData?.data?.items ?? []);
 
   const updateStatusMutation = useUpdateStatus();
 
@@ -283,9 +296,11 @@ function ApplicantsPage() {
       {
         onSuccess: () => {
           toast.success(`Đã chuyển sang "${STATUS_LABELS[toStatus]}"`);
-          queryClient.invalidateQueries({
-            queryKey: getGetByJobIdQueryKey(selectedJobId),
-          });
+          if (isAllSelected) {
+            queryClient.invalidateQueries({ queryKey: getRecruiterApplicationsQueryKey() });
+          } else {
+            queryClient.invalidateQueries({ queryKey: getGetByJobIdQueryKey(selectedJobId) });
+          }
           setStatusOverrides((prev) => {
             const n = { ...prev };
             delete n[applicationId];

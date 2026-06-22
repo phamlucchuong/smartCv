@@ -379,7 +379,6 @@ function ProfilePage() {
     const errors: Record<string, string> = {}
     if (!draft.name.trim()) errors.name = t('validation_required')
     if (!draft.location.trim()) errors.location = t('validation_required')
-    if (!draft.title.trim()) errors.title = t('validation_required')
     if (Object.keys(errors).length > 0) {
       setBasicErrors(errors)
       return

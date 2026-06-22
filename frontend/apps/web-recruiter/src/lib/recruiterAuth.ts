@@ -65,7 +65,7 @@ export function hasRecruiterRole(accessToken: string) {
 
 export function isAuthError(error: unknown): boolean {
   const status = (error as ApiErrorLike | undefined)?.response?.status
-  return status === 401 || status === 403
+  return status === 401
 }
 
 export function ensureRecruiterRole(accessToken: string) {

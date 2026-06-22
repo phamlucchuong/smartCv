@@ -32,6 +32,7 @@ type ApplicationEventMessage struct {
 	CandidateID     string `json:"candidateId"`
 	CandidateEmail  string `json:"candidateEmail"`
 	RecruiterID     string `json:"recruiterId"`
+	RecruiterUserID string `json:"recruiterUserId"`
 	JobID           string `json:"jobId"`
 	JobTitle        string `json:"jobTitle"`
 	NewStatus       string `json:"newStatus"`
@@ -443,8 +444,8 @@ func (c *Consumer) ListenApplicationSubmittedEvents() error {
 				c.logger.Error("failed to unmarshal application submitted event", "error", err)
 				continue
 			}
-			c.logger.Info("received application submitted event", "applicationId", msg.ApplicationID, "recruiterId", msg.RecruiterID)
-			c.notiSvc.NotifyNewApplicant(context.Background(), msg.RecruiterID, msg.ApplicationID, msg.JobTitle, msg.JobID)
+			c.logger.Info("received application submitted event", "applicationId", msg.ApplicationID, "recruiterId", msg.RecruiterID, "recruiterUserId", msg.RecruiterUserID)
+			c.notiSvc.NotifyNewApplicant(context.Background(), msg.RecruiterID, msg.RecruiterUserID, msg.ApplicationID, msg.JobTitle, msg.JobID)
 		}
 	}()
 

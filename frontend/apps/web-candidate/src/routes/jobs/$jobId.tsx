@@ -199,10 +199,32 @@ function JobDetailPage() {
     }
     if (saved) {
       setSaved(false)
-      removeMutation.mutate({ jobId }, { onError: () => setSaved(true) })
+      removeMutation.mutate(
+        { jobId },
+        {
+          onSuccess: () => {
+            toast.success('Đã bỏ lưu tin tuyển dụng!')
+          },
+          onError: () => {
+            setSaved(true)
+            toast.error('Không thể bỏ lưu tin. Vui lòng thử lại.')
+          }
+        }
+      )
     } else {
       setSaved(true)
-      saveMutation.mutate({ data: { jobId } }, { onError: () => setSaved(false) })
+      saveMutation.mutate(
+        { data: { jobId } },
+        {
+          onSuccess: () => {
+            toast.success('Đã lưu tin tuyển dụng!')
+          },
+          onError: () => {
+            setSaved(false)
+            toast.error('Không thể lưu tin. Vui lòng thử lại.')
+          }
+        }
+      )
     }
   }
 
@@ -758,7 +780,16 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
     if (!selectedCvUrl) return
     submitMutation.mutate(
       { data: { jobId, cvUrl: selectedCvUrl, coverLetter: coverLetter.trim() || undefined } },
-      { onSuccess: () => { onSuccess(); onClose() } }
+      {
+        onSuccess: () => {
+          toast.success('Ứng tuyển thành công!')
+          onSuccess()
+          onClose()
+        },
+        onError: () => {
+          toast.error('Có lỗi xảy ra khi ứng tuyển. Vui lòng thử lại.')
+        }
+      }
     )
   }
 

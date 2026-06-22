@@ -55,7 +55,7 @@ type ServiceInterface interface {
 	NotifyApplicationStatusChanged(ctx context.Context, candidateID, title, body string, data map[string]string)
 
 	// New applicant notification to recruiter
-	NotifyNewApplicant(ctx context.Context, recruiterID, applicationID, jobTitle, jobID string)
+	NotifyNewApplicant(ctx context.Context, recruiterID, recruiterUserID, applicationID, jobTitle, jobID string)
 
 	// New recruiter registration request notification to admins
 	NotifyAdminNewRecruiterRequest(ctx context.Context, msg RecruiterPendingEventMessage)
@@ -419,8 +419,13 @@ func (s *Service) NotifyApplicationStatusChanged(ctx context.Context, candidateI
 }
 
 // NotifyNewApplicant persists a notification and sends an FCM push to the recruiter when a candidate applies.
-func (s *Service) NotifyNewApplicant(ctx context.Context, recruiterID, applicationID, jobTitle, jobID string) {
-	if recruiterID == "" {
+// recruiterUserID is the recruiter's User._id (JWT subject) used for FCM token lookup and notification storage.
+func (s *Service) NotifyNewApplicant(ctx context.Context, recruiterID, recruiterUserID, applicationID, jobTitle, jobID string) {
+	notifTarget := recruiterUserID
+	if notifTarget == "" {
+		notifTarget = recruiterID
+	}
+	if notifTarget == "" {
 		return
 	}
 	title := "New Application Received"
@@ -434,11 +439,11 @@ func (s *Service) NotifyNewApplicant(ctx context.Context, recruiterID, applicati
 		"url":           url,
 	}
 	jsonData, _ := json.Marshal(dataMap)
-	if err := s.CreateNotification(ctx, recruiterID, "RECRUITER", title, body, "NEW_APPLICANT", jsonData); err != nil {
-		s.logger.Error("failed to persist new applicant notification", "recruiterID", recruiterID, "err", err)
+	if err := s.CreateNotification(ctx, notifTarget, "RECRUITER", title, body, "NEW_APPLICANT", jsonData); err != nil {
+		s.logger.Error("failed to persist new applicant notification", "notifTarget", notifTarget, "err", err)
 	}
-	s.sendWebpushToUser(ctx, recruiterID, url, dataMap, audienceForRecipientRole("RECRUITER"))
-	s.syncFirestoreUnreadCount(recruiterID, "RECRUITER")
+	s.sendWebpushToUser(ctx, notifTarget, url, dataMap, audienceForRecipientRole("RECRUITER"))
+	s.syncFirestoreUnreadCount(notifTarget, "RECRUITER")
 }
 
 // NotifyAdminNewRecruiterRequest persists a notification and sends an FCM push to each admin when a recruiter submits for approval.

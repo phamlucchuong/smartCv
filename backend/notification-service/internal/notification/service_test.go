@@ -76,16 +76,17 @@ func TestNotifyNewApplicant_CreatesDBRecord(t *testing.T) {
 	svc := newTestService(repo)
 
 	recruiterID := uuid.New().String()
+	recruiterUserID := uuid.New().String()
 	applicationID := uuid.New().String()
 	jobTitle := "Software Engineer"
 	jobID := uuid.New().String()
 
-	svc.NotifyNewApplicant(context.Background(), recruiterID, applicationID, jobTitle, jobID)
+	svc.NotifyNewApplicant(context.Background(), recruiterID, recruiterUserID, applicationID, jobTitle, jobID)
 
 	require.Len(t, repo.createCalls, 1, "expected exactly one notification created")
 
 	n := repo.createCalls[0]
-	assert.Equal(t, recruiterID, n.UserID)
+	assert.Equal(t, recruiterUserID, n.UserID, "notification must be stored under the recruiter's User._id")
 	assert.Equal(t, "RECRUITER", n.RecipientRole)
 	assert.Equal(t, "NEW_APPLICANT", n.Type)
 
@@ -101,9 +102,9 @@ func TestNotifyNewApplicant_SkipsWhenRecruiterIDEmpty(t *testing.T) {
 	repo := &mockRepository{}
 	svc := newTestService(repo)
 
-	svc.NotifyNewApplicant(context.Background(), "", uuid.New().String(), "Engineer", uuid.New().String())
+	svc.NotifyNewApplicant(context.Background(), "", "", uuid.New().String(), "Engineer", uuid.New().String())
 
-	assert.Empty(t, repo.createCalls, "no notification should be created for empty recruiterID")
+	assert.Empty(t, repo.createCalls, "no notification should be created when both recruiterID and recruiterUserID are empty")
 }
 
 // --- TestNotifyAdminNewRecruiterRequest ---

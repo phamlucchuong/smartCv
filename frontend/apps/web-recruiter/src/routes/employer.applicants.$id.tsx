@@ -297,11 +297,19 @@ function CandidateDetail() {
               </Button>
             )}
           </div>
-          <div className="aspect-[3/4] max-w-md mx-auto rounded-lg bg-muted flex items-center justify-center text-muted-foreground border-2 border-dashed border-border text-sm">
-            {application.cvUrl
-              ? "CV đã được tải lên"
-              : "Ứng viên chưa đính kèm CV"}
-          </div>
+          {application.cvUrl ? (
+            <div className="w-full h-[700px] border border-border rounded-lg overflow-hidden bg-muted">
+              <iframe
+                src={application.cvUrl}
+                className="w-full h-full"
+                title="CV Preview"
+              />
+            </div>
+          ) : (
+            <div className="aspect-[3/4] max-w-md mx-auto rounded-lg bg-muted flex items-center justify-center text-muted-foreground border-2 border-dashed border-border text-sm">
+              Ứng viên chưa đính kèm CV
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="ai" className="mt-5 grid lg:grid-cols-3 gap-4">
