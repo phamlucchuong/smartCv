@@ -23,6 +23,7 @@
     ]
   },
   "enabledPlugins": {
-    "deploy-on-aws@claude-plugins-official": true
+    "deploy-on-aws@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
   }
 }

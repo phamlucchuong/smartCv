@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import Cookies from 'js-cookie'
+import { useAuthStore } from '../store/useAuthStore'
 import { CandidateDashboardLayout } from '../components/layouts/CandidateDashboardLayout'
 
 export const Route = createFileRoute('/_account')({
   beforeLoad: () => {
-    if (!Cookies.get('smart_cv_token')) {
+    if (!useAuthStore.getState().isAuthenticated) {
       throw redirect({ to: '/signin' })
     }
   },

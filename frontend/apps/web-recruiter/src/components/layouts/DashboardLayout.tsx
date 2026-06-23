@@ -1,20 +1,22 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  Search, Sparkles, Sun, Moon, ChevronDown,
+  Search, Sparkles, Sun, Moon, ChevronDown, LogOut, UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button, NotificationPopover } from "@smart-cv/ui";
 import type { LucideIcon } from "lucide-react";
-import type { NotificationItem } from "@smart-cv/ui";
+import type { NotificationItem, NotificationFilter } from "@smart-cv/ui";
 import { useRecruiterStore } from "@/store/useRecruiterStore";
 import { useTranslation } from "@smart-cv/i18n";
-import { useNotificationsStore } from "@/store/useNotificationsStore";
 import {
   useNotificationsList,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
 } from "@smart-cv/api";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@smart-cv/ui";
 
 export interface NavItem {
   to: string;
@@ -35,15 +37,21 @@ const ROLE_HOME: Record<Props["role"], string> = {
   admin: "/admin",
 };
 
-export function DashboardLayout({ role, nav, userName, userRole }: Props) {
+export function DashboardLayout({ role, nav, userName }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const { i18n, t } = useTranslation();
   const theme = useRecruiterStore((s) => s.theme);
   const setTheme = useRecruiterStore((s) => s.setTheme);
-  const filter = useNotificationsStore((s) => s.filter);
-  const setFilter = useNotificationsStore((s) => s.setFilter);
+  const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
+  const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    overview: true,
+    hiring: true,
+    intelligence: true,
+    account: true,
+  });
 
   const { data: notifData } = useNotificationsList({ page: 1, pageSize: 30 });
   const markReadMutation = useMarkNotificationRead();
@@ -62,21 +70,16 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
         if (item.type === "RECRUITER_REJECTED" || item.type === "JOB_REJECTED") return "danger";
         return "info";
       })(),
+      url: item.data?.url,
     }));
   }, [notifData]);
 
   const unreadCount = notifData?.data?.unreadCount ?? 0;
-  const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    overview: true,
-    hiring: true,
-    intelligence: true,
-    account: true,
-  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
   const toggleLanguage = () => {
     const nextLanguage = language === "EN" ? "VI" : "EN";
     localStorage.setItem("smartcv_lang", nextLanguage.toLowerCase());
@@ -92,17 +95,17 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
     {
       key: "hiring",
       label: t("recruiter_sidebar_group_hiring"),
-      items: nav.filter((item) => ["/employer/company-verification", "/employer/jobs", "/employer/applicants", "/employer/ats-board"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/verification", "/employer/company-verification", "/employer/jobs", "/employer/applicants"].includes(item.to)),
     },
     {
       key: "intelligence",
       label: t("recruiter_sidebar_group_intelligence"),
-      items: nav.filter((item) => ["/employer/cv-search", "/employer/assessments", "/employer/profile"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/cv-search", "/employer/assessments"].includes(item.to)),
     },
     {
       key: "account",
       label: t("recruiter_sidebar_group_account"),
-      items: nav.filter((item) => ["/employer/billing", "/employer/settings"].includes(item.to)),
+      items: nav.filter((item) => ["/employer/profile", "/employer/billing", "/employer/notifications", "/employer/settings"].includes(item.to)),
     },
   ].filter((group) => group.items.length > 0)), [nav, role, t]);
 
@@ -116,12 +119,12 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
         )}
       >
         <div className="h-16 flex items-center gap-2 px-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2 min-w-0">
+          <Link to="/" className="flex items-center gap-2 min-w-0">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Sparkles className="size-4" />
             </div>
             {!collapsed && <span className="font-bold tracking-tight">SmartCV</span>}
-          </div>
+          </Link>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-2">
           {navGroups.map((group) => {
@@ -186,14 +189,12 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
             );
           })}
         </nav>
-        <div className="mt-auto p-2 border-t border-sidebar-border space-y-1">
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent cursor-pointer"
-          >
-            {collapsed ? "→" : "← Thu gọn"}
-          </button>
-        </div>
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="m-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent"
+        >
+          {collapsed ? "→" : "← Thu gọn"}
+        </button>
       </aside>
 
       {/* Main */}
@@ -238,6 +239,11 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
               onDelete={() => {}}
               onMarkAllRead={() => markAllReadMutation.mutate()}
               onClearAll={() => {}}
+              onClickNotification={(id, url) => {
+                const notifItem = notifData?.data?.items?.find((i) => i.id === id)
+                if (notifItem && !notifItem.isRead) markReadMutation.mutate(id)
+                if (url) window.location.href = url
+              }}
               locale={language === "VI" ? "vi-VN" : "en-US"}
               triggerClassName="text-foreground hover:bg-accent"
               labels={{
@@ -256,18 +262,24 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
               }}
             />
 
-            <button
-              onClick={() => navigate({ to: "/employer/profile" })}
-              className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-accent cursor-pointer"
-            >
-              <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-                {userName.split(" ").slice(-1)[0]?.[0] ?? "U"}
-              </div>
-              <div className="hidden md:block text-left leading-tight">
-                <div className="text-sm font-medium">{userName}</div>
-                <div className="text-xs text-muted-foreground">{userRole}</div>
-              </div>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-full bg-primary/20 border border-primary/30 px-3 py-1.5 cursor-pointer hover:bg-primary/25 transition-colors">
+                  <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
+                    <UserRound className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{userName}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate({ to: "/employer/settings" })}>{t("account_settings")}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate({ to: "/login" })}>
+                  <LogOut className="size-4 mr-2" /> {t("account_sign_out")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">

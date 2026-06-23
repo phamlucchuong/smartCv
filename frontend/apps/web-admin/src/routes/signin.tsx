@@ -10,7 +10,7 @@ import { useTranslation } from '@smart-cv/i18n'
 
 export const Route = createFileRoute('/signin')({
   beforeLoad: () => {
-    const token = Cookies.get('smart_cv_token')
+    const token = Cookies.get('smart_cv_a_token')
     if (!token) return
     try {
       const { scope } = jwtDecode<{ scope?: string }>(token)

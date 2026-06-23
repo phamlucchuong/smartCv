@@ -133,6 +133,18 @@ func (s *Server) Start(ctx context.Context) error {
 				s.log.Error("failed to start cv analysis event consumer", slog.Any("error", err))
 			}
 		}()
+
+		go func() {
+			if err := s.consumer.ListenApplicationSubmittedEvents(); err != nil {
+				s.log.Error("failed to start application submitted event consumer", slog.Any("error", err))
+			}
+		}()
+
+		go func() {
+			if err := s.consumer.ListenRecruiterPendingEvents(); err != nil {
+				s.log.Error("failed to start recruiter pending event consumer", slog.Any("error", err))
+			}
+		}()
 	}
 
 	sc := echo.StartConfig{

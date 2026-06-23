@@ -18,6 +18,7 @@ type Repository interface {
 	MarkAllAsRead(ctx context.Context, receiverID string, receiverType string) error
 	GetUnreadCount(ctx context.Context, receiverID string, receiverType string) (int64, error)
 	DeleteOlderThanDays(ctx context.Context, olderThanDays int) (int64, error)
+	DeleteNotificationForUser(ctx context.Context, id uuid.UUID, userID string) error
 
 	SaveFCMToken(ctx context.Context, token *FCMToken) error
 	GetFCMTokensByUserIDAndAudience(ctx context.Context, userID string, audience string) ([]FCMToken, error)
@@ -119,6 +120,19 @@ func (r *repository) DeleteOlderThanDays(ctx context.Context, olderThanDays int)
 		Delete(&Notification{})
 
 	return tx.RowsAffected, tx.Error
+}
+
+func (r *repository) DeleteNotificationForUser(ctx context.Context, id uuid.UUID, userID string) error {
+	tx := r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", id, userID).
+		Delete(&Notification{})
+	if tx.Error != nil {
+		return tx.Error
+	}
+	if tx.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r *repository) SaveFCMToken(ctx context.Context, token *FCMToken) error {

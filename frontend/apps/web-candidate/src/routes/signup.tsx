@@ -3,14 +3,14 @@ import * as React from 'react'
 import { Badge, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label } from '@smart-cv/ui'
 import { ArrowRight, Lock, Mail, Phone, Sparkles, UserRound, Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
-import Cookies from 'js-cookie'
 import { toast } from 'sonner'
 import { useRegisterCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from '@smart-cv/api'
 import type { RegisterRequestPreferredVerification, VerifyRegistrationRequestVerificationType } from '@smart-cv/api'
+import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createFileRoute('/signup')({
   beforeLoad: () => {
-    if (Cookies.get('smart_cv_token')) throw redirect({ to: '/' })
+    if (useAuthStore.getState().isAuthenticated) throw redirect({ to: '/' })
   },
   component: SignUpComponent,
 })

@@ -7,6 +7,8 @@ import vn.chuongpl.user_service.dtos.ApiResponse;
 import vn.chuongpl.user_service.dtos.request.QuotaDeltaRequest;
 import vn.chuongpl.user_service.dtos.response.RecruiterProfileResponse;
 
+import java.util.Map;
+
 /**
  * Internal endpoints consumed only by peer microservices (job_service, payment_service).
  * Security: guarded by InternalAuthFilter (X-Gateway-Secret header). No JWT required.
@@ -18,6 +20,14 @@ import vn.chuongpl.user_service.dtos.response.RecruiterProfileResponse;
 public class InternalRecruiterController {
 
     RecruiterService recruiterService;
+
+    /** Called by application_service to resolve Recruiter._id → User._id for FCM/notification routing. */
+    @GetMapping("/{id}/user-id")
+    public ApiResponse<Map<String, String>> getUserId(@PathVariable String id) {
+        return ApiResponse.<Map<String, String>>builder()
+                .data(Map.of("userId", recruiterService.getUserIdByRecruiterId(id)))
+                .build();
+    }
 
     /** Called by job_service to verify recruiter status and quota before creating a job. */
     @GetMapping("/by-user/{userId}")

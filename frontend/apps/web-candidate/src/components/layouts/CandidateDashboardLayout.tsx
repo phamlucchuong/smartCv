@@ -1,5 +1,4 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import * as React from 'react'
 import {
   ChevronDown,
   ClipboardCheck,
@@ -14,21 +13,18 @@ import {
   Sun,
   UserRound,
 } from 'lucide-react'
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  NotificationPopover,
-  cn,
-} from '@smart-cv/ui'
+import * as React from 'react'
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, NotificationPopover, cn } from '@smart-cv/ui'
+import type { NotificationItem, NotificationFilter } from '@smart-cv/ui'
 import { i18n, useTranslation } from '@smart-cv/i18n'
-import { useGetMe2 } from '@smart-cv/api'
-import { hasCandidateRole, useAuthStore } from '../../store/useAuthStore'
-import { useCandidatePreferences } from '../../store/candidatePreferences'
-import { useNotificationsStore } from '../../store/useNotificationsStore'
+import { usePreferencesStore } from '../../store/usePreferencesStore'
+import { useAuthStore } from '../../store/useAuthStore'
+import {
+  useNotificationsList,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useDeleteNotification,
+} from '@smart-cv/api'
 
 interface NavItem {
   key: string
@@ -55,25 +51,37 @@ export function CandidateDashboardLayout() {
     other: true,
   })
 
-  const { email, isAuthenticated, role, fullName, setFullName, avatarUrl, setAvatarUrl, signOut } = useAuthStore()
-  const { theme, language, toggleTheme, toggleLanguage } = useCandidatePreferences()
-  const notifications = useNotificationsStore((s) => s.notifications)
-  const filter = useNotificationsStore((s) => s.filter)
-  const setFilter = useNotificationsStore((s) => s.setFilter)
-  const markAsRead = useNotificationsStore((s) => s.markAsRead)
-  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead)
-  const deleteNotification = useNotificationsStore((s) => s.deleteNotification)
-  const clearAll = useNotificationsStore((s) => s.clearAll)
-
-  const { data: profileData } = useGetMe2({ query: { enabled: isAuthenticated && hasCandidateRole(role) && (!fullName || !avatarUrl), retry: false } })
-  React.useEffect(() => {
-    const name = profileData?.data?.fullName
-    if (name) setFullName(name)
-    setAvatarUrl(profileData?.data?.avatarUrl ?? null)
-  }, [profileData, setAvatarUrl, setFullName])
-
+  const { email, fullName, avatarUrl, signOut } = useAuthStore()
   const displayName = fullName ?? email?.split('@')[0] ?? 'Account'
-  const unreadCount = notifications.filter((notification) => !notification.read).length
+  const theme = usePreferencesStore((s) => s.theme)
+  const language = usePreferencesStore((s) => s.language)
+  const toggleTheme = usePreferencesStore((s) => s.toggleTheme)
+  const toggleLanguage = usePreferencesStore((s) => s.toggleLanguage)
+
+  const [filter, setFilter] = React.useState<NotificationFilter>('all')
+  const [dismissed, setDismissed] = React.useState<Set<string>>(new Set())
+
+  const { data: notifData } = useNotificationsList({ page: 1, pageSize: 30 })
+  const markReadMutation = useMarkNotificationRead()
+  const markAllReadMutation = useMarkAllNotificationsRead()
+  const deleteMutation = useDeleteNotification()
+
+  const notifications: NotificationItem[] = React.useMemo(() => {
+    const items = notifData?.data?.items ?? []
+    return items
+      .filter((item) => !dismissed.has(item.id))
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        message: item.body,
+        createdAt: item.createdAt,
+        read: item.isRead,
+        tone: 'info' as const,
+        url: item.data?.url,
+      }))
+  }, [notifData, dismissed])
+
+  const unreadCount = notifData?.data?.unreadCount ?? 0
 
   const navGroups: NavGroup[] = [
     {
@@ -143,7 +151,7 @@ export function CandidateDashboardLayout() {
                   type="button"
                   onClick={() => setOpenGroups((prev) => ({ ...prev, [group.key]: !expanded }))}
                   className={cn(
-                    'text-muted-foreground hover:bg-sidebar-accent flex w-full items-center rounded-lg px-2 py-1.5 text-xs font-semibold uppercase tracking-wide',
+                    'text-muted-foreground hover:bg-sidebar-accent flex w-full items-center rounded-lg px-2 py-1.5 text-xs font-semibold tracking-wide uppercase',
                     collapsed && 'justify-center px-0',
                   )}
                 >
@@ -152,9 +160,7 @@ export function CandidateDashboardLayout() {
                   {collapsed && <div className={cn('size-1.5 rounded-full', groupHasActive ? 'bg-primary' : 'bg-muted-foreground/40')} />}
                 </button>
 
-                {expanded && group.items.map((item) => (
-                  <SidebarLink key={item.key} item={item} active={isActive(item.to)} collapsed={collapsed} />
-                ))}
+                {expanded && group.items.map((item) => <SidebarLink key={item.key} item={item} active={isActive(item.to)} collapsed={collapsed} />)}
               </div>
             )
           })}
@@ -162,10 +168,10 @@ export function CandidateDashboardLayout() {
 
         <div className="border-sidebar-border sticky bottom-0 border-t bg-sidebar p-2">
           <button
-            onClick={() => setCollapsed((current) => !current)}
+            onClick={() => setCollapsed((c) => !c)}
             className="border-border text-muted-foreground hover:bg-accent w-full rounded-lg border px-3 py-2 text-xs"
           >
-            {collapsed ? '->' : `<- ${t('candidate_sidebar_collapse')}`}
+            {collapsed ? '→' : `← ${t('candidate_sidebar_collapse')}`}
           </button>
         </div>
       </aside>
@@ -196,9 +202,7 @@ export function CandidateDashboardLayout() {
               onClick={toggleTheme}
               className="border-border bg-muted/60 text-muted-foreground h-9 w-9 transition-transform duration-300 active:scale-95"
             >
-              {theme === 'dark'
-                ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" />
-                : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
+              {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
             </Button>
 
             <NotificationPopover
@@ -206,10 +210,14 @@ export function CandidateDashboardLayout() {
               unreadCount={unreadCount}
               filter={filter}
               onFilterChange={setFilter}
-              onMarkRead={markAsRead}
-              onDelete={deleteNotification}
-              onMarkAllRead={markAllAsRead}
-              onClearAll={clearAll}
+              onMarkRead={(id) => markReadMutation.mutate(id)}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              onMarkAllRead={() => markAllReadMutation.mutate()}
+              onClearAll={() => setDismissed(new Set((notifData?.data?.items ?? []).map((i) => i.id)))}
+              onClickNotification={(id, url) => {
+                markReadMutation.mutate(id)
+                if (url) window.location.href = url
+              }}
               locale={language === 'VI' ? 'vi-VN' : 'en-US'}
               triggerClassName="hover:bg-accent text-foreground"
               labels={{
@@ -230,7 +238,7 @@ export function CandidateDashboardLayout() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex cursor-pointer items-center gap-2 rounded-full border border-primary/30 bg-primary/20 px-3 py-1.5">
+                <button className="flex items-center gap-2 rounded-full bg-primary/20 border border-primary/30 px-3 py-1.5 cursor-pointer hover:bg-primary/25 transition-colors">
                   <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
@@ -242,21 +250,7 @@ export function CandidateDashboardLayout() {
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                    ) : (
-                      <UserRound className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{displayName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{email}</p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>{t('account_my_profile')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
@@ -284,7 +278,7 @@ function SidebarLink({ item, active, collapsed }: { item: NavItem; active: boole
       className={cn(
         'group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors',
         active
-          ? 'border-primary/20 bg-primary/10 font-semibold text-primary'
+          ? 'border-primary/20 bg-primary/10 text-primary font-semibold'
           : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-foreground',
         collapsed && 'justify-center px-0',
       )}

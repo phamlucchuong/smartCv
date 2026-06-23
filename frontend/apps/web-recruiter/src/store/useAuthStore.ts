@@ -3,8 +3,8 @@ import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 import { hasRecruiterRole } from '../lib/recruiterAuth'
 
-const ACCESS_COOKIE = 'smart_cv_token'
-const REFRESH_COOKIE = 'smart_cv_refresh'
+const ACCESS_COOKIE = 'smart_cv_r_token'
+const REFRESH_COOKIE = 'smart_cv_r_refresh'
 
 interface JwtPayload {
   sub?: string

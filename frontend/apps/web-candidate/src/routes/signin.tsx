@@ -3,7 +3,6 @@ import * as React from 'react'
 import { Badge, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input } from '@smart-cv/ui'
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
-import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 import { toast } from 'sonner'
 import { useLoginCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from '@smart-cv/api'
@@ -23,7 +22,7 @@ function maskContact(contact: string): string {
 
 export const Route = createFileRoute('/signin')({
   beforeLoad: () => {
-    if (Cookies.get('smart_cv_token')) throw redirect({ to: '/' })
+    if (useAuthStore.getState().isAuthenticated) throw redirect({ to: '/' })
   },
   component: SignInComponent,
 })

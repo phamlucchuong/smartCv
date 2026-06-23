@@ -56,7 +56,10 @@ function NotificationsPage() {
           <Card
             key={item.id}
             className={`cursor-pointer transition-colors hover:bg-muted/40 ${!item.isRead ? 'border-primary/30 bg-primary/5' : ''}`}
-            onClick={() => !item.isRead && markRead.mutate(item.id)}
+            onClick={() => {
+              if (!item.isRead) markRead.mutate(item.id)
+              if (item.data?.url) window.location.href = item.data.url
+            }}
           >
             <CardContent className="flex items-start gap-3 p-4">
               {!item.isRead && (

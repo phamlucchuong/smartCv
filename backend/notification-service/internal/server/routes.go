@@ -20,6 +20,7 @@ func (s *Server) setupRoutes() {
 	notifications := v1.Group("/notifications", authMiddleware())
 	notifications.GET("", s.notiHandler.ListNotifications)
 	notifications.PATCH("/:id/read", s.notiHandler.MarkRead)
+	notifications.DELETE("/:id", s.notiHandler.DeleteNotification)
 	notifications.POST("/read-all", s.notiHandler.MarkAllRead)
 	notifications.GET("/firebase-token", s.notiHandler.GetFirebaseToken)
 	notifications.POST("/fcm/subscribe", s.notiHandler.SubscribeFCMToken)

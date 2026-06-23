@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 
-const ACCESS_COOKIE = 'smart_cv_token'
-const REFRESH_COOKIE = 'smart_cv_refresh'
+const ACCESS_COOKIE = 'smart_cv_c_token'
+const REFRESH_COOKIE = 'smart_cv_c_refresh'
 
 interface JwtPayload {
   sub?: string

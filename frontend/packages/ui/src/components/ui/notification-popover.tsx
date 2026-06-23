@@ -25,6 +25,7 @@ export interface NotificationItem {
   createdAt: string
   read: boolean
   tone?: NotificationTone
+  url?: string
 }
 
 interface NotificationLabels {
@@ -55,6 +56,7 @@ interface NotificationPopoverProps {
   locale?: string
   triggerClassName?: string
   panelClassName?: string
+  onClickNotification?: (id: string, url?: string) => void
 }
 
 const toneClasses: Record<NotificationTone, string> = {
@@ -91,6 +93,7 @@ export function NotificationPopover({
   locale = "en-US",
   triggerClassName,
   panelClassName,
+  onClickNotification,
 }: NotificationPopoverProps) {
   const [open, setOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -101,6 +104,12 @@ export function NotificationPopover({
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node
       if (containerRef.current && !containerRef.current.contains(target)) {
+        const targetElement = event.target as HTMLElement
+        if (targetElement && typeof targetElement.closest === "function") {
+          if (targetElement.closest("[data-radix-popper-content-wrapper]")) {
+            return
+          }
+        }
         setOpen(false)
       }
     }
@@ -221,10 +230,12 @@ export function NotificationPopover({
                     tabIndex={0}
                     onClick={() => {
                       if (!notification.read) onMarkRead(notification.id)
+                      onClickNotification?.(notification.id, notification.url)
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         if (!notification.read) onMarkRead(notification.id)
+                        onClickNotification?.(notification.id, notification.url)
                       }
                     }}
                     className={cn(
@@ -232,7 +243,11 @@ export function NotificationPopover({
                       !notification.read && "bg-primary/[0.04]",
                     )}
                   >
-                    <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", toneClasses[notification.tone ?? "default"])} />
+                    {!notification.read ? (
+                      <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", toneClasses[notification.tone ?? "default"])} />
+                    ) : (
+                      <div className="mt-1.5 size-2.5 shrink-0" />
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">

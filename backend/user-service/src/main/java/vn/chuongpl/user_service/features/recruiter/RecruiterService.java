@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.user_service.configuration.RabbitMQConfig;
 import vn.chuongpl.user_service.dtos.PageResponse;
+import vn.chuongpl.user_service.dtos.message.RecruiterPendingEventMessage;
 import vn.chuongpl.user_service.dtos.message.RecruiterStatusEventMessage;
 import vn.chuongpl.user_service.dtos.request.QuotaDeltaRequest;
 import vn.chuongpl.user_service.dtos.request.RecruiterRequest;
@@ -91,7 +92,7 @@ public class RecruiterService {
     }
 
     public RecruiterPublicResponse getById(String id) {
-        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        Recruiter recruiter = recruiterRepository.findById(id).filter(r -> !r.isDeleted()).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         RecruiterPublicResponse response = recruiterMapper.toRecruiterPublicResponse(recruiter, user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
@@ -169,7 +170,7 @@ public class RecruiterService {
     }
 
     public RecruiterResponse update(String id, RecruiterRequest request, String currentUserId, boolean isAdmin) {
-        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        Recruiter recruiter = recruiterRepository.findById(id).filter(r -> !r.isDeleted()).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         if (!isAdmin && !recruiter.getUserId().equals(currentUserId)) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
@@ -195,7 +196,7 @@ public class RecruiterService {
     }
 
     public RecruiterResponse updateStatus(String id, RecruiterStatusRequest request) {
-        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        Recruiter recruiter = recruiterRepository.findById(id).filter(r -> !r.isDeleted()).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         User user = userRepository.findById(recruiter.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         recruiter.setStatus(request.getStatus());
@@ -248,6 +249,24 @@ public class RecruiterService {
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+
+        List<String> adminIds = userRepository
+                .findByRoles_NameIn(List.of("ADMIN"), Pageable.unpaged())
+                .stream().map(User::getId).toList();
+        if (!adminIds.isEmpty()) {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.RECRUITER_EXCHANGE,
+                    RabbitMQConfig.RECRUITER_PENDING_KEY,
+                    RecruiterPendingEventMessage.builder()
+                            .recruiterId(recruiter.getId())
+                            .recruiterEmail(user.getEmail())
+                            .companyName(recruiter.getCompanyName())
+                            .adminUserIds(adminIds)
+                            .occurredAt(LocalDateTime.now())
+                            .build()
+            );
+        }
+
         return response;
     }
 
@@ -292,6 +311,13 @@ public class RecruiterService {
             createBasicProfile(userId);
         }
         return getByUserIdFull(userId);
+    }
+
+    public String getUserIdByRecruiterId(String recruiterId) {
+        return recruiterRepository.findById(recruiterId)
+                .filter(r -> !r.isDeleted())
+                .map(Recruiter::getUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
     }
 
     public RecruiterProfileResponse getProfile(String userId) {
@@ -347,7 +373,7 @@ public class RecruiterService {
     }
 
     public void delete(String id) {
-        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        Recruiter recruiter = recruiterRepository.findById(id).filter(r -> !r.isDeleted()).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         recruiter.setDeleted(true);
         recruiter.setDeletedAt(LocalDateTime.now());
         recruiter.setUpdatedAt(LocalDateTime.now());

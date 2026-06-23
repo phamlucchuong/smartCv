@@ -45,6 +45,7 @@ export * from './attemptStateResponseStatus';
 export * from './getAllParams';
 export * from './getByJobIdParams';
 export * from './getMyApplicationsParams';
+export * from './getMyJobsApplicationsParams';
 export * from './getTopJobsParams';
 export * from './pageResponseApplicationDetailResponse';
 export * from './pageResponseApplicationResponse';

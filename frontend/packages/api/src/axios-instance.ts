@@ -3,8 +3,13 @@ import type { AxiosRequestConfig } from 'axios';
 
 declare const __SMART_CV_API_BASE_URL__: string | undefined;
 
-const ACCESS_COOKIE = 'smart_cv_token';
-const REFRESH_COOKIE = 'smart_cv_refresh';
+let ACCESS_COOKIE = 'smart_cv_token';
+let REFRESH_COOKIE = 'smart_cv_refresh';
+
+export function configureCookieNames(access: string, refresh: string) {
+  ACCESS_COOKIE = access;
+  REFRESH_COOKIE = refresh;
+}
 const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 const ACCESS_COOKIE_DAYS = 1;
 const REFRESH_COOKIE_DAYS = 1;
