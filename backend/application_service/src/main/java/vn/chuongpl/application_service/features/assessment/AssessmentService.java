@@ -10,6 +10,7 @@ import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
 import vn.chuongpl.application_service.enums.*;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.user.UserClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,8 +24,16 @@ public class AssessmentService {
 
     AssessmentRepository assessmentRepository;
     AssessmentAttemptRepository attemptRepository;
+    UserClient userClient;
 
-    public AssessmentResponse createAssessment(AssessmentCreateRequest req, String recruiterId) {
+    private String resolveRecruiterId(String userId) {
+        String recruiterId = userClient.resolveRecruiterId(userId);
+        if (recruiterId == null) throw new AppException(ErrorCode.UNAUTHORIZED);
+        return recruiterId;
+    }
+
+    public AssessmentResponse createAssessment(AssessmentCreateRequest req, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = Assessment.builder()
                 .recruiterId(recruiterId)
                 .jobId(req.getJobId())
@@ -39,13 +48,15 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
-    public List<AssessmentResponse> getRecruiterAssessments(String recruiterId) {
+    public List<AssessmentResponse> getRecruiterAssessments(String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         return assessmentRepository.findByRecruiterId(recruiterId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String recruiterId) {
+    public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
         if (!recruiterId.equals(assessment.getRecruiterId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -59,7 +70,8 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
-    public void deleteAssessment(String id, String recruiterId) {
+    public void deleteAssessment(String id, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
         if (!recruiterId.equals(assessment.getRecruiterId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -219,5 +231,31 @@ public class AssessmentService {
                 .answers(a.getAnswers())
                 .startedAt(a.getStartedAt())
                 .build();
+    }
+
+    public List<AssessmentResponse> getAssessmentsByJob(String jobId) {
+        return assessmentRepository.findByJobId(jobId).stream()
+                .filter(a -> a.getStatus() == AssessmentStatus.ACTIVE)
+                .map(a -> {
+                    AssessmentResponse res = toResponse(a);
+                    if (res.getQuestions() != null) {
+                        res.getQuestions().forEach(q -> q.setCorrectOptionIndex(null));
+                    }
+                    return res;
+                })
+                .toList();
+    }
+
+    public List<AssessmentResponse> getAssessmentsByRecruiter(String recruiterId) {
+        return assessmentRepository.findByRecruiterId(recruiterId).stream()
+                .filter(a -> a.getStatus() == AssessmentStatus.ACTIVE)
+                .map(a -> {
+                    AssessmentResponse res = toResponse(a);
+                    if (res.getQuestions() != null) {
+                        res.getQuestions().forEach(q -> q.setCorrectOptionIndex(null));
+                    }
+                    return res;
+                })
+                .toList();
     }
 }

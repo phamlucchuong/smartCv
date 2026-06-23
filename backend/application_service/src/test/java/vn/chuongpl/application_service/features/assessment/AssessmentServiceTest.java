@@ -13,6 +13,7 @@ import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
 import vn.chuongpl.application_service.enums.*;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.user.UserClient;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.*;
 class AssessmentServiceTest {
     @Mock AssessmentRepository assessmentRepository;
     @Mock AssessmentAttemptRepository attemptRepository;
+    @Mock UserClient userClient;
     @InjectMocks AssessmentService assessmentService;
 
     @Test
@@ -37,12 +39,13 @@ class AssessmentServiceTest {
         req.setQuestions(List.of());
         req.setTimeLimitMinutes(30);
 
+        when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
         Assessment saved = Assessment.builder()
                 .id("a1").title("Java Test").status(AssessmentStatus.DRAFT)
                 .recruiterId("r1").createdAt(LocalDateTime.now()).build();
         when(assessmentRepository.save(any(Assessment.class))).thenReturn(saved);
 
-        AssessmentResponse response = assessmentService.createAssessment(req, "r1");
+        AssessmentResponse response = assessmentService.createAssessment(req, "u1");
 
         assertEquals("a1", response.getId());
         assertEquals(AssessmentStatus.DRAFT, response.getStatus());
