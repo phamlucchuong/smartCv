@@ -204,3 +204,21 @@ func (h *Handler) GetFirebaseToken(c *echo.Context) error {
 	}
 	return pkg.JSONOK(c, map[string]string{"firebaseToken": token})
 }
+
+func (h *Handler) DeleteNotification(c *echo.Context) error {
+	userID, _ := c.Get("user_id").(string)
+	if userID == "" {
+		return pkg.JSONError(c, http.StatusUnauthorized, pkg.CodeUnauthorized, "unauthorized")
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return pkg.JSONError(c, http.StatusBadRequest, pkg.CodeBadRequest, "notification id is required")
+	}
+
+	if err := h.notifSvc.DeleteNotificationForUser(c.Request().Context(), id, userID); err != nil {
+		return pkg.JSONError(c, http.StatusInternalServerError, pkg.CodeInternalError, "failed to delete notification")
+	}
+
+	return pkg.JSONOK(c, nil)
+}

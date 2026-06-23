@@ -104,6 +104,12 @@ export function NotificationPopover({
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node
       if (containerRef.current && !containerRef.current.contains(target)) {
+        const targetElement = event.target as HTMLElement
+        if (targetElement && typeof targetElement.closest === "function") {
+          if (targetElement.closest("[data-radix-popper-content-wrapper]")) {
+            return
+          }
+        }
         setOpen(false)
       }
     }
@@ -237,7 +243,11 @@ export function NotificationPopover({
                       !notification.read && "bg-primary/[0.04]",
                     )}
                   >
-                    <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", toneClasses[notification.tone ?? "default"])} />
+                    {!notification.read ? (
+                      <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", toneClasses[notification.tone ?? "default"])} />
+                    ) : (
+                      <div className="mt-1.5 size-2.5 shrink-0" />
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">

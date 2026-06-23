@@ -59,6 +59,12 @@ export const markAllNotificationsRead = (): Promise<unknown> =>
     method: 'POST',
   });
 
+export const deleteNotification = (id: string): Promise<unknown> =>
+  customInstance({
+    url: `/notification/api/notifications/${id}`,
+    method: 'DELETE',
+  });
+
 export const NOTIFICATIONS_QUERY_KEY = ['/notification/api/notifications'] as const;
 
 export const getNotificationsQueryKey = (params?: NotificationsListParams) =>
@@ -97,6 +103,17 @@ export const useMarkAllNotificationsRead = () => {
 
   return useMutation({
     mutationFn: () => markAllNotificationsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+    },
+  });
+};
+
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteNotification(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
     },

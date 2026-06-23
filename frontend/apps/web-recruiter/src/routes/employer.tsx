@@ -2,7 +2,7 @@ import { createFileRoute, redirect, Outlet, useNavigate, useRouterState } from "
 import { DashboardLayout, type NavItem } from "@/components/layouts/DashboardLayout";
 import Cookies from "js-cookie";
 import {
-  LayoutDashboard, ShieldCheck, Briefcase, Users, Trello, Search, ClipboardCheck, CreditCard, Settings, Building2,
+  LayoutDashboard, ShieldCheck, Briefcase, Users, Search, ClipboardCheck, CreditCard, Settings, Building2,
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
 import { useEffect } from "react";

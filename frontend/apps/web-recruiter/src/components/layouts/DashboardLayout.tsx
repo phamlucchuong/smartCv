@@ -1,6 +1,6 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  Search, Sparkles, Sun, Moon, ChevronDown, LogOut,
+  Search, Sparkles, Sun, Moon, ChevronDown, LogOut, UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ const ROLE_HOME: Record<Props["role"], string> = {
   admin: "/admin",
 };
 
-export function DashboardLayout({ role, nav, userName, userRole }: Props) {
+export function DashboardLayout({ role, nav, userName }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -264,14 +264,12 @@ export function DashboardLayout({ role, nav, userName, userRole }: Props) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-accent">
-                  <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-                    {userName.split(" ").slice(-1)[0]?.[0] ?? "U"}
+                <button className="flex items-center gap-2 rounded-full bg-primary/20 border border-primary/30 px-3 py-1.5 cursor-pointer hover:bg-primary/25 transition-colors">
+                  <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
+                    <UserRound className="h-4 w-4" />
                   </div>
-                  <div className="hidden md:block text-left leading-tight">
-                    <div className="text-sm font-medium">{userName}</div>
-                    <div className="text-xs text-muted-foreground">{userRole}</div>
-                  </div>
+                  <span className="text-sm font-medium text-foreground">{userName}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">

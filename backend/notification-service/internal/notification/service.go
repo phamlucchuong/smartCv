@@ -39,6 +39,7 @@ type ServiceInterface interface {
 	GetUnreadCount(ctx context.Context, receiverID string, receiverType string) (int64, error)
 	CleanupOldNotifications(ctx context.Context, olderThanDays int) (int64, error)
 	GenerateFirebaseToken(ctx context.Context, userID string) (string, error)
+	DeleteNotificationForUser(ctx context.Context, notificationID string, userID string) error
 
 	// OTP methods
 	SendOTP(ctx context.Context, target string, targetType string, ttlMinutes int) error
@@ -216,6 +217,30 @@ func (s *Service) GetUnreadCount(ctx context.Context, receiverID string, receive
 
 func (s *Service) CleanupOldNotifications(ctx context.Context, olderThanDays int) (int64, error) {
 	return s.repo.DeleteOlderThanDays(ctx, olderThanDays)
+}
+
+func (s *Service) DeleteNotificationForUser(ctx context.Context, notificationID string, userID string) error {
+	nid, err := uuid.Parse(notificationID)
+	if err != nil {
+		return err
+	}
+
+	// Fetch notification first to get the RecipientRole for Firestore sync before deleting
+	notif, err := s.repo.GetNotificationByID(ctx, nid)
+	var role string
+	if err == nil && notif != nil {
+		role = notif.RecipientRole
+	}
+
+	if err := s.repo.DeleteNotificationForUser(ctx, nid, userID); err != nil {
+		return err
+	}
+
+	if role != "" {
+		s.syncFirestoreUnreadCount(userID, role)
+	}
+
+	return nil
 }
 
 // SubscribeFCMToken saves a new FCM registration token for a user.

@@ -44,6 +44,7 @@ aws --version
 6. Tìm và tick chọn các policies sau:
    - `AmazonS3FullAccess` — để upload frontend lên S3
    - `CloudFrontFullAccess` — để tạo CloudFront invalidation
+   - `AWSCertificateManagerFullAccess` — để request SSL certificate (bước 5.2)
    - `AmazonEC2ContainerRegistryFullAccess` — để push Docker images (dùng ở bước CI/CD)
 7. Click **Next** → **Create user**
 

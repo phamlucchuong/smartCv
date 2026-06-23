@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, LogOut, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users } from 'lucide-react'
+import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard, LogOut, Menu, Moon, Package, ScrollText, Search, Settings, ShieldCheck, Sparkles, Sun, Users, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
@@ -221,17 +221,16 @@ export function AdminLayout() {
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="hover:bg-accent flex items-center gap-2 rounded-lg px-1.5 py-1">
-                  <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold">
-                    {user?.email?.charAt(0).toUpperCase() ?? '?'}
+                <button className="flex items-center gap-2 rounded-full bg-primary/20 border border-primary/30 px-3 py-1.5 cursor-pointer hover:bg-primary/25 transition-colors">
+                  <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
+                    <UserRound className="h-4 w-4" />
                   </div>
-                  <div className="hidden text-left leading-tight md:block">
-                    <div className="text-sm font-medium">{user?.email?.split('@')[0] ?? 'Account'}</div>
-                  </div>
+                  <span className="text-sm font-medium text-foreground">{user?.email?.split('@')[0] ?? 'Admin'}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>{t('account_my_profile')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate({ to: '/profile' as any })}>{t('account_my_profile')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
