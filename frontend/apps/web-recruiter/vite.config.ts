@@ -23,12 +23,27 @@ function copyFirebaseCompatPlugin() {
 export default defineConfig(({ mode }) => {
   const envDir = path.resolve(__dirname, '../../')
   const env = loadEnv(mode, envDir, '')
+  const packagesDir = path.resolve(__dirname, '../../packages')
 
   return {
     envDir,
-    plugins: [TanStackRouterVite(), react(), tailwindcss(), copyFirebaseCompatPlugin()],
+    plugins: [
+      TanStackRouterVite(),
+      react(),
+      tailwindcss(),
+      copyFirebaseCompatPlugin(),
+      {
+        name: 'watch-workspace-packages',
+        configureServer(server) {
+          server.watcher.add(packagesDir)
+        },
+      },
+    ],
     define: {
       __SMART_CV_API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:8080'),
+    },
+    optimizeDeps: {
+      exclude: ['@smart-cv/api', '@smart-cv/ui', '@smart-cv/i18n'],
     },
     resolve: {
       alias: {
