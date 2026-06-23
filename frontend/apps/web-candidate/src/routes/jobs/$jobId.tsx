@@ -31,6 +31,7 @@ import {
   useListCvs,
   getListCvsQueryKey,
   AXIOS_INSTANCE,
+  useGetAssessmentsByJob,
 } from '@smart-cv/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -110,6 +111,9 @@ function JobDetailPage() {
 
   const { data: jobData, isLoading, isError } = useGetJobById(jobId)
   const job = jobData?.data
+
+  const { data: assessmentsData } = useGetAssessmentsByJob(jobId)
+  const assessments = assessmentsData?.data ?? []
 
   const deadlineDaysLeft = job?.deadline
     ? (() => {
@@ -489,6 +493,46 @@ function JobDetailPage() {
                       >
                         <Check className="h-4 w-4 text-primary shrink-0" />
                         {benefit}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Recruitment Assessments */}
+            {assessments.length > 0 && (
+              <Card className="border-border bg-card">
+                <CardContent className="p-6 space-y-4">
+                  <h2 className="text-lg font-semibold text-foreground border-l-4 border-primary pl-3">
+                    Bài kiểm tra tuyển dụng
+                  </h2>
+                  <hr className="border-border" />
+                  <div className="space-y-3">
+                    {assessments.map((assessment) => (
+                      <div
+                        key={assessment.id}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 hover:shadow-sm transition-shadow bg-muted/20"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">{assessment.title}</p>
+                          {assessment.description && (
+                            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{assessment.description}</p>
+                          )}
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5 text-primary" />
+                              {assessment.timeLimitMinutes} phút
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Briefcase className="h-3.5 w-3.5 text-primary" />
+                              {assessment.questions?.length ?? 0} câu hỏi
+                            </span>
+                          </div>
+                        </div>
+                        <Link to="/assessments" search={{ take: assessment.id }} className="shrink-0">
+                          <Button size="sm">Làm bài test</Button>
+                        </Link>
                       </div>
                     ))}
                   </div>

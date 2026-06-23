@@ -12,6 +12,8 @@ import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
 
+import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
+
 import java.util.List;
 import java.util.Map;
 
@@ -126,8 +128,9 @@ public class AssessmentController {
     @PreAuthorize("hasRole('CANDIDATE')")
     public ApiResponse<Void> submitAttempt(
             @PathVariable String attemptId,
+            @RequestParam(defaultValue = "false") boolean overtime,
             @AuthenticationPrincipal String userId) {
-        assessmentService.submitAttempt(attemptId, userId);
+        assessmentService.submitAttempt(attemptId, userId, overtime);
         return ApiResponse.<Void>builder().message("Assessment submitted").build();
     }
 
@@ -138,6 +141,42 @@ public class AssessmentController {
             @AuthenticationPrincipal String userId) {
         return ApiResponse.<AssessmentResultResponse>builder()
                 .data(assessmentService.getResult(attemptId, userId))
+                .build();
+    }
+
+    @PatchMapping("/api/assessments/{id}/publish")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<AssessmentResponse> publishAssessment(
+            @PathVariable String id,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<AssessmentResponse>builder()
+                .data(assessmentService.publishAssessment(id, userId))
+                .build();
+    }
+
+    @GetMapping("/api/assessments/{id}/attempts")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<List<AttemptSummaryResponse>> getAttemptsByAssessment(
+            @PathVariable String id,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<AttemptSummaryResponse>>builder()
+                .data(assessmentService.getAttemptsByAssessment(id, userId))
+                .build();
+    }
+
+    @GetMapping("/api/assessments/job/{jobId}")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<List<AssessmentResponse>> getAssessmentsByJob(@PathVariable String jobId) {
+        return ApiResponse.<List<AssessmentResponse>>builder()
+                .data(assessmentService.getAssessmentsByJob(jobId))
+                .build();
+    }
+
+    @GetMapping("/api/assessments/recruiter/{recruiterId}")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<List<AssessmentResponse>> getAssessmentsByRecruiter(@PathVariable String recruiterId) {
+        return ApiResponse.<List<AssessmentResponse>>builder()
+                .data(assessmentService.getAssessmentsByRecruiter(recruiterId))
                 .build();
     }
 }

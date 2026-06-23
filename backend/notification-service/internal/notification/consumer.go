@@ -73,6 +73,61 @@ type RecruiterPendingEventMessage struct {
 	OccurredAt     string   `json:"occurredAt"`
 }
 
+type AssessmentEventMessage struct {
+	AttemptID      string  `json:"attemptId"`
+	AssessmentID   string  `json:"assessmentId"`
+	AssessmentTitle string `json:"assessmentTitle"`
+	CandidateID    string  `json:"candidateId"`
+	RecruiterID    string  `json:"recruiterId"`
+	RecruiterUserID string `json:"recruiterUserId"`
+	Score          float64 `json:"score"`
+	Result         string  `json:"result"`
+	Overtime       bool    `json:"overtime"`
+	OccurredAt     string  `json:"occurredAt"`
+}
+
+func (c *Consumer) ListenAssessmentEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("assessment.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("assessment.submitted.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = ch.QueueBind(queue.Name, "assessment.submitted", "assessment.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg AssessmentEventMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal assessment event", "error", err)
+				continue
+			}
+			c.logger.Info("received assessment submitted event", "attemptId", msg.AttemptID, "candidateId", msg.CandidateID)
+			if err := c.notiSvc.HandleAssessmentSubmitted(context.Background(), msg); err != nil {
+				c.logger.Error("failed to handle assessment submitted event", "attemptId", msg.AttemptID, "error", err)
+			}
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on assessment.submitted.queue")
+	return nil
+}
+
 func (c *Consumer) ListenCvAnalysisEvents() error {
 	ch, err := c.conn.Channel()
 	if err != nil {

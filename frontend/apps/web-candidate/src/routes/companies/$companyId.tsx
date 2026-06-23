@@ -13,7 +13,7 @@ import {
   MapPin,
   Users,
 } from 'lucide-react'
-import { useGetById3, useGetCompanyJobs, useGetRelatedCompanies } from '@smart-cv/api'
+import { useGetById3, useGetCompanyJobs, useGetRelatedCompanies, useGetAssessmentsByRecruiter } from '@smart-cv/api'
 import type { UserModels } from '@smart-cv/api'
 
 export const Route = createFileRoute('/companies/$companyId')({
@@ -282,6 +282,9 @@ function OverviewTab({
   const { data: jobsData } = useGetCompanyJobs(companyId)
   const previewJobs = (jobsData?.data ?? []).slice(0, 3)
 
+  const { data: assessmentsData } = useGetAssessmentsByRecruiter(companyId)
+  const assessments = assessmentsData?.data ?? []
+
   return (
     <div className="space-y-6">
       {/* About */}
@@ -326,7 +329,7 @@ function OverviewTab({
             onClick={onViewAllJobs}
             className="text-sm text-primary hover:underline"
           >
-            {t('company_detail_view_all_jobs', { count: company.activeJobCount ?? 0 })} →
+            {t('company_detail_view_all_jobs', { count: jobsData?.data?.length ?? company.activeJobCount ?? 0 })} →
           </button>
         </div>
         {previewJobs.length > 0 ? (
@@ -337,6 +340,20 @@ function OverviewTab({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground py-4 text-center">{t('account_no_results')}</p>
+        )}
+      </div>
+
+      {/* Assessments */}
+      <div className="border-t border-border pt-6 mt-6">
+        <h2 className="text-lg font-semibold mb-4">Bài kiểm tra tuyển dụng</h2>
+        {assessments.length > 0 ? (
+          <div className="space-y-3">
+            {assessments.map((assessment) => (
+              <AssessmentPreviewCard key={assessment.id} assessment={assessment} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground py-4 text-center">Không có bài kiểm tra nào dành cho công ty này.</p>
         )}
       </div>
     </div>
@@ -379,6 +396,40 @@ function JobPreviewCard({ job }: { job: UserModels.JobSummary }) {
         <Button size="sm" className="shrink-0">Quick Apply</Button>
       </div>
     </Link>
+  )
+}
+
+interface AssessmentPreview {
+  id?: string
+  title?: string
+  description?: string
+  timeLimitMinutes?: number
+  questions?: unknown[]
+}
+
+function AssessmentPreviewCard({ assessment }: { assessment: AssessmentPreview }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 hover:shadow-sm transition-shadow">
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-foreground truncate">{assessment.title}</p>
+        {assessment.description && (
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{assessment.description}</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Clock3 className="h-3.5 w-3.5" />
+            {assessment.timeLimitMinutes} phút
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Briefcase className="h-3.5 w-3.5" />
+            {assessment.questions?.length ?? 0} câu hỏi
+          </span>
+        </div>
+      </div>
+      <Link to="/assessments" search={{ take: assessment.id }} className="shrink-0">
+        <Button size="sm">Làm bài test</Button>
+      </Link>
+    </div>
   )
 }
 

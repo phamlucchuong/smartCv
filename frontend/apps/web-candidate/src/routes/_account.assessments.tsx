@@ -8,13 +8,18 @@ import {
   useGetAssessment,
   useGetAttemptState,
   useSaveAnswers,
+  useStartAttempt,
   useSubmitAttempt,
   useGetResult,
   ApplicationModels,
+  useSubmitAttemptWithFlag,
 } from '@smart-cv/api'
 import { useAuthStore } from '../store/useAuthStore'
 
 export const Route = createFileRoute('/_account/assessments')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    take: typeof search.take === 'string' ? search.take : undefined,
+  }),
   component: AssessmentsPage,
 })
 
@@ -154,10 +159,38 @@ function AssessmentCard({
 function AssessmentsPage() {
   const { t } = useTranslation()
   const { isAuthenticated } = useAuthStore()
+  const { take: takeAssessmentId } = Route.useSearch()
   const { data, isLoading, isError } = useGetMyAssessments({ query: { enabled: isAuthenticated } })
   const assessments = data?.data ?? []
 
   const [taking, setTaking] = React.useState<{ assessmentId: string; attemptId: string } | null>(null)
+
+  const startAttemptMutation = useStartAttempt()
+  const hasAutoStarted = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!takeAssessmentId || hasAutoStarted.current || isLoading) return
+    const existing = assessments.find(
+      (a) => a.assessmentId === takeAssessmentId && a.status === 'IN_PROGRESS',
+    )
+    if (existing) {
+      hasAutoStarted.current = true
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTaking({ assessmentId: existing.assessmentId ?? '', attemptId: existing.attemptId ?? '' })
+      return
+    }
+    hasAutoStarted.current = true
+    startAttemptMutation.mutate(
+      { id: takeAssessmentId },
+      {
+        onSuccess: (res: { data?: { attemptId?: string } }) => {
+          const attemptId = res?.data?.attemptId ?? ''
+          if (attemptId) setTaking({ assessmentId: takeAssessmentId, attemptId })
+        },
+      },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [takeAssessmentId, assessments, isLoading])
   const [query, setQuery] = React.useState('')
   const [status, setStatus] = React.useState<AssessmentStatusFilter>('all')
   const [statusMenuOpen, setStatusMenuOpen] = React.useState(false)
@@ -318,6 +351,7 @@ function TakeAssessmentContent({
 
   const saveAnswersMutation = useSaveAnswers()
   const submitMutation = useSubmitAttempt()
+  const submitWithFlagMutation = useSubmitAttemptWithFlag()
   const { data: resultData, refetch: fetchResult } = useGetResult(attemptId, {
     query: { enabled: false },
   })
@@ -343,25 +377,27 @@ function TakeAssessmentContent({
   const [timeLeft, setTimeLeft] = React.useState((assessment.timeLimitMinutes ?? 30) * 60)
 
   // Update ref in useLayoutEffect so the timer callback always reads current state
-  const handleSubmitRef = React.useRef<() => void>(() => {})
+  const handleSubmitRef = React.useRef<(overtime?: boolean) => void>(() => {})
   React.useLayoutEffect(() => {
-    handleSubmitRef.current = () => {
+    handleSubmitRef.current = (overtime = false) => {
       if (isSubmitting) return
       setIsSubmitting(true)
-      submitMutation.mutate(
-        { attemptId },
-        {
-          onSuccess: () => { setShowResult(true); fetchResult() },
-          onError: () => setIsSubmitting(false),
-        },
-      )
+      const callbacks = {
+        onSuccess: () => { setShowResult(true); fetchResult() },
+        onError: () => setIsSubmitting(false),
+      }
+      if (overtime) {
+        submitWithFlagMutation.mutate({ attemptId, overtime: true }, callbacks)
+      } else {
+        submitMutation.mutate({ attemptId }, callbacks)
+      }
     }
   })
 
   // Countdown — only depends on timeLeft and showResult (no stale-closure issue via ref)
   React.useEffect(() => {
     if (showResult) return
-    if (timeLeft <= 0) { handleSubmitRef.current(); return }
+    if (timeLeft <= 0) { handleSubmitRef.current(true); return }
     const id = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000)
     return () => clearInterval(id)
   }, [timeLeft, showResult])
