@@ -34,8 +34,10 @@ import {
   useAssignToCandidate,
   getGetRecruiterAssessmentsQueryKey,
   ApplicationModels,
+  useGetByRecruiter,
+  useGetRecruiterApplications,
 } from "@smart-cv/api";
-import { JOBS, CANDIDATES } from "@/lib/mock-data";
+import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 
 type Question = ApplicationModels.Question;
@@ -54,9 +56,16 @@ export const Route = createFileRoute("/employer/assessments")({
 function AssessmentsManager() {
   const queryClient = useQueryClient();
 
+  const userId = useAuthStore((s) => s.userId);
+
   // Queries
   const { data: apiResponse, isLoading, isError } = useGetRecruiterAssessments();
   const assessments: AssessmentResponse[] = apiResponse?.data ?? [];
+
+  const { data: jobsData } = useGetByRecruiter(userId ?? "", {
+    query: { enabled: !!userId },
+  });
+  const jobs = jobsData?.data ?? [];
 
   // Preview State
   const [previewingAssessment, setPreviewingAssessment] = useState<AssessmentResponse | null>(null);
@@ -135,13 +144,21 @@ function AssessmentsManager() {
   // Assign Field
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
 
+  const { data: applicationsData } = useGetRecruiterApplications(
+    { size: 1000 },
+    { query: { enabled: isAssignOpen } },
+  );
+  const filteredApplications = (applicationsData?.data?.items ?? []).filter(
+    (item) => item.jobId === assessmentToAssign?.jobId,
+  );
+
   // Initialize form for Create/Edit
   const handleOpenCreate = () => {
     setIsEditMode(false);
     setCurrentId(null);
     setTitle("");
     setDescription("");
-    setJobId(JOBS[0]?.id || "");
+    setJobId("");
     setTimeLimitMinutes(30);
     setQuestions([
       {
@@ -165,7 +182,7 @@ function AssessmentsManager() {
     setCurrentId(a.id || null);
     setTitle(a.title || "");
     setDescription(a.description || "");
-    setJobId(a.jobId || JOBS[0]?.id || "");
+    setJobId(a.jobId || "");
     setTimeLimitMinutes(a.timeLimitMinutes || 30);
     setQuestions(a.questions ? [...a.questions] : []);
     setIsFormOpen(true);
@@ -178,7 +195,7 @@ function AssessmentsManager() {
 
   const handleOpenAssign = (a: AssessmentResponse) => {
     setAssessmentToAssign(a);
-    setSelectedCandidateId(CANDIDATES[0]?.id || "");
+    setSelectedCandidateId("");
     setIsAssignOpen(true);
   };
 
@@ -315,8 +332,8 @@ function AssessmentsManager() {
 
   const getJobTitle = (id?: string) => {
     if (!id) return "Tất cả vị trí";
-    const job = JOBS.find((j) => j.id === id);
-    return job ? job.title : "Tất cả vị trí";
+    const job = jobs.find((j) => j.id === id);
+    return job ? (job.title ?? "Tất cả vị trí") : "Tất cả vị trí";
   };
 
   if (previewingAssessment) {
@@ -524,7 +541,7 @@ function AssessmentsManager() {
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <option value="">Tất cả vị trí / Không bắt buộc</option>
-                    {JOBS.map((j) => (
+                    {jobs.map((j) => (
                       <option key={j.id} value={j.id}>
                         {j.title} ({j.company})
                       </option>
@@ -716,9 +733,9 @@ function AssessmentsManager() {
                   onChange={(e) => setSelectedCandidateId(e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
-                  {CANDIDATES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} - {c.title}
+                  {filteredApplications.map((item) => (
+                    <option key={item.candidateId} value={item.candidateId}>
+                      {`${item.candidateId?.slice(0, 8)}… — ${item.jobTitle}`}
                     </option>
                   ))}
                 </select>
