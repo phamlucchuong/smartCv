@@ -39,7 +39,7 @@ import {
   RecruiterApi,
   usePublishAssessment,
   useGetAttemptsByAssessment,
-  type AttemptSummaryItem,
+  type AttemptSummaryResponse,
 } from "@smart-cv/api";
 import { toast } from "sonner";
 
@@ -183,7 +183,7 @@ function AssessmentsManager() {
     assessmentForAttempts?.id ?? "",
     { query: { enabled: isAttemptsOpen && !!assessmentForAttempts?.id } },
   );
-  const attempts: AttemptSummaryItem[] = attemptsData?.data ?? [];
+  const attempts: AttemptSummaryResponse[] = attemptsData?.data ?? [];
 
   // Initialize form for Create/Edit
   const handleOpenCreate = () => {
