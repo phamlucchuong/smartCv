@@ -218,4 +218,3 @@ volumes:
 networks:
   smartCv-net:
     driver: bridge
-    internal: true
