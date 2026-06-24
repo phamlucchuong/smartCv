@@ -161,7 +161,7 @@ sudo certbot renew --dry-run
 
 ```bash
 # Từ máy local của bạn, test API qua HTTPS
-curl https://api.smartcv-chuongpl.io.vn/actuator/health
+curl https://api.smartcv-chuongpl.io.vn/health
 # Kết quả: {"status":"UP"}
 ```
 

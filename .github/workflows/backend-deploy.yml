@@ -1,0 +1,99 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+
+jobs:
+  deploy:
+    name: Build, Push to ECR, Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and push API Gateway
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend/api-gateway
+          docker build -t $ECR_REGISTRY/smartcv/api-gateway:latest .
+          docker push $ECR_REGISTRY/smartcv/api-gateway:latest
+
+      - name: Build and push User Service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend/user-service
+          docker build -t $ECR_REGISTRY/smartcv/user-service:latest .
+          docker push $ECR_REGISTRY/smartcv/user-service:latest
+
+      - name: Build and push Job Service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend/job_service
+          docker build -t $ECR_REGISTRY/smartcv/job-service:latest .
+          docker push $ECR_REGISTRY/smartcv/job-service:latest
+
+      - name: Build and push Application Service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend/application_service
+          docker build -t $ECR_REGISTRY/smartcv/application-service:latest .
+          docker push $ECR_REGISTRY/smartcv/application-service:latest
+
+      - name: Build and push Notification Service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend/notification-service
+          docker build -t $ECR_REGISTRY/smartcv/notification-service:latest .
+          docker push $ECR_REGISTRY/smartcv/notification-service:latest
+
+      - name: Build and push AI Engine Service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend/ai_engine_service
+          docker build -t $ECR_REGISTRY/smartcv/ai-engine-service:latest .
+          docker push $ECR_REGISTRY/smartcv/ai-engine-service:latest
+
+      - name: Deploy to EC2 via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "cd /home/ubuntu/apps/smartCv/backend",
+              "git pull origin main",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
+              "docker compose -f docker-compose.prod.yaml pull",
+              "docker compose -f docker-compose.prod.yaml up -d --remove-orphans",
+              "docker image prune -f"
+            ]' \
+            --comment "Deploy SmartCV Backend" \
+            --output text
