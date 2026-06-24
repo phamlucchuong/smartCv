@@ -43,7 +43,8 @@ func Load() (*Config, error) {
 
 	viper.SetDefault("NOTI_SERVICE_PORT", "8084")
 	viper.SetDefault("PSQL_DSN", "")
-	viper.SetDefault("REDIS_ADDR", "localhost:6379")
+	viper.SetDefault("REDIS_HOST", "localhost")
+	viper.SetDefault("REDIS_PORT", "6379")
 	viper.SetDefault("SMTP_HOST", "smtp.gmail.com")
 	viper.SetDefault("SMTP_PORT", "587")
 	viper.SetDefault("SMTP_FROM", "Smart CV <noreply@smartcv.com>")
