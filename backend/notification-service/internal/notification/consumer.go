@@ -74,16 +74,16 @@ type RecruiterPendingEventMessage struct {
 }
 
 type AssessmentEventMessage struct {
-	AttemptID      string  `json:"attemptId"`
-	AssessmentID   string  `json:"assessmentId"`
-	AssessmentTitle string `json:"assessmentTitle"`
-	CandidateID    string  `json:"candidateId"`
-	RecruiterID    string  `json:"recruiterId"`
-	RecruiterUserID string `json:"recruiterUserId"`
-	Score          float64 `json:"score"`
-	Result         string  `json:"result"`
-	Overtime       bool    `json:"overtime"`
-	OccurredAt     string  `json:"occurredAt"`
+	AttemptID       string  `json:"attemptId"`
+	AssessmentID    string  `json:"assessmentId"`
+	AssessmentTitle string  `json:"assessmentTitle"`
+	CandidateID     string  `json:"candidateId"`
+	RecruiterID     string  `json:"recruiterId"`
+	RecruiterUserID string  `json:"recruiterUserId"`
+	Score           float64 `json:"score"`
+	Result          string  `json:"result"`
+	Overtime        bool    `json:"overtime"`
+	OccurredAt      string  `json:"occurredAt"`
 }
 
 func (c *Consumer) ListenAssessmentEvents() error {

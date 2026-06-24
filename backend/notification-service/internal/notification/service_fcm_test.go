@@ -37,8 +37,10 @@ func (m *minimalMockRepo) GetNotificationByID(_ context.Context, _ uuid.UUID) (*
 func (m *minimalMockRepo) GetNotifications(_ context.Context, _ string, _ string, _, _ int) ([]Notification, int64, error) {
 	return nil, 0, nil
 }
-func (m *minimalMockRepo) MarkAsRead(_ context.Context, _ uuid.UUID) error                  { return nil }
-func (m *minimalMockRepo) MarkAsReadForUser(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (m *minimalMockRepo) MarkAsRead(_ context.Context, _ uuid.UUID) error { return nil }
+func (m *minimalMockRepo) MarkAsReadForUser(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
 func (m *minimalMockRepo) MarkAllAsRead(_ context.Context, _ string, _ string) error {
 	return nil
 }
