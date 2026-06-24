@@ -321,7 +321,7 @@ aws ecr get-login-password --region ap-southeast-1 | \
 Trên EC2:
 
 ```bash
-cd ~/apps/smartcv/backend
+cd ~/apps/smartCv/backend
 
 # Pull tất cả images từ ECR
 docker compose -f docker-compose.prod.yaml pull
