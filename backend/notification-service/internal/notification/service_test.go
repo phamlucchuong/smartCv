@@ -60,6 +60,10 @@ func (m *mockRepository) DeleteFCMTokenByTokenAudienceAndUser(_ context.Context,
 	return nil
 }
 
+func (m *mockRepository) DeleteNotificationForUser(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
+
 // --- helpers ---
 
 func parseDataMap(t *testing.T, data datatypes.JSON) map[string]string {

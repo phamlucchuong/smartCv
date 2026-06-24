@@ -56,6 +56,9 @@ func (m *minimalMockRepo) GetFCMTokensByUserIDAndAudience(_ context.Context, _, 
 func (m *minimalMockRepo) DeleteFCMTokenByTokenAndAudience(_ context.Context, _, _ string) error {
 	return nil
 }
+func (m *minimalMockRepo) DeleteNotificationForUser(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
 func newTestService(repo Repository) *Service {
 	return &Service{repo: repo, logger: slog.Default()}
 }
