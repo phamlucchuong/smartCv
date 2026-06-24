@@ -82,19 +82,19 @@ Thay `smartcv-frontend` bằng tên bucket S3 thật của bạn.
 ```bash
 # Upload web-candidate
 aws s3 sync frontend/apps/web-candidate/dist/ \
-  s3://smartcv-frontend/web-candidate/ \
+  s3://smartcv-storage-dev/web-candidate/ \
   --delete \
   --cache-control "public, max-age=31536000, immutable"
 
 # Upload web-recruiter
 aws s3 sync frontend/apps/web-recruiter/dist/ \
-  s3://smartcv-frontend/web-recruiter/ \
+  s3://smartcv-storage-dev/web-recruiter/ \
   --delete \
   --cache-control "public, max-age=31536000, immutable"
 
 # Upload web-admin
 aws s3 sync frontend/apps/web-admin/dist/ \
-  s3://smartcv-frontend/web-admin/ \
+  s3://smartcv-storage-dev/web-admin/ \
   --delete \
   --cache-control "public, max-age=31536000, immutable"
 ```
