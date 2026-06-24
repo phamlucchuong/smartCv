@@ -61,6 +61,16 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(cvScoringQueue()).to(cvScoringExchange()).with(CV_SCORING_KEY);
     }
 
+    public static final String ASSESSMENT_EXCHANGE = "assessment.exchange";
+    public static final String ASSESSMENT_SUBMITTED_KEY = "assessment.submitted";
+    public static final String ASSESSMENT_SUBMITTED_QUEUE = "assessment.submitted.queue";
+
+    @Bean DirectExchange assessmentExchange() { return new DirectExchange(ASSESSMENT_EXCHANGE); }
+    @Bean Queue assessmentSubmittedQueue() { return new Queue(ASSESSMENT_SUBMITTED_QUEUE, true); }
+    @Bean Binding assessmentSubmittedBinding(@Qualifier("assessmentExchange") DirectExchange e) {
+        return BindingBuilder.bind(assessmentSubmittedQueue()).to(e).with(ASSESSMENT_SUBMITTED_KEY);
+    }
+
     @Bean
     MessageConverter jackson2MessageConverter() {
         return new Jackson2JsonMessageConverter();

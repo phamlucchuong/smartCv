@@ -63,6 +63,9 @@ type ServiceInterface interface {
 
 	// CV analysis done push notification
 	NotifyCvAnalysisDone(ctx context.Context, userID, filename string)
+
+	// Assessment submission notifications
+	HandleAssessmentSubmitted(ctx context.Context, msg AssessmentEventMessage) error
 }
 
 // Service provides high-level notification methods.
@@ -665,6 +668,46 @@ func audienceForRecipientRole(role string) string {
 	default:
 		return "web-user"
 	}
+}
+
+func (s *Service) HandleAssessmentSubmitted(ctx context.Context, msg AssessmentEventMessage) error {
+	resultLabel := msg.Result
+	if msg.Overtime {
+		resultLabel = "OVERTIME"
+	}
+
+	candidateData, _ := json.Marshal(map[string]string{
+		"type":         "ASSESSMENT_SUBMITTED",
+		"assessmentId": msg.AssessmentID,
+		"attemptId":    msg.AttemptID,
+		"result":       resultLabel,
+		"layout":       "/assessments",
+	})
+	if err := s.CreateNotification(ctx, msg.CandidateID, "USER",
+		"Bài kiểm tra đã được nộp",
+		"Kết quả bài kiểm tra của bạn: "+resultLabel,
+		"ASSESSMENT_SUBMITTED",
+		candidateData); err != nil {
+		s.logger.ErrorContext(ctx, "failed to create candidate assessment notification", "candidateId", msg.CandidateID, "err", err)
+	}
+
+	if msg.RecruiterUserID != "" {
+		recruiterData, _ := json.Marshal(map[string]string{
+			"type":         "ASSESSMENT_SUBMITTED",
+			"assessmentId": msg.AssessmentID,
+			"attemptId":    msg.AttemptID,
+			"result":       resultLabel,
+			"layout":       "/employer/assessments",
+		})
+		if err := s.CreateNotification(ctx, msg.RecruiterUserID, "RECRUITER",
+			"Ứng viên đã nộp bài kiểm tra",
+			"Bài kiểm tra \""+msg.AssessmentTitle+"\": "+resultLabel,
+			"ASSESSMENT_SUBMITTED",
+			recruiterData); err != nil {
+			s.logger.ErrorContext(ctx, "failed to create recruiter assessment notification", "recruiterUserId", msg.RecruiterUserID, "err", err)
+		}
+	}
+	return nil
 }
 
 func isSupportedAudience(audience string) bool {

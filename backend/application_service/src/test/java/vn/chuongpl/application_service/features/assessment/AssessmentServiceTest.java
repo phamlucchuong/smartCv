@@ -10,9 +10,12 @@ import vn.chuongpl.application_service.dtos.request.AssessmentAnswerRequest;
 import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
+import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
 import vn.chuongpl.application_service.enums.*;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.notification.AssessmentNotificationPublisher;
+import vn.chuongpl.application_service.integration.user.UserClient;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,6 +30,8 @@ import static org.mockito.Mockito.*;
 class AssessmentServiceTest {
     @Mock AssessmentRepository assessmentRepository;
     @Mock AssessmentAttemptRepository attemptRepository;
+    @Mock UserClient userClient;
+    @Mock AssessmentNotificationPublisher assessmentNotificationPublisher;
     @InjectMocks AssessmentService assessmentService;
 
     @Test
@@ -37,12 +42,13 @@ class AssessmentServiceTest {
         req.setQuestions(List.of());
         req.setTimeLimitMinutes(30);
 
+        when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
         Assessment saved = Assessment.builder()
                 .id("a1").title("Java Test").status(AssessmentStatus.DRAFT)
                 .recruiterId("r1").createdAt(LocalDateTime.now()).build();
         when(assessmentRepository.save(any(Assessment.class))).thenReturn(saved);
 
-        AssessmentResponse response = assessmentService.createAssessment(req, "r1");
+        AssessmentResponse response = assessmentService.createAssessment(req, "u1");
 
         assertEquals("a1", response.getId());
         assertEquals(AssessmentStatus.DRAFT, response.getStatus());
@@ -50,21 +56,23 @@ class AssessmentServiceTest {
     }
 
     @Test
-    void assignToCandidate_shouldCreateInProgressAttemptAndActivateAssessment() {
+    void assignToCandidate_shouldCreateInProgressAttemptWithoutChangingAssessmentStatus() {
+        when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
         Assessment assessment = Assessment.builder()
                 .id("a1").recruiterId("r1").status(AssessmentStatus.DRAFT).build();
         when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
         when(attemptRepository.save(any(AssessmentAttempt.class))).thenAnswer(i -> i.getArgument(0));
-        when(assessmentRepository.save(any(Assessment.class))).thenReturn(assessment);
 
-        assessmentService.assignToCandidate("a1", "c1", "r1");
+        assessmentService.assignToCandidate("a1", "c1", "u1");
 
         ArgumentCaptor<AssessmentAttempt> captor = ArgumentCaptor.forClass(AssessmentAttempt.class);
         verify(attemptRepository).save(captor.capture());
         assertEquals("c1", captor.getValue().getCandidateId());
         assertEquals(AttemptStatus.IN_PROGRESS, captor.getValue().getStatus());
 
-        assertEquals(AssessmentStatus.ACTIVE, assessment.getStatus());
+        // Assessment status must NOT change — publish button owns this transition
+        assertEquals(AssessmentStatus.DRAFT, assessment.getStatus());
+        verify(assessmentRepository, never()).save(any(Assessment.class));
     }
 
     @Test
@@ -125,7 +133,7 @@ class AssessmentServiceTest {
     void submitAttempt_shouldGradeMcqQuestionsAndSetPassResult() {
         Question q1 = Question.builder().id("q1").type(QuestionType.MCQ).correctOptionIndex(1).build();
         Question q2 = Question.builder().id("q2").type(QuestionType.MCQ).correctOptionIndex(0).build();
-        Assessment assessment = Assessment.builder().id("a1")
+        Assessment assessment = Assessment.builder().id("a1").recruiterId("r1")
                 .questions(List.of(q1, q2)).build();
 
         AttemptAnswer ans1 = new AttemptAnswer("q1", 1, null);
@@ -138,20 +146,23 @@ class AssessmentServiceTest {
         when(attemptRepository.findById("att1")).thenReturn(Optional.of(attempt));
         when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
         when(attemptRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userClient.resolveUserIdFromRecruiterId("r1")).thenReturn("u1");
+        doNothing().when(assessmentNotificationPublisher).publishAssessmentSubmitted(any());
 
-        assessmentService.submitAttempt("att1", "c1");
+        assessmentService.submitAttempt("att1", "c1", false);
 
         assertEquals(AttemptStatus.SUBMITTED, attempt.getStatus());
         assertEquals(50.0, attempt.getScore());
         assertEquals(AttemptResult.FAIL, attempt.getResult());
         assertNotNull(attempt.getSubmittedAt());
+        verify(assessmentNotificationPublisher).publishAssessmentSubmitted(any());
     }
 
     @Test
     void submitAttempt_shouldSetPendingResultWhenTextQuestionsPresent() {
         Question q1 = Question.builder().id("q1").type(QuestionType.MCQ).correctOptionIndex(0).build();
         Question q2 = Question.builder().id("q2").type(QuestionType.TEXT).build();
-        Assessment assessment = Assessment.builder().id("a1").questions(List.of(q1, q2)).build();
+        Assessment assessment = Assessment.builder().id("a1").recruiterId("r1").questions(List.of(q1, q2)).build();
 
         AttemptAnswer ans1 = new AttemptAnswer("q1", 0, null);
         AttemptAnswer ans2 = new AttemptAnswer("q2", null, "My answer");
@@ -163,10 +174,110 @@ class AssessmentServiceTest {
         when(attemptRepository.findById("att1")).thenReturn(Optional.of(attempt));
         when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
         when(attemptRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userClient.resolveUserIdFromRecruiterId("r1")).thenReturn("u1");
+        doNothing().when(assessmentNotificationPublisher).publishAssessmentSubmitted(any());
 
-        assessmentService.submitAttempt("att1", "c1");
+        assessmentService.submitAttempt("att1", "c1", false);
 
         assertEquals(AttemptResult.PENDING, attempt.getResult());
+    }
+
+    @Test
+    void submitAttempt_withOvertime_shouldSetOvertimeResultAndSkipScoring() {
+        Question q1 = Question.builder().id("q1").type(QuestionType.MCQ).correctOptionIndex(0).build();
+        Assessment assessment = Assessment.builder().id("a1").recruiterId("r1")
+                .questions(List.of(q1)).build();
+
+        AssessmentAttempt attempt = AssessmentAttempt.builder()
+                .id("att1").candidateId("c1").assessmentId("a1")
+                .status(AttemptStatus.IN_PROGRESS)
+                .answers(new ArrayList<>()).build();
+
+        when(attemptRepository.findById("att1")).thenReturn(Optional.of(attempt));
+        when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+        when(attemptRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userClient.resolveUserIdFromRecruiterId("r1")).thenReturn("u1");
+        doNothing().when(assessmentNotificationPublisher).publishAssessmentSubmitted(any());
+
+        assessmentService.submitAttempt("att1", "c1", true);
+
+        assertEquals(AttemptStatus.SUBMITTED, attempt.getStatus());
+        assertEquals(0.0, attempt.getScore());
+        assertEquals(AttemptResult.OVERTIME, attempt.getResult());
+        assertNotNull(attempt.getSubmittedAt());
+    }
+
+    @Test
+    void publishAssessment_shouldPromoteDraftToActive() {
+        when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
+        Assessment assessment = Assessment.builder()
+                .id("a1").recruiterId("r1").status(AssessmentStatus.DRAFT).build();
+        when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+        when(assessmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        AssessmentResponse response = assessmentService.publishAssessment("a1", "u1");
+
+        assertEquals(AssessmentStatus.ACTIVE, assessment.getStatus());
+        verify(assessmentRepository).save(assessment);
+    }
+
+    @Test
+    void publishAssessment_shouldBeIdempotentWhenAlreadyActive() {
+        when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
+        Assessment assessment = Assessment.builder()
+                .id("a1").recruiterId("r1").status(AssessmentStatus.ACTIVE).build();
+        when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+
+        assessmentService.publishAssessment("a1", "u1");
+
+        verify(assessmentRepository, never()).save(any());
+    }
+
+    @Test
+    void publishAssessment_shouldThrowWhenWrongRecruiter() {
+        when(userClient.resolveRecruiterId("u2")).thenReturn("r2");
+        Assessment assessment = Assessment.builder()
+                .id("a1").recruiterId("r1").status(AssessmentStatus.DRAFT).build();
+        when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> assessmentService.publishAssessment("a1", "u2"));
+        assertEquals(ErrorCode.UNAUTHORIZED, ex.getErrorCode());
+    }
+
+    @Test
+    void getAttemptsByAssessment_shouldReturnAttemptsForOwningRecruiter() {
+        when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
+        Assessment assessment = Assessment.builder()
+                .id("a1").recruiterId("r1").build();
+        when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+
+        AssessmentAttempt att1 = AssessmentAttempt.builder()
+                .id("att1").assessmentId("a1").candidateId("c1")
+                .status(AttemptStatus.SUBMITTED).score(80.0).result(AttemptResult.PASS).build();
+        AssessmentAttempt att2 = AssessmentAttempt.builder()
+                .id("att2").assessmentId("a1").candidateId("c2")
+                .status(AttemptStatus.IN_PROGRESS).build();
+        when(attemptRepository.findByAssessmentId("a1")).thenReturn(List.of(att1, att2));
+
+        List<AttemptSummaryResponse> result = assessmentService.getAttemptsByAssessment("a1", "u1");
+
+        assertEquals(2, result.size());
+        assertEquals("att1", result.get(0).getAttemptId());
+        assertEquals(80.0, result.get(0).getScore());
+        assertEquals(AttemptResult.PASS, result.get(0).getResult());
+    }
+
+    @Test
+    void getAttemptsByAssessment_shouldThrowWhenWrongRecruiter() {
+        when(userClient.resolveRecruiterId("u2")).thenReturn("r2");
+        Assessment assessment = Assessment.builder()
+                .id("a1").recruiterId("r1").build();
+        when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> assessmentService.getAttemptsByAssessment("a1", "u2"));
+        assertEquals(ErrorCode.UNAUTHORIZED, ex.getErrorCode());
     }
 
     @Test

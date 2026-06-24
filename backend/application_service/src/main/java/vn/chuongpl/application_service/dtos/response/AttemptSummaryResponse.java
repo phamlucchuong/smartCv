@@ -2,12 +2,10 @@ package vn.chuongpl.application_service.dtos.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import vn.chuongpl.application_service.enums.AttemptStatus;
 import vn.chuongpl.application_service.enums.AttemptResult;
-import vn.chuongpl.application_service.features.assessment.AttemptAnswer;
+import vn.chuongpl.application_service.enums.AttemptStatus;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -15,13 +13,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AttemptStateResponse {
+public class AttemptSummaryResponse {
     String attemptId;
     String assessmentId;
+    String candidateId;
     AttemptStatus status;
-    List<AttemptAnswer> answers;
-    LocalDateTime startedAt;
     Double score;
     AttemptResult result;
+    LocalDateTime submittedAt;
 }
-

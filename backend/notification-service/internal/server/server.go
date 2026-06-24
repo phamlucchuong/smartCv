@@ -145,6 +145,12 @@ func (s *Server) Start(ctx context.Context) error {
 				s.log.Error("failed to start recruiter pending event consumer", slog.Any("error", err))
 			}
 		}()
+
+		go func() {
+			if err := s.consumer.ListenAssessmentEvents(); err != nil {
+				s.log.Error("failed to start assessment event consumer", slog.Any("error", err))
+			}
+		}()
 	}
 
 	sc := echo.StartConfig{

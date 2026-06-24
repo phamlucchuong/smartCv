@@ -12,7 +12,9 @@ import {
 } from "@smart-cv/api";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, MoreVertical, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+
+const DOMAIN_URL = import.meta.env.VITE_DOMAIN_URL ?? 'http://localhost:3000';
 
 type JobItem = {
   id?: string;
@@ -139,6 +141,14 @@ function JobActionsMenu({ job, onMutated }: { job: JobItem; onMutated: () => voi
             onClick={() => run(() => withdrawMutation.mutateAsync({ id: job.id! }))}
           >
             Rút về nháp
+          </DropdownMenuItem>
+        )}
+        {isPublishedActive && (
+          <DropdownMenuItem
+            onClick={() => window.open(`${DOMAIN_URL}/jobs/${job.id}`, '_blank', 'noopener,noreferrer')}
+          >
+            <ExternalLink className="size-4 mr-2" />
+            Xem trên trang ứng viên
           </DropdownMenuItem>
         )}
         {isPublishedActive && (

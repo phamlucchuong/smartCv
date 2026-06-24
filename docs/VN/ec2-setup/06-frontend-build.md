@@ -4,44 +4,37 @@ Trong bước này bạn sẽ build 3 React app và upload lên đúng thư mụ
 
 ---
 
-## 6.1 Tạo file .env cho từng app
+## 6.1 Tạo file .env dùng chung
 
-Mỗi React app cần biết địa chỉ API backend. Tạo file `.env` trong thư mục của từng app.
+Cả 3 app đều đọc env từ **một file duy nhất** tại `frontend/.env`. Lý do: mỗi `vite.config.ts` đã cấu hình `envDir` trỏ về thư mục gốc `frontend/`, nên không cần tạo env riêng trong từng app.
 
 Trên **máy local**, từ thư mục gốc của project:
 
-### web-candidate
-
 ```bash
-# Tạo file .env cho web-candidate
-cat > frontend/apps/web-candidate/.env << 'EOF'
+cat > frontend/.env << 'EOF'
+# API
 VITE_API_BASE_URL=https://api.smartcv-chuongpl.io.vn
+VITE_DOMAIN_URL=https://smartcv-chuongpl.io.vn
+
+# i18n
 VITE_I18N_DEFAULT_LOCALE=vi
 VITE_I18N_FALLBACK_LOCALE=en
+
+# Firebase (FCM push notifications — dùng chung cho cả 3 app)
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MEASUREMENT_ID=
+VITE_FIREBASE_VAPID_KEY=
 EOF
 ```
 
-### web-recruiter
+Điền đầy đủ các giá trị Firebase từ Firebase Console → Project Settings → General → Your apps.
 
-```bash
-cat > frontend/apps/web-recruiter/.env << 'EOF'
-VITE_API_BASE_URL=https://api.smartcv-chuongpl.io.vn
-VITE_I18N_DEFAULT_LOCALE=vi
-VITE_I18N_FALLBACK_LOCALE=en
-EOF
-```
-
-### web-admin
-
-```bash
-cat > frontend/apps/web-admin/.env << 'EOF'
-VITE_API_BASE_URL=https://api.smartcv-chuongpl.io.vn
-VITE_I18N_DEFAULT_LOCALE=vi
-VITE_I18N_FALLBACK_LOCALE=en
-EOF
-```
-
-> **Lưu ý:** Các file `.env` trong `frontend/apps/*/` đã có trong `.gitignore`. Đây là cách đúng — không commit biến môi trường production lên git.
+> **Lưu ý:** `frontend/.env` đã có trong `.gitignore`. Không commit file này lên git.
 
 ---
 
@@ -198,7 +191,7 @@ docker compose -f docker-compose.prod.yaml up -d --force-recreate user-service
 ## Tóm tắt Bước 6
 
 Sau bước này:
-- [x] 3 React app đã build với đúng `VITE_API_BASE_URL`
+- [x] File `frontend/.env` đã có đúng `VITE_API_BASE_URL` và Firebase config cho production
 - [x] Files đã upload lên S3 với cấu hình cache phù hợp
 - [x] CloudFront cache đã xóa
 - [x] Frontend hoạt động trên domain thật với HTTPS

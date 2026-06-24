@@ -8,8 +8,11 @@ import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
+import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
 import vn.chuongpl.application_service.enums.*;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.notification.AssessmentNotificationPublisher;
+import vn.chuongpl.application_service.integration.user.UserClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,8 +26,17 @@ public class AssessmentService {
 
     AssessmentRepository assessmentRepository;
     AssessmentAttemptRepository attemptRepository;
+    UserClient userClient;
+    AssessmentNotificationPublisher assessmentNotificationPublisher;
 
-    public AssessmentResponse createAssessment(AssessmentCreateRequest req, String recruiterId) {
+    private String resolveRecruiterId(String userId) {
+        String recruiterId = userClient.resolveRecruiterId(userId);
+        if (recruiterId == null) throw new AppException(ErrorCode.UNAUTHORIZED);
+        return recruiterId;
+    }
+
+    public AssessmentResponse createAssessment(AssessmentCreateRequest req, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = Assessment.builder()
                 .recruiterId(recruiterId)
                 .jobId(req.getJobId())
@@ -39,13 +51,15 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
-    public List<AssessmentResponse> getRecruiterAssessments(String recruiterId) {
+    public List<AssessmentResponse> getRecruiterAssessments(String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         return assessmentRepository.findByRecruiterId(recruiterId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String recruiterId) {
+    public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
         if (!recruiterId.equals(assessment.getRecruiterId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -59,7 +73,8 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
-    public void deleteAssessment(String id, String recruiterId) {
+    public void deleteAssessment(String id, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
         if (!recruiterId.equals(assessment.getRecruiterId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -67,8 +82,12 @@ public class AssessmentService {
         assessmentRepository.delete(assessment);
     }
 
-    public void assignToCandidate(String assessmentId, String candidateId, String recruiterId) {
+    public void assignToCandidate(String assessmentId, String candidateId, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(assessmentId);
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
         AssessmentAttempt attempt = AssessmentAttempt.builder()
                 .assessmentId(assessmentId)
                 .candidateId(candidateId)
@@ -76,11 +95,51 @@ public class AssessmentService {
                 .startedAt(LocalDateTime.now())
                 .build();
         attemptRepository.save(attempt);
+    }
+
+    public AssessmentResponse publishAssessment(String id, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
+        Assessment assessment = findAssessmentById(id);
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
         if (assessment.getStatus() == AssessmentStatus.DRAFT) {
             assessment.setStatus(AssessmentStatus.ACTIVE);
-            assessmentRepository.save(assessment);
+        } else {
+            assessment.setStatus(AssessmentStatus.DRAFT);
         }
+        assessmentRepository.save(assessment);
+        return toResponse(assessment);
     }
+
+    public void deleteAttempt(String attemptId, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
+        AssessmentAttempt attempt = findAttemptById(attemptId);
+        Assessment assessment = findAssessmentById(attempt.getAssessmentId());
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        attemptRepository.delete(attempt);
+    }
+
+    public List<AttemptSummaryResponse> getAttemptsByAssessment(String assessmentId, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
+        Assessment assessment = findAssessmentById(assessmentId);
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        return attemptRepository.findByAssessmentId(assessmentId).stream()
+                .map(this::toAttemptSummaryResponse)
+                .toList();
+    }
+
+    public List<AttemptSummaryResponse> getAttemptsByCandidate(String candidateId, String userId) {
+        resolveRecruiterId(userId);
+        return attemptRepository.findByCandidateId(candidateId).stream()
+                .map(this::toAttemptSummaryResponse)
+                .toList();
+    }
+
 
     public List<AttemptStateResponse> getMyAssessments(String candidateId) {
         return attemptRepository.findByCandidateId(candidateId).stream()
@@ -122,7 +181,7 @@ public class AssessmentService {
         attemptRepository.save(attempt);
     }
 
-    public void submitAttempt(String attemptId, String candidateId) {
+    public void submitAttempt(String attemptId, String candidateId, boolean overtime) {
         AssessmentAttempt attempt = findAttemptById(attemptId);
         assertOwner(attempt, candidateId);
         if (attempt.getStatus() == AttemptStatus.SUBMITTED) {
@@ -130,28 +189,31 @@ public class AssessmentService {
         }
         Assessment assessment = findAssessmentById(attempt.getAssessmentId());
 
-        Map<String, Question> questionMap = assessment.getQuestions().stream()
-                .collect(Collectors.toMap(Question::getId, q -> q));
-
-        boolean hasText = assessment.getQuestions().stream()
-                .anyMatch(q -> q.getType() == QuestionType.TEXT);
-
-        long mcqTotal = assessment.getQuestions().stream()
-                .filter(q -> q.getType() == QuestionType.MCQ).count();
-        long mcqCorrect = attempt.getAnswers().stream()
-                .filter(a -> {
-                    Question q = questionMap.get(a.getQuestionId());
-                    return q != null && q.getType() == QuestionType.MCQ
-                            && q.getCorrectOptionIndex() != null
-                            && q.getCorrectOptionIndex().equals(a.getSelectedOptionIndex());
-                }).count();
-
-        double score = mcqTotal > 0 ? (double) mcqCorrect / mcqTotal * 100 : 0.0;
         AttemptResult result;
-        if (hasText) {
-            result = AttemptResult.PENDING;
+        double score;
+        if (overtime) {
+            result = AttemptResult.OVERTIME;
+            score = 0.0;
         } else {
-            result = score >= 70 ? AttemptResult.PASS : AttemptResult.FAIL;
+            Map<String, Question> questionMap = assessment.getQuestions().stream()
+                    .collect(Collectors.toMap(Question::getId, q -> q));
+            boolean hasText = assessment.getQuestions().stream()
+                    .anyMatch(q -> q.getType() == QuestionType.TEXT);
+            long mcqTotal = assessment.getQuestions().stream()
+                    .filter(q -> q.getType() == QuestionType.MCQ).count();
+            long mcqCorrect = attempt.getAnswers().stream()
+                    .filter(a -> {
+                        Question q = questionMap.get(a.getQuestionId());
+                        return q != null && q.getType() == QuestionType.MCQ
+                                && q.getCorrectOptionIndex() != null
+                                && q.getCorrectOptionIndex().equals(a.getSelectedOptionIndex());
+                    }).count();
+            score = mcqTotal > 0 ? (double) mcqCorrect / mcqTotal * 100 : 0.0;
+            if (hasText) {
+                result = AttemptResult.PENDING;
+            } else {
+                result = score >= 70 ? AttemptResult.PASS : AttemptResult.FAIL;
+            }
         }
 
         attempt.setScore(score);
@@ -159,6 +221,21 @@ public class AssessmentService {
         attempt.setStatus(AttemptStatus.SUBMITTED);
         attempt.setSubmittedAt(LocalDateTime.now());
         attemptRepository.save(attempt);
+
+        String recruiterUserId = userClient.resolveUserIdFromRecruiterId(assessment.getRecruiterId());
+        assessmentNotificationPublisher.publishAssessmentSubmitted(
+                AssessmentEventMessage.builder()
+                        .attemptId(attempt.getId())
+                        .assessmentId(assessment.getId())
+                        .assessmentTitle(assessment.getTitle())
+                        .candidateId(candidateId)
+                        .recruiterId(assessment.getRecruiterId())
+                        .recruiterUserId(recruiterUserId)
+                        .score(score)
+                        .result(result.name())
+                        .overtime(overtime)
+                        .occurredAt(LocalDateTime.now())
+                        .build());
     }
 
     public AttemptStateResponse getAttemptState(String attemptId, String candidateId) {
@@ -218,6 +295,46 @@ public class AssessmentService {
                 .status(a.getStatus())
                 .answers(a.getAnswers())
                 .startedAt(a.getStartedAt())
+                .score(a.getScore())
+                .result(a.getResult())
                 .build();
+    }
+
+    private AttemptSummaryResponse toAttemptSummaryResponse(AssessmentAttempt a) {
+        return AttemptSummaryResponse.builder()
+                .attemptId(a.getId())
+                .assessmentId(a.getAssessmentId())
+                .candidateId(a.getCandidateId())
+                .status(a.getStatus())
+                .score(a.getScore())
+                .result(a.getResult())
+                .submittedAt(a.getSubmittedAt())
+                .build();
+    }
+
+    public List<AssessmentResponse> getAssessmentsByJob(String jobId) {
+        return assessmentRepository.findByJobId(jobId).stream()
+                .filter(a -> a.getStatus() == AssessmentStatus.ACTIVE)
+                .map(a -> {
+                    AssessmentResponse res = toResponse(a);
+                    if (res.getQuestions() != null) {
+                        res.getQuestions().forEach(q -> q.setCorrectOptionIndex(null));
+                    }
+                    return res;
+                })
+                .toList();
+    }
+
+    public List<AssessmentResponse> getAssessmentsByRecruiter(String recruiterId) {
+        return assessmentRepository.findByRecruiterId(recruiterId).stream()
+                .filter(a -> a.getStatus() == AssessmentStatus.ACTIVE)
+                .map(a -> {
+                    AssessmentResponse res = toResponse(a);
+                    if (res.getQuestions() != null) {
+                        res.getQuestions().forEach(q -> q.setCorrectOptionIndex(null));
+                    }
+                    return res;
+                })
+                .toList();
     }
 }

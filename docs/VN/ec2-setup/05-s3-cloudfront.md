@@ -301,10 +301,12 @@ Tuy nhiên, vì bạn tạo **3 distributions** lần lượt, mỗi lần Cloud
 
 **Kiểm tra sau khi tạo xong cả 3:**
 
-1. Vào [S3 Console](https://s3.console.aws.amazon.com) → bucket `smartcv-frontend` → tab **Permissions** → **Bucket policy**
-2. Xem nội dung policy — phải có **3 Statement** (mỗi Statement cho 1 distribution).
+1. Vào [S3 Console](https://s3.console.aws.amazon.com) → bucket `smartcv-storage-dev` → tab **Permissions** → **Bucket policy**
+2. Policy hiện tại có thể là:
+   - `1 Statement` duy nhất với `AWS:SourceArn` là một mảng chứa 3 distribution IDs, hoặc
+   - `3 Statement` riêng nếu CloudFront/S3 cập nhật theo kiểu cũ.
 
-Nếu chỉ có 1 Statement (distribution cuối), thay thế toàn bộ policy bằng nội dung sau.
+Miễn là cả 3 distribution IDs đều có trong policy thì cấu hình là đúng. Nếu policy chỉ còn 1 distribution hoặc thiếu ID nào đó, thay thế toàn bộ policy bằng nội dung sau.
 
 **Lấy thông tin cần thiết trước:**
 
@@ -320,41 +322,22 @@ aws cloudfront list-distributions --query "DistributionList.Items[*].{ID:Id,Doma
 
 ```json
 {
-  "Version": "2012-10-17",
+  "Version": "2008-10-17",
+  "Id": "PolicyForCloudFrontPrivateContent",
   "Statement": [
     {
-      "Sid": "AllowCloudFrontCandidate",
+      "Sid": "AllowCloudFrontServicePrincipal",
       "Effect": "Allow",
       "Principal": { "Service": "cloudfront.amazonaws.com" },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::smartcv-frontend/*",
+      "Resource": "arn:aws:s3:::smartcv-storage-dev/*",
       "Condition": {
-        "StringEquals": {
-          "AWS:SourceArn": "arn:aws:cloudfront::ACCOUNT_ID:distribution/CANDIDATE_DIST_ID"
-        }
-      }
-    },
-    {
-      "Sid": "AllowCloudFrontRecruiter",
-      "Effect": "Allow",
-      "Principal": { "Service": "cloudfront.amazonaws.com" },
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::smartcv-frontend/*",
-      "Condition": {
-        "StringEquals": {
-          "AWS:SourceArn": "arn:aws:cloudfront::ACCOUNT_ID:distribution/RECRUITER_DIST_ID"
-        }
-      }
-    },
-    {
-      "Sid": "AllowCloudFrontAdmin",
-      "Effect": "Allow",
-      "Principal": { "Service": "cloudfront.amazonaws.com" },
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::smartcv-frontend/*",
-      "Condition": {
-        "StringEquals": {
-          "AWS:SourceArn": "arn:aws:cloudfront::ACCOUNT_ID:distribution/ADMIN_DIST_ID"
+        "ArnLike": {
+          "AWS:SourceArn": [
+            "arn:aws:cloudfront::ACCOUNT_ID:distribution/CANDIDATE_DIST_ID",
+            "arn:aws:cloudfront::ACCOUNT_ID:distribution/RECRUITER_DIST_ID",
+            "arn:aws:cloudfront::ACCOUNT_ID:distribution/ADMIN_DIST_ID"
+          ]
         }
       }
     }
@@ -370,7 +353,11 @@ Click **Save changes**.
 
 Sau khi tạo xong 3 CloudFront distributions, mỗi cái sẽ có một địa chỉ như `d1abc123.cloudfront.net`.
 
-Vào **Cloudflare dashboard** → **DNS** → **Records**. Xóa (hoặc sửa) các A records frontend hiện tại đang trỏ về EC2, thay bằng CNAME trỏ về CloudFront:
+Vào **Cloudflare dashboard** → **DNS** → **Records**.
+
+**Lưu ý quan trọng:** nếu bạn đang có `A` record rồi mà Cloudflare không cho đổi thẳng sang `CNAME`, hãy **xóa record cũ rồi tạo record mới**. Cách này đơn giản nhất và tránh lỗi UI.
+
+Chỉ thay các record frontend đang trỏ về EC2 bằng `CNAME` trỏ về CloudFront:
 
 | Subdomain | Loại cũ → mới | Giá trị mới | Proxy status |
 |-----------|--------------|-------------|-------------|
@@ -384,6 +371,34 @@ Vào **Cloudflare dashboard** → **DNS** → **Records**. Xóa (hoặc sửa) c
 > **Proxy status phải là DNS only:** CloudFront tự xử lý HTTPS và CDN, không cần Cloudflare proxy. Để Proxied có thể gây lỗi SSL hoặc routing.
 
 > **Apex domain với CNAME:** Cloudflare hỗ trợ CNAME ở apex (`@`) thông qua tính năng **CNAME Flattening** — không cần làm gì thêm, Cloudflare tự xử lý.
+
+### Cách làm từng record
+
+1. Với `smartcv-chuongpl.io.vn`:
+   - Xóa record `A` hiện tại.
+   - Tạo `CNAME` mới với `Name` là `@`.
+   - `Target` là CloudFront distribution của `web-candidate`.
+   - `Proxy status`: `DNS only`.
+
+2. Với `www.smartcv-chuongpl.io.vn`:
+   - Xóa record `A` hiện tại.
+   - Tạo `CNAME` mới với `Name` là `www`.
+   - `Target` là CloudFront distribution của `web-candidate`.
+   - `Proxy status`: `DNS only`.
+
+3. Với `recruiter.smartcv-chuongpl.io.vn`:
+   - Xóa record `A` hiện tại.
+   - Tạo `CNAME` mới với `Name` là `recruiter`.
+   - `Target` là CloudFront distribution của `web-recruiter`.
+   - `Proxy status`: `DNS only`.
+
+4. Với `admin.smartcv-chuongpl.io.vn`:
+   - Xóa record `A` hiện tại.
+   - Tạo `CNAME` mới với `Name` là `admin`.
+   - `Target` là CloudFront distribution của `web-admin`.
+   - `Proxy status`: `DNS only`.
+
+5. Không chạm vào `api.smartcv-chuongpl.io.vn`.
 
 ---
 

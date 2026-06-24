@@ -1,6 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useGetById, useGetCandidateByUserId, useUpdateStatus, getGetByIdQueryKey } from "@smart-cv/api";
+import { createFileRoute } from '@tanstack/react-router';
+import {
+  useGetById,
+  useGetCandidateByUserId,
+  useUpdateStatus,
+  getGetByIdQueryKey,
+  useGetAttemptsByCandidate,
+  useGetRecruiterAssessments,
+  useDeleteAttempt,
+  getGetAttemptsByCandidateQueryKey,
+} from "@smart-cv/api";
 import type { ApplicationModels } from "@smart-cv/api";
+
 import { AIScoreRing } from "@/components/ui-kit/AIScoreRing";
 import { StatusBadge } from "@/components/ui-kit/StatusBadge";
 import { AIInsightBox } from "@/components/ui-kit/AIInsightBox";
@@ -60,7 +70,30 @@ function CandidateDetail() {
   );
   const candidate = candidateData?.data;
 
+  const { data: attemptsData, isLoading: attemptsLoading } = useGetAttemptsByCandidate(
+    application?.candidateId ?? "",
+    { query: { enabled: !!application?.candidateId } }
+  );
+  const attempts = attemptsData?.data ?? [];
+
+  const { data: assessmentsData } = useGetRecruiterAssessments();
+  const assessments = assessmentsData?.data ?? [];
+
   const updateStatusMutation = useUpdateStatus();
+
+  const deleteAttemptMutation = useDeleteAttempt({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Đặt lại bài kiểm tra thành công! Ứng viên có thể thực hiện lại.");
+        queryClient.invalidateQueries({
+          queryKey: getGetAttemptsByCandidateQueryKey(application?.candidateId ?? ""),
+        });
+      },
+      onError: (err: unknown) => {
+        toast.error((err as { message?: string })?.message || "Đặt lại bài kiểm tra thất bại.");
+      },
+    },
+  });
 
   const status = (application?.status ?? "PENDING") as ApplicationStatus;
   const validTransitions = VALID_TRANSITIONS[status];
@@ -368,11 +401,74 @@ function CandidateDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="test" className="mt-5 card-surface p-5">
-          <h3 className="font-semibold mb-4">Kết quả bài test</h3>
-          <div className="text-sm text-muted-foreground">
-            Chưa có bài test nào được gửi.
+        <TabsContent value="test" className="mt-5 card-surface p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg text-foreground">Kết quả bài kiểm tra</h3>
           </div>
+          {attemptsLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-2">
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Đang tải kết quả...</span>
+            </div>
+          ) : attempts.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">
+              Ứng viên chưa tham gia bài kiểm tra nào.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground uppercase">
+                    <th className="py-3 px-4 text-left">Bài kiểm tra</th>
+                    <th className="py-3 px-4 text-center">Điểm</th>
+                    <th className="py-3 px-4 text-center">Kết quả</th>
+                    <th className="py-3 px-4 text-center">Trạng thái</th>
+                    <th className="py-3 px-4 text-center">Thời gian nộp</th>
+                    <th className="py-3 px-4 text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attempts.map((a) => {
+                    const assessment = assessments.find((as) => as.id === a.assessmentId);
+                    return (
+                      <tr key={a.attemptId} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="py-3.5 px-4 font-semibold text-foreground">
+                          {assessment?.title ?? a.assessmentId ?? "Bài test không rõ"}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-bold">
+                          {a.result === 'OVERTIME' ? '—' : a.score != null ? `${a.score.toFixed(0)}%` : '—'}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${a.result === 'PASS' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                            a.result === 'FAIL' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                              a.result === 'OVERTIME' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' :
+                                'bg-muted text-muted-foreground border-border'
+                            }`}>
+                            {a.result === 'PASS' ? 'Đạt' : a.result === 'FAIL' ? 'Chưa đạt' : a.result === 'OVERTIME' ? 'Hết giờ' : 'Chờ chấm'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-muted-foreground text-xs">{a.status}</td>
+                        <td className="py-3.5 px-4 text-center text-muted-foreground text-xs">
+                          {a.submittedAt ? new Date(a.submittedAt).toLocaleString('vi-VN') : '—'}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteAttemptMutation.mutate({ attemptId: a.attemptId! })}
+                            disabled={deleteAttemptMutation.isPending}
+                            className="h-7 text-xs font-semibold text-red-600 border-red-500/30 hover:bg-red-500/10 cursor-pointer"
+                          >
+                            Làm lại
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent

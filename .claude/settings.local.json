@@ -73,7 +73,10 @@
       "Bash(pkill -f \"user.service\\\\|user_service\")",
       "Bash(pkill -f \"application.service\\\\|application_service\")",
       "Bash(pkill -f \"notification.service\\\\|notification-service\\\\|main.go\")",
-      "Bash(make run-noti *)"
+      "Bash(make run-noti *)",
+      "Bash(rtk ./mvnw test -Dtest=AssessmentServiceTest)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(pnpm -F web-candidate lint)"
     ]
   }
 }
