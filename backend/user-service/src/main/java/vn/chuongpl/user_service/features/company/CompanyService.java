@@ -57,6 +57,7 @@ public class CompanyService {
     public CompanyResponse getById(String id) {
         Recruiter recruiter = recruiterRepository.findById(id)
                 .filter(r -> !r.isDeleted())
+                .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
         return CompanyResponse.from(recruiter);
     }
@@ -64,6 +65,7 @@ public class CompanyService {
     public CompanyResponse getByRecruiterId(String recruiterId) {
         Recruiter recruiter = recruiterRepository.findById(recruiterId)
                 .filter(r -> !r.isDeleted())
+                .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
         return CompanyResponse.from(recruiter);
     }

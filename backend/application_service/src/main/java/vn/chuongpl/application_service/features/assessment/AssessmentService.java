@@ -105,10 +105,8 @@ public class AssessmentService {
         }
         if (assessment.getStatus() == AssessmentStatus.DRAFT) {
             assessment.setStatus(AssessmentStatus.ACTIVE);
-        } else {
-            assessment.setStatus(AssessmentStatus.DRAFT);
+            assessmentRepository.save(assessment);
         }
-        assessmentRepository.save(assessment);
         return toResponse(assessment);
     }
 

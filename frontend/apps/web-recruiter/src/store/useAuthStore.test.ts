@@ -11,8 +11,8 @@ function createJwt(payload: Record<string, unknown>) {
 
 afterEach(() => {
   useAuthStore.setState(initialState, true)
-  document.cookie = 'smart_cv_token=; Max-Age=0; path=/'
-  document.cookie = 'smart_cv_refresh=; Max-Age=0; path=/'
+  document.cookie = 'smart_cv_r_token=; Max-Age=0; path=/'
+  document.cookie = 'smart_cv_r_refresh=; Max-Age=0; path=/'
   vi.resetModules()
 })
 
@@ -31,8 +31,8 @@ describe('useAuthStore', () => {
     expect(state.userId).toBe('u1')
     expect(state.email).toBe('hr@company.com')
     expect(state.role).toBe('ROLE_RECRUITER recruiter:write')
-    expect(document.cookie).toContain('smart_cv_token=')
-    expect(document.cookie).toContain('smart_cv_refresh=refresh-token')
+    expect(document.cookie).toContain('smart_cv_r_token=')
+    expect(document.cookie).toContain('smart_cv_r_refresh=refresh-token')
   })
 
   it('clears cookies and auth state on sign out', () => {
@@ -59,8 +59,8 @@ describe('useAuthStore', () => {
       scope: 'ROLE_CANDIDATE',
     })
 
-    document.cookie = `smart_cv_token=${candidateToken}; path=/`
-    document.cookie = 'smart_cv_refresh=refresh-token; path=/'
+    document.cookie = `smart_cv_r_token=${candidateToken}; path=/`
+    document.cookie = 'smart_cv_r_refresh=refresh-token; path=/'
 
     vi.resetModules()
     const { useAuthStore: reloadedStore } = await import('./useAuthStore')
@@ -68,6 +68,6 @@ describe('useAuthStore', () => {
 
     expect(state.isAuthenticated).toBe(false)
     expect(state.role).toBeNull()
-    expect(document.cookie).not.toContain('smart_cv_token=')
+    expect(document.cookie).not.toContain('smart_cv_r_token=')
   })
 })

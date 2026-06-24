@@ -26,7 +26,6 @@ import vn.chuongpl.job_service.enums.JobModerationStatus;
 import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.exception.AppException;
 import vn.chuongpl.job_service.integration.elasticsearch.JobIndexService;
-import vn.chuongpl.job_service.integration.userservice.RecruiterStatusDto;
 import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.time.LocalDate;
@@ -92,7 +91,8 @@ class JobServiceTest {
         Job savedJob = Job.builder().id("job-1").build();
         JobResponse expected = JobResponse.builder().id("job-1").build();
 
-        when(userServiceClient.getRecruiterStatus("recruiter-1")).thenReturn(new RecruiterStatusDto("APPROVED"));
+        when(userServiceClient.getRecruiterProfile("recruiter-1"))
+                .thenReturn(new UserServiceClient.RecruiterProfileDto("recruiter-1", "APPROVED"));
         when(jobMapper.toJob(request)).thenReturn(mappedJob);
         when(jobRepository.existsByRecruiterIdAndNormalizedTitleAndDeletedFalse("recruiter-1", "backend engineer"))
                 .thenReturn(false);
@@ -116,7 +116,8 @@ class JobServiceTest {
         JobCreateRequest request = new JobCreateRequest();
         Job mappedJob = Job.builder().title(" Backend Engineer ").build();
 
-        when(userServiceClient.getRecruiterStatus("recruiter-1")).thenReturn(new RecruiterStatusDto("APPROVED"));
+        when(userServiceClient.getRecruiterProfile("recruiter-1"))
+                .thenReturn(new UserServiceClient.RecruiterProfileDto("recruiter-1", "APPROVED"));
         when(jobMapper.toJob(request)).thenReturn(mappedJob);
         when(jobRepository.existsByRecruiterIdAndNormalizedTitleAndDeletedFalse("recruiter-1", "backend engineer"))
                 .thenReturn(true);
@@ -131,7 +132,8 @@ class JobServiceTest {
     void createJob_shouldThrowWhenRecruiterNotApproved() {
         JobCreateRequest request = new JobCreateRequest();
 
-        when(userServiceClient.getRecruiterStatus("recruiter-pending")).thenReturn(new RecruiterStatusDto("PENDING"));
+        when(userServiceClient.getRecruiterProfile("recruiter-pending"))
+                .thenReturn(new UserServiceClient.RecruiterProfileDto(null, "PENDING"));
 
         AppException ex = assertThrows(AppException.class, () -> jobService.createJob(request, "recruiter-pending"));
 
@@ -163,6 +165,7 @@ class JobServiceTest {
                 .build();
 
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(userServiceClient.resolveRecruiterId("recruiter-1")).thenReturn("recruiter-1");
         when(jobRepository.existsByRecruiterIdAndNormalizedTitleAndDeletedFalseAndIdNot("recruiter-1", "backend engineer", "job-1"))
                 .thenReturn(false);
         when(jobRepository.save(job)).thenReturn(job);
@@ -307,6 +310,7 @@ class JobServiceTest {
                 .build();
 
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(userServiceClient.resolveRecruiterId("recruiter-1")).thenReturn("recruiter-1");
         doAnswer(invocation -> {
             Job target = invocation.getArgument(0);
             JobUpdateRequest update = invocation.getArgument(1);
@@ -342,6 +346,7 @@ class JobServiceTest {
                 .build();
 
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(userServiceClient.resolveRecruiterId("recruiter-1")).thenReturn("recruiter-1");
         when(jobRepository.save(job)).thenReturn(job);
         when(jobMapper.toJobResponse(job)).thenReturn(response);
         when(jobIndexServiceProvider.getIfAvailable()).thenReturn(jobIndexService);
@@ -357,6 +362,7 @@ class JobServiceTest {
     void deleteJob_shouldSoftDeleteAndRemoveIndex() {
         Job job = Job.builder().id("job-1").recruiterId("recruiter-1").deleted(false).build();
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(userServiceClient.resolveRecruiterId("recruiter-1")).thenReturn("recruiter-1");
         when(jobIndexServiceProvider.getIfAvailable()).thenReturn(jobIndexService);
 
         jobService.deleteJob("job-1", "recruiter-1", false);
@@ -380,6 +386,7 @@ class JobServiceTest {
                 .visibilityStatus(JobVisibilityStatus.INACTIVE)
                 .build();
         when(jobRepository.findByIdAndDeletedFalse("job-1")).thenReturn(Optional.of(job));
+        when(userServiceClient.resolveRecruiterId("recruiter-1")).thenReturn("recruiter-1");
         when(jobMapper.toJobResponse(job)).thenReturn(expected);
 
         JobResponse actual = jobService.getMyJobById("job-1", "recruiter-1", false);
