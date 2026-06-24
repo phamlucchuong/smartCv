@@ -104,7 +104,7 @@ function SignInComponent() {
     try {
       await attemptLogin(email, password)
     } catch (err: unknown) {
-      const e = err as any
+      const e = err as { response?: { data?: { code?: number; message?: string } }; message?: string }
       if (e?.response?.data?.code === 3003) {
         openOtpPanel()
       } else {

@@ -212,7 +212,7 @@ class RecruiterServiceTest {
                 .id("r1").userId("u1").status(RecruiterStatus.PENDING)
                 .companyName("ACME Corp").contactEmail("contact@acme.com").build();
         User user = User.builder().id("u1").email("admin@acme.com").build();
-        when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.findById("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(user));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
@@ -237,7 +237,7 @@ class RecruiterServiceTest {
         Recruiter recruiter = Recruiter.builder()
                 .id("r2").userId("u2").status(RecruiterStatus.PENDING).companyName("Beta Ltd").build();
         User user = User.builder().id("u2").email("owner@beta.com").build();
-        when(recruiterRepository.findByIdAndDeletedFalse("r2")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.findById("r2")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u2")).thenReturn(Optional.of(user));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
@@ -259,7 +259,7 @@ class RecruiterServiceTest {
     @Test
     void updateStatus_shouldStoreRejectionNoteWhenRejected() {
         Recruiter recruiter = Recruiter.builder().id("r1").userId("u1").status(RecruiterStatus.PENDING).build();
-        when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.findById("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(User.builder().id("u1").build()));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
@@ -281,7 +281,7 @@ class RecruiterServiceTest {
                 .status(RecruiterStatus.REJECTED)
                 .rejectionNote("Old note")
                 .build();
-        when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.findById("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(User.builder().id("u1").build()));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());
@@ -303,7 +303,7 @@ class RecruiterServiceTest {
                 .id("r1").userId("u1")
                 .status(RecruiterStatus.PENDING)
                 .build();
-        when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.findById("r1")).thenReturn(Optional.of(recruiter));
 
         AppException ex = assertThrows(AppException.class,
                 () -> recruiterService.update("r1", new RecruiterRequest(), "u1", false));
@@ -316,7 +316,7 @@ class RecruiterServiceTest {
                 .id("r1").userId("u1")
                 .status(RecruiterStatus.PENDING)
                 .build();
-        when(recruiterRepository.findByIdAndDeletedFalse("r1")).thenReturn(Optional.of(recruiter));
+        when(recruiterRepository.findById("r1")).thenReturn(Optional.of(recruiter));
         when(userRepository.findById("u1")).thenReturn(Optional.of(User.builder().id("u1").build()));
         when(recruiterRepository.save(any())).thenReturn(recruiter);
         when(recruiterMapper.toRecruiterResponse(any(), any())).thenReturn(new vn.chuongpl.user_service.dtos.response.RecruiterResponse());

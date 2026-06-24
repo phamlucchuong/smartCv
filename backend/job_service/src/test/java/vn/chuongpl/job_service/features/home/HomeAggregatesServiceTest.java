@@ -6,8 +6,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Query;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
 import vn.chuongpl.job_service.features.job.Job;
@@ -19,11 +17,11 @@ import vn.chuongpl.job_service.integration.applicationservice.ApplicationService
 import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,18 +34,17 @@ class HomeAggregatesServiceTest {
 
     @Test
     void getTopCompanies_shouldReturnAggregatedResultsWithCompanyId() {
-        TopCompanyResponse company = new TopCompanyResponse();
-        company.setRecruiterId("r1");
-        company.setName("TechCorp");
-        company.setLocation("Hanoi");
-        company.setActiveJobCount(5);
+        java.util.List<Job> activeJobs = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Job job = Job.builder().id("job" + i).recruiterId("r1")
+                    .company("TechCorp").location("Hanoi").build();
+            activeJobs.add(job);
+        }
 
-        @SuppressWarnings("unchecked")
-        AggregationResults<TopCompanyResponse> mockResults = mock(AggregationResults.class);
-        when(mockResults.getMappedResults()).thenReturn(List.of(company));
-        when(mongoTemplate.aggregate(any(Aggregation.class), eq("jobs"), eq(TopCompanyResponse.class)))
-                .thenReturn(mockResults);
-        when(userServiceClient.getCompanyId("r1")).thenReturn("company-uuid-1");
+        when(mongoTemplate.find(any(Query.class), eq(Job.class))).thenReturn(activeJobs);
+        when(applicationServiceClient.getTopJobs(1000)).thenReturn(List.of());
+        when(userServiceClient.getCompanyData("r1"))
+                .thenReturn(new UserServiceClient.CompanyData("company-uuid-1", "TechCorp", null, null, null, "Hanoi"));
 
         List<TopCompanyResponse> result = homeService.getTopCompanies();
 

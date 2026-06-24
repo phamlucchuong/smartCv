@@ -14,7 +14,6 @@ import vn.chuongpl.ai_engine_service.features.analysis.AnalysisService;
 import vn.chuongpl.ai_engine_service.features.analysis.PromptBuilder;
 import vn.chuongpl.ai_engine_service.integration.cv.CvTextExtractor;
 import vn.chuongpl.ai_engine_service.integration.job.JobClient;
-import vn.chuongpl.ai_engine_service.integration.job.JobSummary;
 import vn.chuongpl.ai_engine_service.integration.user.CvInfoResponse;
 import vn.chuongpl.ai_engine_service.integration.user.JobSuggestionsPublisher;
 import vn.chuongpl.ai_engine_service.integration.user.UserClient;

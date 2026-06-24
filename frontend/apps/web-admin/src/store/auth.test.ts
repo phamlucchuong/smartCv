@@ -24,8 +24,8 @@ describe('useAuthStore', () => {
   it('sets user state from decoded JWT on setAuth', () => {
     useAuthStore.getState().setAuth({ token: 'test-jwt', refreshToken: 'refresh-jwt' })
 
-    expect(Cookies.set).toHaveBeenCalledWith('smart_cv_token', 'test-jwt', expect.any(Object))
-    expect(Cookies.set).toHaveBeenCalledWith('smart_cv_refresh', 'refresh-jwt', expect.any(Object))
+    expect(Cookies.set).toHaveBeenCalledWith('smart_cv_a_token', 'test-jwt', expect.any(Object))
+    expect(Cookies.set).toHaveBeenCalledWith('smart_cv_a_refresh', 'refresh-jwt', expect.any(Object))
     expect(useAuthStore.getState().user?.id).toBe('admin-1')
     expect(useAuthStore.getState().user?.email).toBe('admin@gmail.com')
   })
@@ -35,8 +35,8 @@ describe('useAuthStore', () => {
 
     useAuthStore.getState().clearAuth()
 
-    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_token', { path: '/' })
-    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_refresh', { path: '/' })
+    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_a_token', { path: '/' })
+    expect(Cookies.remove).toHaveBeenCalledWith('smart_cv_a_refresh', { path: '/' })
     expect(useAuthStore.getState().user).toBeNull()
   })
 

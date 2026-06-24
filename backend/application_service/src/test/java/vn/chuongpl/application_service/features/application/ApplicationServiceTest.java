@@ -125,6 +125,7 @@ class ApplicationServiceTest {
                 .status(ApplicationStatus.REVIEWING)
                 .build();
         when(applicationRepository.findByIdAndDeletedFalse("app-1")).thenReturn(Optional.of(application));
+        when(userClient.resolveRecruiterId("recruiter-1")).thenReturn("recruiter-1");
 
         AppException ex = assertThrows(
                 AppException.class,

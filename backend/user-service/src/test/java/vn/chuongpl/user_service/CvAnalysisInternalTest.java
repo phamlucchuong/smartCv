@@ -15,6 +15,7 @@ import vn.chuongpl.user_service.features.candidate.CandidateService;
 import vn.chuongpl.user_service.features.candidate.CvAnalysisStatus;
 import vn.chuongpl.user_service.features.candidate.CvItem;
 import vn.chuongpl.user_service.features.candidate.dto.CvInfoResponse;
+import vn.chuongpl.user_service.integration.notification.CvAnalysisDonePublisher;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,9 @@ class CvAnalysisInternalTest {
 
     @Mock
     CandidateRepository candidateRepository;
+
+    @Mock
+    CvAnalysisDonePublisher cvAnalysisDonePublisher;
 
     @InjectMocks
     CandidateService candidateService;
