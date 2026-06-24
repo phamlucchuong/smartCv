@@ -76,7 +76,17 @@
       "Bash(make run-noti *)",
       "Bash(rtk ./mvnw test -Dtest=AssessmentServiceTest)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(pnpm -F web-candidate lint)"
+      "Bash(pnpm -F web-candidate lint)",
+      "Bash(pnpm -F web-admin lint)",
+      "Read(//home/chuongpl/projects/smartCv/frontend/apps/web-candidate/src/routes/jobs/**)",
+      "Bash(pnpm -F web-recruiter test:coverage)",
+      "Bash(pnpm -F web-admin test:coverage)",
+      "Bash(pnpm -F web-candidate test:coverage)",
+      "Bash(pnpm build *)",
+      "Bash(git *)",
+      "Bash(gofmt -l .)",
+      "Bash(gofmt *)",
+      "Bash(go vet *)"
     ]
   }
 }
