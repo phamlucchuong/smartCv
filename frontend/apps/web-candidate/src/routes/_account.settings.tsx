@@ -206,7 +206,7 @@ function SettingsPage() {
 
   const { subscribe, unsubscribe, initPushSubscription, currentPermission } = usePushNotifications()
 
-  React.useEffect(() => { initPushSubscription() }, [])
+  React.useEffect(() => { initPushSubscription() }, [initPushSubscription])
 
   const [pushPermDialog, setPushPermDialog] = React.useState<'pre-prompt' | 'blocked' | null>(null)
   const [isSubscribing, setIsSubscribing] = React.useState(false)

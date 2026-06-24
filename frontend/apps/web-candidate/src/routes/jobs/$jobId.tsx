@@ -23,8 +23,10 @@ import {
   useGetJobById,
   useGetRelatedJobs,
   useGetMyApplicationForJob,
+  getGetMyApplicationForJobQueryKey,
   useSubmit,
   useContains,
+  getContainsQueryKey,
   useSave,
   useRemove,
   useGetByRecruiterId,
@@ -91,7 +93,7 @@ function formatDate(dateInput?: string | Date | number): string {
     const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
     if (isNaN(d.getTime())) return ''
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-  } catch (e) {
+  } catch {
     return ''
   }
 }
@@ -100,11 +102,10 @@ function JobDetailPage() {
   const { jobId } = Route.useParams()
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { isAuthenticated, role } = useAuthStore()
   const isCandidate = isAuthenticated && hasCandidateRole(role)
 
-  const [applied, setApplied] = React.useState(false)
-  const [saved, setSaved] = React.useState(false)
   const [showApplyModal, setShowApplyModal] = React.useState(false)
   const [showStickyBar, setShowStickyBar] = React.useState(false)
   const heroRef = React.useRef<HTMLDivElement>(null)
@@ -145,16 +146,12 @@ function JobDetailPage() {
   const { data: appliedData } = useGetMyApplicationForJob(jobId, {
     query: { enabled: isCandidate, retry: false },
   })
-  React.useEffect(() => {
-    if (appliedData?.data) setApplied(true)
-  }, [appliedData])
+  const applied = Boolean(appliedData?.data)
 
   const { data: containsData, isLoading: containsLoading } = useContains(jobId, {
     query: { enabled: isCandidate },
   })
-  React.useEffect(() => {
-    if (containsData?.data !== undefined) setSaved(Boolean(containsData.data))
-  }, [containsData])
+  const saved = Boolean(containsData?.data)
 
   const saveMutation = useSave()
   const removeMutation = useRemove()
@@ -202,29 +199,27 @@ function JobDetailPage() {
       return
     }
     if (saved) {
-      setSaved(false)
       removeMutation.mutate(
         { jobId },
         {
           onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getContainsQueryKey(jobId) })
             toast.success('Đã bỏ lưu tin tuyển dụng!')
           },
           onError: () => {
-            setSaved(true)
             toast.error('Không thể bỏ lưu tin. Vui lòng thử lại.')
           }
         }
       )
     } else {
-      setSaved(true)
       saveMutation.mutate(
         { data: { jobId } },
         {
           onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getContainsQueryKey(jobId) })
             toast.success('Đã lưu tin tuyển dụng!')
           },
           onError: () => {
-            setSaved(false)
             toast.error('Không thể lưu tin. Vui lòng thử lại.')
           }
         }
@@ -269,7 +264,7 @@ function JobDetailPage() {
       {showApplyModal && (
         <ApplyModal
           jobId={jobId}
-          onSuccess={() => setApplied(true)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: getGetMyApplicationForJobQueryKey(jobId) })}
           onClose={() => setShowApplyModal(false)}
         />
       )}
@@ -772,17 +767,8 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
   const { data: cvsData, isLoading: cvsLoading } = useListCvs({
     query: { enabled: isCandidate },
   })
-  const cvList = cvsData?.data ?? []
-
-  // Initialize selected CV URL with default CV or first CV
-  React.useEffect(() => {
-    if (cvList.length > 0 && !selectedCvUrl) {
-      const defaultCv = cvList.find((c) => c.default) ?? cvList[0]
-      if (defaultCv?.url) {
-        setSelectedCvUrl(defaultCv.url)
-      }
-    }
-  }, [cvList, selectedCvUrl])
+  const cvList = React.useMemo(() => cvsData?.data ?? [], [cvsData?.data])
+  const effectiveCvUrl = selectedCvUrl || cvList.find(c => c.default)?.url || cvList[0]?.url || ''
 
   const queryClient = useQueryClient()
   const uploadMutation = useMutation({
@@ -821,9 +807,9 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
   const submitMutation = useSubmit()
 
   function handleSubmit() {
-    if (!selectedCvUrl) return
+    if (!effectiveCvUrl) return
     submitMutation.mutate(
-      { data: { jobId, cvUrl: selectedCvUrl, coverLetter: coverLetter.trim() || undefined } },
+      { data: { jobId, cvUrl: effectiveCvUrl, coverLetter: coverLetter.trim() || undefined } },
       {
         onSuccess: () => {
           toast.success('Ứng tuyển thành công!')
@@ -891,7 +877,7 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
                 </label>
                 <select
                   id="cv-select"
-                  value={selectedCvUrl}
+                  value={effectiveCvUrl}
                   onChange={(e) => setSelectedCvUrl(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                 >
@@ -921,7 +907,7 @@ function ApplyModal({ jobId, onSuccess, onClose }: ApplyModalProps) {
                 <Button variant="outline" onClick={onClose} disabled={submitMutation.isPending}>
                   Hủy
                 </Button>
-                <Button onClick={handleSubmit} disabled={submitMutation.isPending || !selectedCvUrl}>
+                <Button onClick={handleSubmit} disabled={submitMutation.isPending || !effectiveCvUrl}>
                   {submitMutation.isPending ? 'Đang nộp...' : 'Nộp hồ sơ'}
                 </Button>
               </div>

@@ -3,7 +3,7 @@ import { Brain, ChevronDown, CreditCard, FileWarning, KeyRound, LayoutDashboard,
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
-import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@smart-cv/ui'
+import { Button, NotificationPopover, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@smart-cv/ui'
 import type { NotificationItem, NotificationFilter } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { useNotificationsList, useMarkNotificationRead, useMarkAllNotificationsRead } from '@smart-cv/api'
@@ -230,8 +230,6 @@ export function AdminLayout() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => navigate({ to: '/profile' as any })}>{t('account_my_profile')}</DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
                     clearAuth()

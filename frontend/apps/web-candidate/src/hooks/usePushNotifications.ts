@@ -1,4 +1,5 @@
 import { getToken, deleteToken } from 'firebase/messaging'
+import { useCallback } from 'react'
 import { messaging, firebaseConfig } from '../lib/firebase'
 import { subscribeFcmToken, unsubscribeFcmToken } from '@smart-cv/api'
 
@@ -48,7 +49,7 @@ export function usePushNotifications() {
     localStorage.removeItem(FCM_TOKEN_KEY)
   }
 
-  const initPushSubscription = async (): Promise<void> => {
+  const initPushSubscription = useCallback(async (): Promise<void> => {
     if (typeof Notification === 'undefined') return
     if (Notification.permission !== 'granted') return
     if (localStorage.getItem(FCM_TOKEN_KEY)) return
@@ -64,7 +65,7 @@ export function usePushNotifications() {
     } catch {
       // Silently ignore — push works on next explicit subscribe
     }
-  }
+  }, [])
 
   const currentPermission = (): NotificationPermission =>
     typeof Notification !== 'undefined' ? Notification.permission : 'default'

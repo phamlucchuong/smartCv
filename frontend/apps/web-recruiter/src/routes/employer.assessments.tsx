@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@smart-cv/ui";
@@ -69,7 +69,7 @@ function AssessmentsManager() {
   const { data: jobsData } = useGetByRecruiter(recruiterId ?? "", {
     query: { enabled: !!recruiterId },
   });
-  const jobs = jobsData?.data ?? [];
+  const jobs = useMemo(() => jobsData?.data ?? [], [jobsData?.data]);
 
   // Preview State
   const [previewingAssessment, setPreviewingAssessment] = useState<AssessmentResponse | null>(null);
@@ -1318,7 +1318,7 @@ function TakeAssessmentPreview({ assessment, onClose }: TakeAssessmentPreviewPro
 
 interface CandidateInfoCellProps {
   candidateId?: string;
-  applications: any[];
+  applications: ApplicationModels.ApplicationDetailResponse[];
 }
 
 function CandidateInfoCell({ candidateId, applications }: CandidateInfoCellProps) {

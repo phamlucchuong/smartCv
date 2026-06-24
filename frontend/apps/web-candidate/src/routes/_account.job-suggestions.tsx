@@ -106,8 +106,8 @@ function JobSuggestionsPage() {
                 <div className="mb-3 flex flex-wrap gap-2 text-xs">
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1"><DollarSign className="h-3.5 w-3.5" />{salary}</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job?.location}</span>
-                  {(job as any)?.openings != null && (job as any).openings > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><Users className="h-3.5 w-3.5" />{(job as any).openings} vị trí</span>
+                  {(job as { openings?: number })?.openings != null && (job as { openings?: number }).openings! > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><Users className="h-3.5 w-3.5" />{(job as { openings?: number }).openings} vị trí</span>
                   )}
                 </div>
 

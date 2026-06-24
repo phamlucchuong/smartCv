@@ -33,7 +33,7 @@ function SettingsPage() {
     initPushSubscription().then(() => {
       setPushEnabled(localStorage.getItem('smartcv_fcm_token') !== null);
     });
-  }, []);
+  }, [initPushSubscription]);
 
   const doSubscribe = async () => {
     setIsSubscribing(true);

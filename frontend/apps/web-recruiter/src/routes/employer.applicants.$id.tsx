@@ -27,14 +27,7 @@ export const Route = createFileRoute("/employer/applicants/$id")({
   component: CandidateDetail,
 });
 
-const STATUS_COLUMNS = [
-  "PENDING",
-  "REVIEWING",
-  "ACCEPTED",
-  "REJECTED",
-  "WITHDRAWN",
-] as const;
-type ApplicationStatus = (typeof STATUS_COLUMNS)[number];
+type ApplicationStatus = "PENDING" | "REVIEWING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
 
 const STATUS_LABELS: Record<ApplicationStatus, string> = {
   PENDING: "Chờ duyệt",
