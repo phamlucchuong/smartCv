@@ -5,11 +5,11 @@
  * OpenAPI spec version: v0
  */
 
-export type AssessmentResultResponseResult = typeof AssessmentResultResponseResult[keyof typeof AssessmentResultResponseResult];
+export type AttemptSummaryResponseResult = typeof AttemptSummaryResponseResult[keyof typeof AttemptSummaryResponseResult];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const AssessmentResultResponseResult = {
+export const AttemptSummaryResponseResult = {
   PASS: 'PASS',
   FAIL: 'FAIL',
   PENDING: 'PENDING',

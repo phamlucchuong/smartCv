@@ -29,11 +29,13 @@ import type {
   ApiResponseAttemptStateResponse,
   ApiResponseListAssessmentResponse,
   ApiResponseListAttemptStateResponse,
+  ApiResponseListAttemptSummaryResponse,
   ApiResponseMapStringString,
   ApiResponseVoid,
   AssessmentAnswerRequest,
   AssessmentCreateRequest,
-  AssignToCandidateBody
+  AssignToCandidateBody,
+  SubmitAttemptParams
 } from '.././model';
 
 import { customInstance } from '../../../axios-instance';
@@ -244,12 +246,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     export const submitAttempt = (
     attemptId: string,
+    params?: SubmitAttemptParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<ApiResponseVoid>(
-      {url: `/api/attempts/${attemptId}/submit`, method: 'POST', signal
+      {url: `/api/attempts/${attemptId}/submit`, method: 'POST',
+        params, signal
     },
       options);
     }
@@ -257,8 +261,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 export const getSubmitAttemptMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{attemptId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{attemptId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{attemptId: string;params?: SubmitAttemptParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{attemptId: string;params?: SubmitAttemptParams}, TContext> => {
 
 const mutationKey = ['submitAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -270,10 +274,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitAttempt>>, {attemptId: string}> = (props) => {
-          const {attemptId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitAttempt>>, {attemptId: string;params?: SubmitAttemptParams}> = (props) => {
+          const {attemptId,params} = props ?? {};
 
-          return  submitAttempt(attemptId,requestOptions)
+          return  submitAttempt(attemptId,params,requestOptions)
         }
 
         
@@ -286,11 +290,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SubmitAttemptMutationError = unknown
 
     export const useSubmitAttempt = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{attemptId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{attemptId: string;params?: SubmitAttemptParams}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof submitAttempt>>,
         TError,
-        {attemptId: string},
+        {attemptId: string;params?: SubmitAttemptParams},
         TContext
       > => {
 
@@ -557,6 +561,61 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const publishAssessment = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ApiResponseAssessmentResponse>(
+      {url: `/api/assessments/${id}/publish`, method: 'PATCH'
+    },
+      options);
+    }
+  
+
+
+export const getPublishAssessmentMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishAssessment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof publishAssessment>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['publishAssessment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publishAssessment>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  publishAssessment(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PublishAssessmentMutationResult = NonNullable<Awaited<ReturnType<typeof publishAssessment>>>
+    
+    export type PublishAssessmentMutationError = unknown
+
+    export const usePublishAssessment = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishAssessment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof publishAssessment>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getPublishAssessmentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const assignToCandidate = (
     id: string,
     assignToCandidateBody: AssignToCandidateBody,
@@ -701,7 +760,62 @@ export function useGetAttemptState<TData = Awaited<ReturnType<typeof getAttemptS
 
 
 
-export const getResult = (
+export const deleteAttempt = (
+    attemptId: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ApiResponseVoid>(
+      {url: `/api/attempts/${attemptId}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getDeleteAttemptMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAttempt>>, TError,{attemptId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAttempt>>, TError,{attemptId: string}, TContext> => {
+
+const mutationKey = ['deleteAttempt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAttempt>>, {attemptId: string}> = (props) => {
+          const {attemptId} = props ?? {};
+
+          return  deleteAttempt(attemptId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAttemptMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAttempt>>>
+    
+    export type DeleteAttemptMutationError = unknown
+
+    export const useDeleteAttempt = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAttempt>>, TError,{attemptId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAttempt>>,
+        TError,
+        {attemptId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteAttemptMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const getResult = (
     attemptId: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
@@ -776,6 +890,264 @@ export function useGetResult<TData = Awaited<ReturnType<typeof getResult>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetResultQueryOptions(attemptId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getAttemptsByCandidate = (
+    candidateId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseListAttemptSummaryResponse>(
+      {url: `/api/attempts/candidate/${candidateId}`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetAttemptsByCandidateQueryKey = (candidateId?: string,) => {
+    return [
+    `/api/attempts/candidate/${candidateId}`
+    ] as const;
+    }
+
+    
+export const getGetAttemptsByCandidateQueryOptions = <TData = Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError = unknown>(candidateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttemptsByCandidateQueryKey(candidateId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttemptsByCandidate>>> = ({ signal }) => getAttemptsByCandidate(candidateId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(candidateId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAttemptsByCandidateQueryResult = NonNullable<Awaited<ReturnType<typeof getAttemptsByCandidate>>>
+export type GetAttemptsByCandidateQueryError = unknown
+
+
+export function useGetAttemptsByCandidate<TData = Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError = unknown>(
+ candidateId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttemptsByCandidate>>,
+          TError,
+          Awaited<ReturnType<typeof getAttemptsByCandidate>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttemptsByCandidate<TData = Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError = unknown>(
+ candidateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttemptsByCandidate>>,
+          TError,
+          Awaited<ReturnType<typeof getAttemptsByCandidate>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttemptsByCandidate<TData = Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError = unknown>(
+ candidateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAttemptsByCandidate<TData = Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError = unknown>(
+ candidateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByCandidate>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAttemptsByCandidateQueryOptions(candidateId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getAttemptsByAssessment = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseListAttemptSummaryResponse>(
+      {url: `/api/assessments/${id}/attempts`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetAttemptsByAssessmentQueryKey = (id?: string,) => {
+    return [
+    `/api/assessments/${id}/attempts`
+    ] as const;
+    }
+
+    
+export const getGetAttemptsByAssessmentQueryOptions = <TData = Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttemptsByAssessmentQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttemptsByAssessment>>> = ({ signal }) => getAttemptsByAssessment(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAttemptsByAssessmentQueryResult = NonNullable<Awaited<ReturnType<typeof getAttemptsByAssessment>>>
+export type GetAttemptsByAssessmentQueryError = unknown
+
+
+export function useGetAttemptsByAssessment<TData = Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttemptsByAssessment>>,
+          TError,
+          Awaited<ReturnType<typeof getAttemptsByAssessment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttemptsByAssessment<TData = Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttemptsByAssessment>>,
+          TError,
+          Awaited<ReturnType<typeof getAttemptsByAssessment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttemptsByAssessment<TData = Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAttemptsByAssessment<TData = Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttemptsByAssessment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAttemptsByAssessmentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getAssessmentsByRecruiter = (
+    recruiterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseListAssessmentResponse>(
+      {url: `/api/assessments/recruiter/${recruiterId}`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetAssessmentsByRecruiterQueryKey = (recruiterId?: string,) => {
+    return [
+    `/api/assessments/recruiter/${recruiterId}`
+    ] as const;
+    }
+
+    
+export const getGetAssessmentsByRecruiterQueryOptions = <TData = Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError = unknown>(recruiterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssessmentsByRecruiterQueryKey(recruiterId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>> = ({ signal }) => getAssessmentsByRecruiter(recruiterId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(recruiterId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAssessmentsByRecruiterQueryResult = NonNullable<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>>
+export type GetAssessmentsByRecruiterQueryError = unknown
+
+
+export function useGetAssessmentsByRecruiter<TData = Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError = unknown>(
+ recruiterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssessmentsByRecruiter>>,
+          TError,
+          Awaited<ReturnType<typeof getAssessmentsByRecruiter>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssessmentsByRecruiter<TData = Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError = unknown>(
+ recruiterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssessmentsByRecruiter>>,
+          TError,
+          Awaited<ReturnType<typeof getAssessmentsByRecruiter>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssessmentsByRecruiter<TData = Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError = unknown>(
+ recruiterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAssessmentsByRecruiter<TData = Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError = unknown>(
+ recruiterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByRecruiter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAssessmentsByRecruiterQueryOptions(recruiterId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -862,6 +1234,92 @@ export function useGetMyAssessments<TData = Awaited<ReturnType<typeof getMyAsses
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetMyAssessmentsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getAssessmentsByJob = (
+    jobId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseListAssessmentResponse>(
+      {url: `/api/assessments/job/${jobId}`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetAssessmentsByJobQueryKey = (jobId?: string,) => {
+    return [
+    `/api/assessments/job/${jobId}`
+    ] as const;
+    }
+
+    
+export const getGetAssessmentsByJobQueryOptions = <TData = Awaited<ReturnType<typeof getAssessmentsByJob>>, TError = unknown>(jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByJob>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssessmentsByJobQueryKey(jobId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssessmentsByJob>>> = ({ signal }) => getAssessmentsByJob(jobId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(jobId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByJob>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAssessmentsByJobQueryResult = NonNullable<Awaited<ReturnType<typeof getAssessmentsByJob>>>
+export type GetAssessmentsByJobQueryError = unknown
+
+
+export function useGetAssessmentsByJob<TData = Awaited<ReturnType<typeof getAssessmentsByJob>>, TError = unknown>(
+ jobId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByJob>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssessmentsByJob>>,
+          TError,
+          Awaited<ReturnType<typeof getAssessmentsByJob>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssessmentsByJob<TData = Awaited<ReturnType<typeof getAssessmentsByJob>>, TError = unknown>(
+ jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByJob>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssessmentsByJob>>,
+          TError,
+          Awaited<ReturnType<typeof getAssessmentsByJob>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssessmentsByJob<TData = Awaited<ReturnType<typeof getAssessmentsByJob>>, TError = unknown>(
+ jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByJob>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAssessmentsByJob<TData = Awaited<ReturnType<typeof getAssessmentsByJob>>, TError = unknown>(
+ jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssessmentsByJob>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAssessmentsByJobQueryOptions(jobId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

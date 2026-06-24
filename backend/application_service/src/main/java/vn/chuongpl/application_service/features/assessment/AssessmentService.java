@@ -105,9 +105,21 @@ public class AssessmentService {
         }
         if (assessment.getStatus() == AssessmentStatus.DRAFT) {
             assessment.setStatus(AssessmentStatus.ACTIVE);
-            assessmentRepository.save(assessment);
+        } else {
+            assessment.setStatus(AssessmentStatus.DRAFT);
         }
+        assessmentRepository.save(assessment);
         return toResponse(assessment);
+    }
+
+    public void deleteAttempt(String attemptId, String userId) {
+        String recruiterId = resolveRecruiterId(userId);
+        AssessmentAttempt attempt = findAttemptById(attemptId);
+        Assessment assessment = findAssessmentById(attempt.getAssessmentId());
+        if (!recruiterId.equals(assessment.getRecruiterId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        attemptRepository.delete(attempt);
     }
 
     public List<AttemptSummaryResponse> getAttemptsByAssessment(String assessmentId, String userId) {
@@ -120,6 +132,14 @@ public class AssessmentService {
                 .map(this::toAttemptSummaryResponse)
                 .toList();
     }
+
+    public List<AttemptSummaryResponse> getAttemptsByCandidate(String candidateId, String userId) {
+        resolveRecruiterId(userId);
+        return attemptRepository.findByCandidateId(candidateId).stream()
+                .map(this::toAttemptSummaryResponse)
+                .toList();
+    }
+
 
     public List<AttemptStateResponse> getMyAssessments(String candidateId) {
         return attemptRepository.findByCandidateId(candidateId).stream()
@@ -275,6 +295,8 @@ public class AssessmentService {
                 .status(a.getStatus())
                 .answers(a.getAnswers())
                 .startedAt(a.getStartedAt())
+                .score(a.getScore())
+                .result(a.getResult())
                 .build();
     }
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@smart-cv/ui";
 import {
@@ -39,7 +39,7 @@ import {
   RecruiterApi,
   usePublishAssessment,
   useGetAttemptsByAssessment,
-  type AttemptSummaryResponse,
+  useGetCandidateByUserId,
 } from "@smart-cv/api";
 import { toast } from "sonner";
 
@@ -173,7 +173,7 @@ function AssessmentsManager() {
 
   const { data: applicationsData } = useGetRecruiterApplications(
     { size: 1000 },
-    { query: { enabled: isAssignOpen } },
+    { query: { enabled: isAssignOpen || isAttemptsOpen } },
   );
   const filteredApplications = (applicationsData?.data?.items ?? []).filter(
     (item) => item.jobId === assessmentToAssign?.jobId,
@@ -183,7 +183,7 @@ function AssessmentsManager() {
     assessmentForAttempts?.id ?? "",
     { query: { enabled: isAttemptsOpen && !!assessmentForAttempts?.id } },
   );
-  const attempts: AttemptSummaryResponse[] = attemptsData?.data ?? [];
+  const attempts: ApplicationModels.AttemptSummaryResponse[] = attemptsData?.data ?? [];
 
   // Initialize form for Create/Edit
   const handleOpenCreate = () => {
@@ -466,17 +466,16 @@ function AssessmentsManager() {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-                          a.status === "ACTIVE"
-                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                            : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                        }`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${a.status === "ACTIVE"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                          }`}
                       >
                         {a.status === "ACTIVE" ? "Hoạt động" : "Nháp"}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                      {a.status === "DRAFT" && (
+                      {a.status === "DRAFT" ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -486,6 +485,17 @@ function AssessmentsManager() {
                           className="h-8 px-2.5 text-xs font-medium gap-1 text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10"
                         >
                           <CheckCircle2 className="size-3.5" /> Công bố
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => publishMutation.mutate({ id: a.id! })}
+                          disabled={publishMutation.isPending}
+                          title="Tạm ẩn bài kiểm tra"
+                          className="h-8 px-2.5 text-xs font-medium gap-1 text-amber-600 border-amber-500/40 hover:bg-amber-500/10"
+                        >
+                          <X className="size-3.5" /> Tạm ẩn
                         </Button>
                       )}
                       <Button
@@ -845,17 +855,21 @@ function AssessmentsManager() {
                   <tbody>
                     {attempts.map((a) => (
                       <tr key={a.attemptId} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-3 px-3 font-mono text-xs">{a.candidateId?.slice(0, 8) ?? '—'}…</td>
+                        <td className="py-3 px-3">
+                          <CandidateInfoCell
+                            candidateId={a.candidateId}
+                            applications={applicationsData?.data?.items ?? []}
+                          />
+                        </td>
                         <td className="py-3 px-3 text-center font-semibold">
                           {a.result === 'OVERTIME' ? '—' : a.score != null ? `${a.score.toFixed(0)}%` : '—'}
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-                            a.result === 'PASS' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${a.result === 'PASS' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                             a.result === 'FAIL' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
-                            a.result === 'OVERTIME' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' :
-                            'bg-muted text-muted-foreground border-border'
-                          }`}>
+                              a.result === 'OVERTIME' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' :
+                                'bg-muted text-muted-foreground border-border'
+                            }`}>
                             {a.result === 'PASS' ? 'Đạt' : a.result === 'FAIL' ? 'Chưa đạt' : a.result === 'OVERTIME' ? 'Hết giờ' : 'Chờ chấm'}
                           </span>
                         </td>
@@ -1027,9 +1041,8 @@ function TakeAssessmentPreview({ assessment, onClose }: TakeAssessmentPreviewPro
               <Clock className="size-4 text-muted-foreground" />
               Tổng thời gian: {assessment.timeLimitMinutes} phút
             </div>
-            <div className={`flex items-center gap-2 font-mono text-xl font-bold px-4 py-1.5 rounded-full border ${
-              timeLeft < 60 ? "bg-red-500/10 text-red-500 border-red-500/20 animate-pulse" : "bg-primary/10 text-primary border-primary/20"
-            }`}>
+            <div className={`flex items-center gap-2 font-mono text-xl font-bold px-4 py-1.5 rounded-full border ${timeLeft < 60 ? "bg-red-500/10 text-red-500 border-red-500/20 animate-pulse" : "bg-primary/10 text-primary border-primary/20"
+              }`}>
               <Clock className="size-5" />
               {formatTime(timeLeft)}
             </div>
@@ -1096,13 +1109,12 @@ function TakeAssessmentPreview({ assessment, onClose }: TakeAssessmentPreviewPro
                         <span className="text-xs font-bold text-primary uppercase">Câu {idx + 1}</span>
                         <h4 className="text-base font-semibold text-foreground mt-1">{q.text}</h4>
                       </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border ${
-                        q.type === QuestionType.MCQ
-                          ? isCorrect
-                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                            : "bg-red-500/10 text-red-600 border-red-500/20"
-                          : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                      }`}>
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border ${q.type === QuestionType.MCQ
+                        ? isCorrect
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          : "bg-red-500/10 text-red-600 border-red-500/20"
+                        : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                        }`}>
                         {q.type === QuestionType.MCQ
                           ? isCorrect ? "Chính xác" : "Chưa đúng"
                           : "Chờ chấm điểm"
@@ -1125,9 +1137,8 @@ function TakeAssessmentPreview({ assessment, onClose }: TakeAssessmentPreviewPro
 
                           return (
                             <div key={oIdx} className={`flex items-center gap-3 rounded-lg border p-3 text-sm font-medium ${optStyle}`}>
-                              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                                isRightAnswer ? "bg-emerald-500 text-white" : isSelected ? "bg-red-500 text-white" : "bg-muted text-muted-foreground"
-                              }`}>
+                              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${isRightAnswer ? "bg-emerald-500 text-white" : isSelected ? "bg-red-500 text-white" : "bg-muted text-muted-foreground"
+                                }`}>
                                 {String.fromCharCode(65 + oIdx)}
                               </span>
                               <span className="flex-1">{opt}</span>
@@ -1229,17 +1240,16 @@ function TakeAssessmentPreview({ assessment, onClose }: TakeAssessmentPreviewPro
                       <label
                         key={oIdx}
                         onClick={() => handleSelectOption(currentQIndex, oIdx)}
-                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-all hover:bg-muted/40 ${
-                          isSelected
-                            ? "border-primary bg-primary/5 text-primary shadow-sm shadow-primary/5"
-                            : "border-border text-foreground"
-                        }`}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-all hover:bg-muted/40 ${isSelected
+                          ? "border-primary bg-primary/5 text-primary shadow-sm shadow-primary/5"
+                          : "border-border text-foreground"
+                          }`}
                       >
                         <input
                           type="radio"
                           name={`question_${currentQIndex}`}
                           checked={isSelected}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="size-4 text-primary focus:ring-primary accent-primary"
                         />
                         <span className="text-sm font-semibold mr-1">
@@ -1305,3 +1315,38 @@ function TakeAssessmentPreview({ assessment, onClose }: TakeAssessmentPreviewPro
     </div>
   );
 }
+
+interface CandidateInfoCellProps {
+  candidateId?: string;
+  applications: any[];
+}
+
+function CandidateInfoCell({ candidateId, applications }: CandidateInfoCellProps) {
+  const { data: candidateData, isLoading } = useGetCandidateByUserId(candidateId ?? "", {
+    query: { enabled: !!candidateId, staleTime: 60_000 },
+  });
+  const candidate = candidateData?.data;
+  const application = applications.find((app) => app.candidateId === candidateId);
+
+  if (!candidateId) return <span className="text-muted-foreground">—</span>;
+  if (isLoading) return <span className="text-muted-foreground animate-pulse">Đang tải...</span>;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex flex-col">
+        <span className="font-semibold text-foreground">{candidate?.fullName ?? "Không rõ"}</span>
+        {/* <span className="text-[10px] text-muted-foreground font-mono">{candidateId.slice(0, 8)}…</span> */}
+      </div>
+      {application?.id && (
+        <Link
+          to="/employer/applicants/$id"
+          params={{ id: application.id }}
+          className="inline-flex items-center justify-center rounded cursor-pointer"
+        >
+          <Eye className="size-3 hover:text-red-500" />
+        </Link>
+      )}
+    </div>
+  );
+}
+

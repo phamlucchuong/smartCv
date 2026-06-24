@@ -109,4 +109,22 @@ public class UserClient {
             return null;
         }
     }
+
+    public String getCandidateName(String candidateId) {
+        try {
+            ResponseEntity<ApiResponse<UserSummary>> resp = restTemplate.exchange(
+                    baseUrl + "/api/users/" + candidateId,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+            ApiResponse<UserSummary> body = resp.getBody();
+            UserSummary user = body == null ? null : body.getData();
+            return user == null ? null : user.fullName();
+        } catch (Exception e) {
+            log.warn("Failed to fetch candidate name for {}: {}", candidateId, e.getMessage());
+            return null;
+        }
+    }
 }

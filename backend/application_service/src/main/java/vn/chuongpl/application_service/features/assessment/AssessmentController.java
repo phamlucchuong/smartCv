@@ -164,6 +164,26 @@ public class AssessmentController {
                 .build();
     }
 
+    @GetMapping("/api/attempts/candidate/{candidateId}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<List<AttemptSummaryResponse>> getAttemptsByCandidate(
+            @PathVariable String candidateId,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<AttemptSummaryResponse>>builder()
+                .data(assessmentService.getAttemptsByCandidate(candidateId, userId))
+                .build();
+    }
+
+    @DeleteMapping("/api/attempts/{attemptId}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ApiResponse<Void> deleteAttempt(
+            @PathVariable String attemptId,
+            @AuthenticationPrincipal String userId) {
+        assessmentService.deleteAttempt(attemptId, userId);
+        return ApiResponse.<Void>builder().message("Attempt deleted").build();
+    }
+
+
     @GetMapping("/api/assessments/job/{jobId}")
     @PreAuthorize("hasRole('CANDIDATE')")
     public ApiResponse<List<AssessmentResponse>> getAssessmentsByJob(@PathVariable String jobId) {

@@ -1,6 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
-import * as React from 'react'
-import { Button, Input } from '@smart-cv/ui'
+import { createFileRoute } from '@tanstack/react-router';
+import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button, Input } from '@smart-cv/ui';
+
 import { Clock, ClipboardCheck, ChevronDown, ChevronLeft } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import {
@@ -16,8 +18,12 @@ import {
 } from '@smart-cv/api'
 import { useAuthStore } from '../store/useAuthStore'
 
+type AssessmentsSearch = {
+  take?: string
+}
+
 export const Route = createFileRoute('/_account/assessments')({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): AssessmentsSearch => ({
     take: typeof search.take === 'string' ? search.take : undefined,
   }),
   component: AssessmentsPage,
@@ -92,10 +98,16 @@ function AssessmentCard({
   a,
   onTake,
   onTitleLoaded,
+  onRetake,
+  isRetaking,
+  hasActiveAttempt,
 }: {
   a: AttemptStateResponse
   onTake: (assessmentId: string, attemptId: string) => void
   onTitleLoaded: (assessmentId: string, title: string) => void
+  onRetake?: (assessmentId: string) => void
+  isRetaking?: boolean
+  hasActiveAttempt?: boolean
 }) {
   const { t } = useTranslation()
   const { data: assessmentData } = useGetAssessment(a.assessmentId ?? '', {
@@ -117,10 +129,23 @@ function AssessmentCard({
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--ai-soft)] text-[var(--ai)]">
           <ClipboardCheck className="h-5 w-5" />
         </div>
-        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-          {getStatusLabel(t, itemStatus)}
-        </span>
+        <div className="flex items-center gap-2">
+          {itemStatus === 'SUBMITTED' && (
+            <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${
+              a.result === 'PENDING'
+                ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                : a.result === 'PASS'
+                  ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                  : 'bg-red-500/10 text-red-600 border border-red-500/20'
+            }`}>
+              {a.result === 'PENDING' ? 'Chờ chấm' : a.score != null ? `${a.score.toFixed(0)}%` : '—'}
+            </span>
+          )}
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+            {getStatusLabel(t, itemStatus)}
+          </span>
+        </div>
       </div>
 
       <div>
@@ -136,13 +161,29 @@ function AssessmentCard({
       </div>
 
       {itemStatus === 'SUBMITTED' ? (
-        <div className="rounded-lg border border-[var(--success)]/20 bg-[var(--success-soft)] px-3 py-2 text-center text-sm font-semibold text-[var(--success)]">
-          {t('assessments_filter_submitted')}
-        </div>
+        !hasActiveAttempt ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onRetake?.(a.assessmentId ?? '')}
+            disabled={isRetaking}
+            className="w-full cursor-pointer"
+          >
+            Làm lại
+          </Button>
+        ) : null
       ) : itemStatus === 'EXPIRED' ? (
-        <div className="rounded-lg border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-3 py-2 text-center text-sm text-[var(--danger)]">
-          {t('assessments_expired_label')}
-        </div>
+        !hasActiveAttempt ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onRetake?.(a.assessmentId ?? '')}
+            disabled={isRetaking}
+            className="w-full cursor-pointer"
+          >
+            Làm lại
+          </Button>
+        ) : null
       ) : (
         <Button
           className="w-full"
@@ -163,10 +204,26 @@ function AssessmentsPage() {
   const { data, isLoading, isError } = useGetMyAssessments({ query: { enabled: isAuthenticated } })
   const assessments = data?.data ?? []
 
+  const queryClient = useQueryClient()
   const [taking, setTaking] = React.useState<{ assessmentId: string; attemptId: string } | null>(null)
 
   const startAttemptMutation = useStartAttempt()
   const hasAutoStarted = React.useRef(false)
+
+  const handleRetake = (assessmentId: string) => {
+    startAttemptMutation.mutate(
+      { id: assessmentId },
+      {
+        onSuccess: (res: { data?: { attemptId?: string } }) => {
+          const attemptId = res?.data?.attemptId ?? ''
+          if (attemptId) {
+            setTaking({ assessmentId, attemptId })
+            queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+          }
+        },
+      },
+    )
+  }
 
   React.useEffect(() => {
     if (!takeAssessmentId || hasAutoStarted.current || isLoading) return
@@ -292,14 +349,22 @@ function AssessmentsPage() {
         <div className="card-surface p-8 text-center text-sm text-muted-foreground">{t('account_no_results')}</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((a) => (
-            <AssessmentCard
-              key={a.attemptId}
-              a={a}
-              onTake={(assessmentId, attemptId) => setTaking({ assessmentId, attemptId })}
-              onTitleLoaded={registerTitle}
-            />
-          ))}
+          {filtered.map((a) => {
+            const hasActiveAttempt = assessments.some(
+              (item) => item.assessmentId === a.assessmentId && item.status === 'IN_PROGRESS'
+            )
+            return (
+              <AssessmentCard
+                key={a.attemptId}
+                a={a}
+                onTake={(assessmentId, attemptId) => setTaking({ assessmentId, attemptId })}
+                onTitleLoaded={registerTitle}
+                onRetake={handleRetake}
+                isRetaking={startAttemptMutation.isPending}
+                hasActiveAttempt={hasActiveAttempt}
+              />
+            )
+          })}
         </div>
       )}
     </div>
