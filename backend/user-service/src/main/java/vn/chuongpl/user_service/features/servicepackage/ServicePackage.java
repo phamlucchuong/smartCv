@@ -40,6 +40,9 @@ public class ServicePackage {
     @Field(name = "cv_limit")
     Integer cvLimit;
 
+    @Field(name = "duration_days")
+    Integer durationDays;
+
     boolean featured;
 
     List<String> features;

@@ -24,6 +24,7 @@ public class ServicePackageResponse {
     Integer aiCredits;
     Integer jobLimit;
     Integer cvLimit;
+    Integer durationDays;
     boolean featured;
     List<String> features;
     LocalDateTime createdAt;

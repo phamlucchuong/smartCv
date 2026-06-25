@@ -137,6 +137,44 @@ services:
     networks:
       - smartCv-net
 
+  payment-service:
+    build: ./payment-service
+    container_name: smartCv-payment-service
+    restart: unless-stopped
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-8086}:8086"
+    environment:
+      - MONGO_DB_HOST=mongodb
+      - MONGO_DB_PORT=27017
+      - MONGO_DB_USERNAME=${MONGO_DB_USERNAME}
+      - MONGO_DB_PASSWORD=${MONGO_DB_PASSWORD}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET}
+      - USER_SERVICE_URL=http://user-service:8081/user
+      - PAYOS_CLIENT_ID=${PAYOS_CLIENT_ID}
+      - PAYOS_API_KEY=${PAYOS_API_KEY}
+      - PAYOS_CHECKSUM_KEY=${PAYOS_CHECKSUM_KEY}
+      - PAYOS_WEBHOOK_TOKEN=${PAYOS_WEBHOOK_TOKEN}
+      - PAYMENT_RETURN_URL=${PAYMENT_RETURN_URL}
+      - PAYMENT_CANCEL_URL=${PAYMENT_CANCEL_URL}
+      - PAYMENT_SERVICE_PORT=8086
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - smartCv-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/payment/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   mongodb_data_vol:
   postgres_data_vol:

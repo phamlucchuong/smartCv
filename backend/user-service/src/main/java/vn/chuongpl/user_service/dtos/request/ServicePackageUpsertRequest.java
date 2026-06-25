@@ -37,6 +37,8 @@ public class ServicePackageUpsertRequest {
     @NotNull
     Integer cvLimit;
 
+    Integer durationDays;
+
     boolean featured;
 
     List<String> features;

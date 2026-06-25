@@ -100,6 +100,16 @@ public class Candidate {
     @Field(name = "followed_company_ids")
     List<String> followedCompanyIds = new ArrayList<>();
 
+    // ── Active package ────────────────────────────────────────────────────────
+    @Field(name = "active_package_id")
+    String activePackageId;
+
+    @Field(name = "package_activated_at")
+    LocalDateTime packageActivatedAt;
+
+    @Field(name = "package_expires_at")
+    LocalDateTime packageExpiresAt;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;

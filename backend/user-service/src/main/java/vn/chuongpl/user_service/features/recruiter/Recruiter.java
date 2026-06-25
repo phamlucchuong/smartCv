@@ -111,6 +111,16 @@ public class Recruiter {
     @Builder.Default
     int quotaCvViews = 0;
 
+    // ── Active package ────────────────────────────────────────────────────────
+    @Field(name = "active_package_id")
+    String activePackageId;
+
+    @Field(name = "package_activated_at")
+    LocalDateTime packageActivatedAt;
+
+    @Field(name = "package_expires_at")
+    LocalDateTime packageExpiresAt;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;
