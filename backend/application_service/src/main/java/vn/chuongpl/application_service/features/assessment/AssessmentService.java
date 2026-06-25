@@ -5,12 +5,15 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.application_service.dtos.request.AssessmentAnswerRequest;
 import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
+import vn.chuongpl.application_service.dtos.request.AssessmentGenerateRequest;
+import vn.chuongpl.application_service.dtos.response.AssessmentGenerateResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
 import vn.chuongpl.application_service.enums.*;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.ai.AiEngineClient;
 import vn.chuongpl.application_service.integration.notification.AssessmentNotificationPublisher;
 import vn.chuongpl.application_service.integration.user.UserClient;
 
@@ -28,6 +31,7 @@ public class AssessmentService {
     AssessmentAttemptRepository attemptRepository;
     UserClient userClient;
     AssessmentNotificationPublisher assessmentNotificationPublisher;
+    AiEngineClient aiEngineClient;
 
     private String resolveRecruiterId(String userId) {
         String recruiterId = userClient.resolveRecruiterId(userId);
@@ -396,5 +400,9 @@ public class AssessmentService {
                     return res;
                 })
                 .toList();
+    }
+
+    public AssessmentGenerateResponse generateQuestions(AssessmentGenerateRequest request) {
+        return aiEngineClient.generateQuestions(request);
     }
 }

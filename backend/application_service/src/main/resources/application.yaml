@@ -37,6 +37,8 @@ app:
     base-url: ${JOB_SERVICE_URL:http://localhost:8082/job}
   user-service:
     base-url: ${USER_SERVICE_URL:http://localhost:8081/user}
+  ai-service:
+    base-url: ${AI_SERVICE_URL:http://localhost:8085/ai}
   default-page-size: ${APP_DEFAULT_PAGE_SIZE:10}
 
 logging:

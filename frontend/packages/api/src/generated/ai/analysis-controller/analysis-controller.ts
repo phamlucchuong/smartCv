@@ -17,11 +17,13 @@ import type {
 import type {
   AnalyzeUploadTestBody,
   AnalyzeUploadTestParams,
+  ApiResponseAssessmentGenerateResponse,
   ApiResponseCvAnalysisResponse,
   ApiResponseCvFullAnalysisResponse,
   ApiResponseCvImprovementResponse,
   ApiResponseInterviewQuestionsResponse,
   ApiResponseJobRecommendationResponse,
+  AssessmentGenerateRequest,
   CvAnalyzeRequest,
   CvFullAnalysisRequest,
   CvImproveRequest,
@@ -207,6 +209,64 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getImproveMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const generateAssessment = (
+    assessmentGenerateRequest: AssessmentGenerateRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseAssessmentGenerateResponse>(
+      {url: `/api/ai/generate-assessment`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: assessmentGenerateRequest, signal
+    },
+      options);
+    }
+  
+
+
+export const getGenerateAssessmentMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAssessment>>, TError,{data: AssessmentGenerateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateAssessment>>, TError,{data: AssessmentGenerateRequest}, TContext> => {
+
+const mutationKey = ['generateAssessment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateAssessment>>, {data: AssessmentGenerateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateAssessment(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateAssessmentMutationResult = NonNullable<Awaited<ReturnType<typeof generateAssessment>>>
+    export type GenerateAssessmentMutationBody = AssessmentGenerateRequest
+    export type GenerateAssessmentMutationError = unknown
+
+    export const useGenerateAssessment = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAssessment>>, TError,{data: AssessmentGenerateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof generateAssessment>>,
+        TError,
+        {data: AssessmentGenerateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getGenerateAssessmentMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

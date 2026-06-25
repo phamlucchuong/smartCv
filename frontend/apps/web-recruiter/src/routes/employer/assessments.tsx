@@ -50,6 +50,7 @@ import {
   useGetCandidateByUserId,
   parseAssessmentFile,
   downloadAssessmentTemplate,
+  useGenerateAssessmentQuestions,
 } from "@smart-cv/api";
 import { toast } from "sonner";
 
@@ -59,247 +60,6 @@ const QuestionType = {
   MCQ: "MCQ" as const,
   TEXT: "TEXT" as const,
 };
-const generateMockQuestions = (jobName: string, _difficulty: string, _level: string, num: number) => {
-  const name = jobName.toLowerCase()
-  let bank: Array<{ text: string; options: string[]; correctOptionIndex: number }> = []
-
-  if (name.includes('java')) {
-    bank = [
-      {
-        text: 'Sự khác biệt chính giữa interface và abstract class trong Java là gì?',
-        options: [
-          'Interface chỉ chứa method không có body, abstract class có thể có cả hai',
-          'Interface hỗ trợ đa kế thừa, abstract class thì không',
-          'Cả hai câu trên đều đúng',
-          'Cả hai câu trên đều sai',
-        ],
-        correctOptionIndex: 2,
-      },
-      {
-        text: 'Sự khác biệt giữa HashMap và ConcurrentHashMap trong Java là gì?',
-        options: [
-          'ConcurrentHashMap thread-safe tốt hơn HashMap nhờ chia nhóm lock (segment lock)',
-          'HashMap nhanh hơn nhưng không an toàn trong môi trường đa luồng',
-          'ConcurrentHashMap không cho phép khóa null làm key hoặc value',
-          'Tất cả các phương án trên đều đúng',
-        ],
-        correctOptionIndex: 3,
-      },
-      {
-        text: 'Lớp String trong Java là Immutable (không thể thay đổi). Lợi ích chính của việc này là gì?',
-        options: [
-          'Tối ưu hóa bộ nhớ thông qua String Pool',
-          'An toàn luồng (Thread-safety) mà không cần đồng bộ hóa',
-          'Tăng tính bảo mật khi dùng String làm tham số kết nối DB hoặc Network',
-          'Tất cả các phương án trên đều đúng',
-        ],
-        correctOptionIndex: 3,
-      },
-      {
-        text: 'Từ khóa transient trong Java dùng để làm gì?',
-        options: [
-          'Ngăn chặn một trường (field) không bị tuần tự hóa (serialized)',
-          'Đánh dấu một phương thức chạy bất đồng bộ',
-          'Đảm bảo biến được đọc trực tiếp từ bộ nhớ RAM thay vì cache của Thread',
-          'Không có câu nào đúng',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Phương thức finalize() trong Java được gọi khi nào?',
-        options: [
-          'Ngay trước khi đối tượng bị thu hồi bởi Garbage Collector',
-          'Khi chương trình kết thúc thực thi',
-          'Khi kết thúc khối lệnh try-catch-finally',
-          'Không còn được khuyến nghị sử dụng từ Java 9 trở đi',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Sự khác biệt giữa Exception và Error trong Java là gì?',
-        options: [
-          'Exception có thể bắt và xử lý được, Error biểu thị lỗi nghiêm trọng của hệ thống không nên bắt',
-          'Exception là RuntimeException, Error là CompileException',
-          'Cả hai đều kế thừa trực tiếp từ Object',
-          'Không có sự khác biệt',
-        ],
-        correctOptionIndex: 0,
-      }
-    ]
-  } else if (name.includes('react') || name.includes('frontend') || name.includes('javascript') || name.includes('js')) {
-    bank = [
-      {
-        text: 'React Virtual DOM hoạt động theo nguyên lý nào để tăng hiệu năng?',
-        options: [
-          'So sánh sự khác biệt (diffing) giữa Virtual DOM mới và cũ, sau đó chỉ cập nhật những thay đổi thực tế lên Real DOM',
-          'Xóa toàn bộ Real DOM và render lại từ đầu',
-          'Chuyển đổi code React thành WebAssembly để chạy nhanh hơn',
-          'Không cập nhật DOM trực tiếp mà chạy qua một luồng background worker',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Hook useEffect và useLayoutEffect trong React khác nhau ở điểm nào?',
-        options: [
-          'useLayoutEffect chạy đồng bộ ngay sau khi DOM đột biến nhưng trước khi trình duyệt vẽ (paint) lên màn hình',
-          'useEffect chạy bất đồng bộ sau khi màn hình đã được vẽ',
-          'Cả hai câu trên đều đúng',
-          'Cả hai Hook hoàn toàn giống nhau',
-        ],
-        correctOptionIndex: 2,
-      },
-      {
-        text: 'Trong Javascript, sự khác biệt giữa "==" và "===" là gì?',
-        options: [
-          '"==" so sánh giá trị sau khi ép kiểu, "===" so sánh cả giá trị và kiểu dữ liệu không ép kiểu',
-          '"==" so sánh địa chỉ bộ nhớ, "===" so sánh nội dung đối tượng',
-          '"===" chỉ dùng cho kiểu dữ liệu String',
-          'Không có câu nào đúng',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'React.memo và useMemo khác nhau như thế nào?',
-        options: [
-          'React.memo là HOC để memoize component tránh re-render, useMemo là Hook để memoize giá trị tính toán bên trong component',
-          'React.memo là Hook, useMemo là HOC',
-          'Cả hai đều dùng để lưu trữ cache dữ liệu API',
-          'Không có sự khác biệt',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Closure trong Javascript là gì?',
-        options: [
-          'Một hàm có khả năng ghi nhớ và truy cập các biến từ phạm vi bên ngoài của nó, ngay cả sau khi hàm bên ngoài đã thực thi xong',
-          'Một phương thức để đóng kết nối database',
-          'Một tính năng bảo mật ngăn chặn truy cập mã nguồn',
-          'Không có câu nào đúng',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Lợi ích chính của SSR (Server-Side Rendering) trong Next.js là gì?',
-        options: [
-          'Tối ưu hóa SEO tốt hơn và thời gian tải trang đầu tiên (FCP) nhanh hơn',
-          'Giảm tải hoàn toàn việc tính toán cho phía server',
-          'Không cần viết API backend',
-          'Chạy offline không cần kết nối mạng',
-        ],
-        correctOptionIndex: 0,
-      }
-    ]
-  } else if (name.includes('python')) {
-    bank = [
-      {
-        text: 'Trong Python, sự khác biệt chính giữa List và Tuple là gì?',
-        options: [
-          'List có thể thay đổi (mutable), Tuple không thể thay đổi (immutable)',
-          'List nhanh hơn Tuple',
-          'Tuple sử dụng nhiều bộ nhớ hơn List',
-          'Không có câu nào đúng',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'GIL (Global Interpreter Lock) trong CPython hoạt động như thế nào?',
-        options: [
-          'Chỉ cho phép một luồng (thread) thực thi mã Python tại một thời điểm, làm hạn chế hiệu năng đa luồng trên CPU nhiều nhân',
-          'Đồng bộ hóa tất cả các truy vấn Database',
-          'Khóa bộ nhớ RAM để tăng tốc độ chạy vòng lặp',
-          'Không có câu nào đúng',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Decorator trong Python dùng để làm gì?',
-        options: [
-          'Thay đổi hoặc mở rộng hành vi của một hàm hoặc lớp mà không cần sửa đổi trực tiếp mã nguồn của nó',
-          'Trang trí giao diện đồ họa cho ứng dụng',
-          'Tự động định dạng code theo chuẩn PEP 8',
-          'Tất cả các phương án trên',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Sự khác biệt giữa method __init__ và __new__ trong Python là gì?',
-        options: [
-          '__new__ chịu trách nhiệm tạo ra thực thể (instance) mới, __init__ chịu trách nhiệm khởi tạo các thuộc tính cho thực thể đó',
-          '__init__ chạy trước __new__',
-          '__new__ chỉ dùng cho các class kế thừa từ dict',
-          'Không có sự khác biệt',
-        ],
-        correctOptionIndex: 0,
-      }
-    ]
-  } else {
-    // General tech / Database / DevOps
-    bank = [
-      {
-        text: 'Sự khác biệt cơ bản nhất giữa hệ quản trị cơ sở dữ liệu SQL và NoSQL là gì?',
-        options: [
-          'SQL lưu dưới dạng bảng có cấu trúc chặt chẽ, NoSQL lưu trữ phi cấu trúc (key-value, document, graph)',
-          'SQL luôn nhanh hơn NoSQL trong mọi trường hợp',
-          'NoSQL không hỗ trợ giao dịch (transactions)',
-          'Không có câu nào đúng',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Docker Container và Docker Image khác nhau như thế nào?',
-        options: [
-          'Docker Image là một bản đóng gói tĩnh (chỉ đọc), Docker Container là một thực thể chạy động được tạo ra từ Image',
-          'Docker Image chạy nhanh hơn Docker Container',
-          'Docker Container là file cấu hình, Docker Image là file thực thi',
-          'Cả hai hoàn toàn giống nhau',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Nguyên lý thiết kế RESTful API là gì?',
-        options: [
-          'Sử dụng các phương thức HTTP (GET, POST, PUT, DELETE) rõ ràng tương ứng với các thao tác dữ liệu',
-          'Không trạng thái (Stateless)',
-          'Giao tiếp dựa trên tài nguyên (Resources) qua URI',
-          'Tất cả các phương án trên đều đúng',
-        ],
-        correctOptionIndex: 3,
-      },
-      {
-        text: 'CI/CD (Continuous Integration / Continuous Deployment) mang lại giá trị cốt lõi nào?',
-        options: [
-          'Tự động hóa quy trình kiểm thử, build và triển khai phần mềm liên tục, giảm thiểu lỗi thủ công',
-          'Tăng tốc độ xử lý của server chạy production',
-          'Thay thế lập trình viên viết code',
-          'Tự động sinh tài liệu thiết kế hệ thống',
-        ],
-        correctOptionIndex: 0,
-      },
-      {
-        text: 'Trong Database, việc tạo Index (chỉ mục) mang lại tác dụng và đánh đổi gì?',
-        options: [
-          'Tăng tốc độ đọc dữ liệu (SELECT) nhưng làm chậm tốc độ ghi/sửa (INSERT, UPDATE, DELETE) và tốn không gian bộ nhớ',
-          'Tăng tốc độ ghi dữ liệu và giảm dung lượng database',
-          'Chỉ có tác dụng với các bảng chứa khóa ngoại',
-          'Không có sự đánh đổi nào',
-        ],
-        correctOptionIndex: 0,
-      }
-    ]
-  }
-
-  const shuffled = [...bank].sort(() => 0.5 - Math.random())
-  const selected = shuffled.slice(0, Math.min(num, shuffled.length))
-
-  return selected.map((q, idx) => ({
-    id: `q_ai_${idx}_${Date.now()}`,
-    text: q.text,
-    type: QuestionType.MCQ,
-    options: q.options,
-    correctOptionIndex: q.correctOptionIndex,
-  }))
-}
-
 type AssessmentResponse = ApplicationModels.AssessmentResponse;
 
 export const Route = createFileRoute("/employer/assessments")({
@@ -413,8 +173,9 @@ function AssessmentsManager() {
   const [aiJobName, setAiJobName] = useState("");
   const [aiDifficulty, setAiDifficulty] = useState("Trung bình");
   const [aiLevel, setAiLevel] = useState("Junior");
-  const [aiNumQuestions, setAiNumQuestions] = useState(5);
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiNumQuestions, setAiNumQuestions] = useState<number | "">(5);
+
+  const generateMutation = useGenerateAssessmentQuestions();
 
   // Excel Import
   const importInputRef = React.useRef<HTMLInputElement>(null);
@@ -458,16 +219,34 @@ function AssessmentsManager() {
       toast.error("Vui lòng nhập tên công việc");
       return;
     }
-    setIsAiGenerating(true);
-    setTimeout(() => {
-      const generated = generateMockQuestions(aiJobName, aiDifficulty, aiLevel, aiNumQuestions);
-      setQuestions(generated);
-      setTitle(`Bài test ${aiJobName} - Trình độ ${aiLevel}`);
-      setDescription(`Bài test tự động tạo bằng AI cho vị trí ${aiJobName} (${aiLevel}) với độ khó ${aiDifficulty}.`);
-      setIsAiGenerating(false);
-      setIsAiDialogOpen(false);
-      toast.success("Đã tạo câu hỏi bằng AI thành công!");
-    }, 1200);
+    generateMutation.mutate(
+      { jobName: aiJobName, level: aiLevel, difficulty: aiDifficulty, numQuestions: Number(aiNumQuestions) || 5 },
+      {
+        onSuccess: (response) => {
+          const questions = response.data?.questions ?? [];
+          if (questions.length === 0) {
+            toast.error("AI không tạo được câu hỏi. Vui lòng thử lại.");
+            return;
+          }
+          const mapped: Question[] = questions.slice(0, Number(aiNumQuestions) || 5).map((q) => ({
+            id: crypto.randomUUID(),
+            text: q.text,
+            type: "MCQ" as const,
+            options: q.options,
+            correctOptionIndex: q.correctOptionIndex,
+          }));
+          setQuestions(mapped);
+          setTitle(`Bài test ${aiJobName} - Trình độ ${aiLevel}`);
+          setDescription(`Bài test tự động tạo bằng AI cho vị trí ${aiJobName} (${aiLevel}) với độ khó ${aiDifficulty}.`);
+          setIsAiDialogOpen(false);
+          setIsFormOpen(true);
+          toast.success("Đã tạo câu hỏi bằng AI thành công!");
+        },
+        onError: () => {
+          toast.error("Không thể tạo câu hỏi bằng AI. Vui lòng thử lại.");
+        },
+      }
+    );
   };
 
   const activeJobs = React.useMemo(() => {
@@ -910,7 +689,10 @@ function AssessmentsManager() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsAiDialogOpen(true)}
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    setIsAiDialogOpen(true);
+                  }}
                   className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Tạo bằng AI
@@ -1283,107 +1065,131 @@ function AssessmentsManager() {
         </Dialog>
       )}
 
-      {isAiDialogOpen && (
-        <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
-          <DialogContent className="max-w-[450px] p-6 rounded-lg border border-border shadow-lg">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Tạo bài kiểm tra tự động bằng AI
-              </DialogTitle>
-            </DialogHeader>
+       {isAiDialogOpen && (
+         <Dialog
+           open={isAiDialogOpen}
+           onOpenChange={(open) => {
+             setIsAiDialogOpen(open);
+             if (!open) setIsFormOpen(true);
+           }}
+         >
+           <DialogContent className="max-w-[450px] p-6 rounded-lg border border-border shadow-lg">
+             <DialogHeader>
+               <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                 <Sparkles className="h-5 w-5 text-primary" />
+                 Tạo bài kiểm tra tự động bằng AI
+               </DialogTitle>
+             </DialogHeader>
 
-            <form onSubmit={handleAiConfirm} className="space-y-4 mt-2">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-foreground">Liên kết với Job (Vị trí tuyển dụng)</label>
-                <select
-                  value={jobId}
-                  onChange={(e) => {
-                    const selectedVal = e.target.value;
-                    setJobId(selectedVal);
-                    // Also auto-fill the jobName input if it matches an active job
-                    const selectedJob = activeJobs.find(j => j.id === selectedVal);
-                    if (selectedJob && !aiJobName) {
-                      setAiJobName(selectedJob.title ?? "");
-                    }
-                  }}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
-                >
-                  <option value="">Không liên kết / Chọn vị trí...</option>
-                  {activeJobs.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.title} ({j.company})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-foreground">Tên công việc / Chủ đề *</label>
-                <input
-                  type="text"
-                  required
-                  value={aiJobName}
-                  onChange={(e) => setAiJobName(e.target.value)}
-                  placeholder="Ví dụ: React Developer, Java core..."
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">Trình độ</label>
-                  <select
-                    value={aiLevel}
-                    onChange={(e) => setAiLevel(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
-                  >
-                    <option value="Intern">Intern</option>
-                    <option value="Junior">Junior</option>
-                    <option value="Senior">Senior</option>
-                    <option value="Lead">Lead</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">Độ khó</label>
-                  <select
-                    value={aiDifficulty}
-                    onChange={(e) => setAiDifficulty(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
-                  >
-                    <option value="Dễ">Dễ</option>
-                    <option value="Trung bình">Trung bình</option>
-                    <option value="Khó">Khó</option>
+             <form onSubmit={handleAiConfirm} className="space-y-4 mt-2">
+               <div className="space-y-1.5 w-full min-w-0 max-w-full">
+                 <label className="text-sm font-semibold text-foreground">Liên kết với Job (Vị trí tuyển dụng)</label>
+                 <div className="w-full min-w-0 max-w-full">
+                   <select
+                     value={jobId}
+                     onChange={(e) => {
+                       const selectedVal = e.target.value;
+                       setJobId(selectedVal);
+                       // Also auto-fill the jobName input if it matches an active job
+                       const selectedJob = activeJobs.find(j => j.id === selectedVal);
+                       if (selectedJob && !aiJobName) {
+                         setAiJobName(selectedJob.title ?? '');
+                       }
+                     }}
+                     className="h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none truncate"
+                   >
+                     <option value="">Không liên kết / Chọn vị trí...</option>
+                     {activeJobs.map((j) => (
+                       <option key={j.id} value={j.id}>
+                         {j.title} ({j.company})
+                       </option>
+                   ))}
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-foreground">Số câu hỏi</label>
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  max={20}
-                  value={aiNumQuestions}
-                  onChange={(e) => setAiNumQuestions(parseInt(e.target.value) || 5)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
+               <div className="space-y-1.5">
+                 <label className="text-sm font-semibold text-foreground">Tên công việc / Chủ đề *</label>
+                 <input
+                   type="text"
+                   required
+                   value={aiJobName}
+                   onChange={(e) => setAiJobName(e.target.value)}
+                   placeholder="Ví dụ: React Developer, Java core..."
+                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                 />
+               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <Button type="button" variant="outline" onClick={() => setIsAiDialogOpen(false)} disabled={isAiGenerating}>
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={isAiGenerating}>
-                  {isAiGenerating ? "Đang tạo bằng AI..." : "Xác nhận tạo"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1.5">
+                   <label className="text-sm font-semibold text-foreground">Trình độ</label>
+                   <select
+                     value={aiLevel}
+                     onChange={(e) => setAiLevel(e.target.value)}
+                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                   >
+                     <option value="Intern">Intern</option>
+                     <option value="Junior">Junior</option>
+                     <option value="Senior">Senior</option>
+                     <option value="Lead">Lead</option>
+                   </select>
+                 </div>
+
+                 <div className="space-y-1.5">
+                   <label className="text-sm font-semibold text-foreground">Độ khó</label>
+                   <select
+                     value={aiDifficulty}
+                     onChange={(e) => setAiDifficulty(e.target.value)}
+                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                   >
+                     <option value="Dễ">Dễ</option>
+                     <option value="Trung bình">Trung bình</option>
+                     <option value="Khó">Khó</option>
+                   </select>
+                 </div>
+               </div>
+
+               <div className="space-y-1.5">
+                 <label className="text-sm font-semibold text-foreground">Số câu hỏi</label>
+                 <input
+                   type="number"
+                   required
+                   min={1}
+                   max={20}
+                   value={aiNumQuestions}
+                   onChange={(e) => {
+                     const val = e.target.value;
+                     if (val === "") {
+                       setAiNumQuestions("");
+                     } else {
+                       const parsed = parseInt(val);
+                       setAiNumQuestions(isNaN(parsed) ? "" : parsed);
+                     }
+                   }}
+                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                 />
+               </div>
+
+               <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
+                 <Button
+                   type="button"
+                   variant="outline"
+                   onClick={() => {
+                     setIsAiDialogOpen(false);
+                     setIsFormOpen(true);
+                   }}
+                   disabled={generateMutation.isPending}
+                 >
+                   Hủy
+                 </Button>
+                 <Button type="submit" disabled={generateMutation.isPending}>
+                   {generateMutation.isPending ? "Đang tạo bằng AI..." : "Xác nhận tạo"}
+                 </Button>
+               </div>
+             </form>
+           </DialogContent>
+         </Dialog>
+       )}
     </div>
   );
 }
@@ -1803,4 +1609,3 @@ function CandidateInfoCell({ candidateId, applications }: CandidateInfoCellProps
     </div>
   );
 }
-

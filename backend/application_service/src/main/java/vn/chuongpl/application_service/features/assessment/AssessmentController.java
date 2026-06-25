@@ -7,9 +7,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import vn.chuongpl.application_service.dtos.ApiResponse;
 import vn.chuongpl.application_service.dtos.request.AssessmentAnswerRequest;
 import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
+import vn.chuongpl.application_service.dtos.request.AssessmentGenerateRequest;
+import vn.chuongpl.application_service.dtos.response.AssessmentGenerateResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
@@ -221,6 +224,15 @@ public class AssessmentController {
     public ApiResponse<List<AssessmentResponse>> getAssessmentsByRecruiter(@PathVariable String recruiterId) {
         return ApiResponse.<List<AssessmentResponse>>builder()
                 .data(assessmentService.getAssessmentsByRecruiter(recruiterId))
+                .build();
+    }
+
+    @PostMapping("/api/assessments/generate-questions")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
+    public ApiResponse<AssessmentGenerateResponse> generateQuestions(
+            @RequestBody @Valid AssessmentGenerateRequest request) {
+        return ApiResponse.<AssessmentGenerateResponse>builder()
+                .data(assessmentService.generateQuestions(request))
                 .build();
     }
 }

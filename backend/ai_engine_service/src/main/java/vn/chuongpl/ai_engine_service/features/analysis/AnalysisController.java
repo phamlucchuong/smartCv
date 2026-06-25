@@ -8,11 +8,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.chuongpl.ai_engine_service.dtos.ApiResponse;
+import vn.chuongpl.ai_engine_service.dtos.request.AssessmentGenerateRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvFullAnalysisRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvImproveRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.InterviewQuestionsRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.JobRecommendRequest;
+import vn.chuongpl.ai_engine_service.dtos.response.AssessmentGenerateResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvFullAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvImprovementResponse;
@@ -80,6 +82,16 @@ public class AnalysisController {
         return ApiResponse.<InterviewQuestionsResponse>builder()
                 .data(analysisService.generateInterviewQuestions(request, userId, !isAdmin(authentication)))
                 .message("Interview questions generated successfully")
+                .build();
+    }
+
+    @PostMapping("/generate-assessment")
+    @PreAuthorize("hasAnyAuthority('ROLE_RECRUITER','ROLE_CANDIDATE','ROLE_ADMIN')")
+    public ApiResponse<AssessmentGenerateResponse> generateAssessment(
+            @RequestBody @Valid AssessmentGenerateRequest request) {
+        return ApiResponse.<AssessmentGenerateResponse>builder()
+                .data(analysisService.generateAssessmentQuestions(request))
+                .message("Assessment questions generated successfully")
                 .build();
     }
 
