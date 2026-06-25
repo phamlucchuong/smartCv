@@ -15,7 +15,7 @@ import { Button } from "@smart-cv/ui";
 import { Search, Download, List, Kanban, Briefcase, Mail, Phone, MapPin, Calendar, Award } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../../../store/useAuthStore";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/employer/applicants/")({

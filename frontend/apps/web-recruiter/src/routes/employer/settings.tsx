@@ -5,7 +5,7 @@ import { useTranslation } from "@smart-cv/i18n";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 import { Bell, Settings, LogOut, Trash2 } from "lucide-react";
-import { usePushNotifications } from "../hooks/usePushNotifications";
+import { usePushNotifications } from "../../hooks/usePushNotifications";
 
 export const Route = createFileRoute("/employer/settings")({
   head: () => ({ meta: [{ title: "Settings" }] }),

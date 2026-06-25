@@ -4,7 +4,7 @@ import { Badge, Button, Input } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { Clock3, DollarSign, MapPin } from 'lucide-react'
 import { useGetMyApplications } from '@smart-cv/api'
-import { useAuthStore } from '../store/useAuthStore'
+import { useAuthStore } from '../../store/useAuthStore'
 
 export const Route = createFileRoute('/_account/applications')({
   component: ApplicationsPage,

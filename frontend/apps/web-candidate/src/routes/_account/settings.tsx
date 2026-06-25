@@ -12,9 +12,9 @@ import {
   useSendUpdateOtp, useVerifyUpdateOtp,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
-import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
-import { useCandidatePreferences } from '../store/candidatePreferences'
-import { usePushNotifications } from '../hooks/usePushNotifications'
+import { hasCandidateRole, useAuthStore } from '../../store/useAuthStore'
+import { useCandidatePreferences } from '../../store/candidatePreferences'
+import { usePushNotifications } from '../../hooks/usePushNotifications'
 
 export const Route = createFileRoute('/_account/settings')({
   component: SettingsPage,

@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useAuthStore } from '../store/useAuthStore'
-import { CandidateDashboardLayout } from '../components/layouts/CandidateDashboardLayout'
+import { useAuthStore } from '../../store/useAuthStore'
+import { CandidateDashboardLayout } from '../../components/layouts/CandidateDashboardLayout'
 
 export const Route = createFileRoute('/_account')({
   beforeLoad: () => {

@@ -10,8 +10,8 @@ import {
   UserModels,
 } from '@smart-cv/api'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAuthStore } from '../store/useAuthStore'
-import { usePreferencesStore } from '../store/usePreferencesStore'
+import { useAuthStore } from '../../store/useAuthStore'
+import { usePreferencesStore } from '../../store/usePreferencesStore'
 
 export const Route = createFileRoute('/_account/profile')({
   component: ProfilePage,

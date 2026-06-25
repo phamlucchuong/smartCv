@@ -4,7 +4,7 @@ import { Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogH
 import { useTranslation } from '@smart-cv/i18n'
 import { Bell, Settings } from 'lucide-react'
 import { toast } from 'sonner'
-import { usePushNotifications } from '../hooks/usePushNotifications'
+import { usePushNotifications } from '../../hooks/usePushNotifications'
 
 export const Route = createFileRoute('/admin/settings')({ component: SystemSettingsPage })
 

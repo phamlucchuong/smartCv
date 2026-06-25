@@ -24,7 +24,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../../store/useAuthStore";
 
 type CandidateItem = UserModels.CandidateResponse;
 

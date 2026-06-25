@@ -6,9 +6,9 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@smart-cv/i18n";
 import { useEffect } from "react";
-import { hasRecruiterRole, isAuthError } from "../lib/recruiterAuth";
+import { hasRecruiterRole, isAuthError } from "../../lib/recruiterAuth";
 import { RecruiterApi } from "@smart-cv/api";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../../store/useAuthStore";
 
 const GATE_PATHS = ["/employer/setup", "/employer/pending"];
 

@@ -3,8 +3,8 @@ import { buttonVariants, cn } from "@smart-cv/ui";
 import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { RecruiterApi } from "@smart-cv/api";
 import { useEffect } from "react";
-import { isAuthError } from "../lib/recruiterAuth";
-import { useAuthStore } from "../store/useAuthStore";
+import { isAuthError } from "../../lib/recruiterAuth";
+import { useAuthStore } from "../../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/pending")({
   head: () => ({ meta: [{ title: "Account Under Review — SmartCV" }] }),
