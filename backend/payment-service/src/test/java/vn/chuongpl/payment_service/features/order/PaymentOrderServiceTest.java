@@ -1,6 +1,7 @@
 package vn.chuongpl.payment_service.features.order;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.result.UpdateResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.*;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -47,6 +49,7 @@ class PaymentOrderServiceTest {
     @Mock RabbitTemplate rabbitTemplate;
     @Mock RestTemplate restTemplate;
     @Mock ObjectMapper objectMapper;
+    @Mock MongoTemplate mongoTemplate;
 
     @InjectMocks
     PaymentOrderService paymentOrderService;
@@ -190,11 +193,14 @@ class PaymentOrderServiceTest {
                 .id("order-1").userId("user-1").orderCode(555L).status(OrderStatus.PENDING).build();
         when(paymentOrderRepository.findById("order-1")).thenReturn(Optional.of(order));
 
+        UpdateResult updateResult = mock(UpdateResult.class);
+        when(updateResult.getModifiedCount()).thenReturn(1L);
+        when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(updateResult);
+
         paymentOrderService.cancelOrder("order-1", "user-1");
 
-        ArgumentCaptor<PaymentOrder> captor = ArgumentCaptor.forClass(PaymentOrder.class);
-        verify(paymentOrderRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.CANCELLED);
         verify(payOS).cancelPaymentLink(eq(555L), isNull());
+        verify(mongoTemplate).updateFirst(any(), any(), eq(PaymentOrder.class));
+        verify(paymentOrderRepository, never()).save(any());
     }
 }

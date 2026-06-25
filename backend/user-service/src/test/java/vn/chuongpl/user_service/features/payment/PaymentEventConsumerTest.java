@@ -129,7 +129,7 @@ class PaymentEventConsumerTest {
     }
 
     @Test
-    void handlePaymentCompleted_exception_doesNotPropagate() {
+    void handlePaymentCompleted_exception_propagatesForDlqRouting() {
         when(recruiterRepository.findByUserIdAndDeletedFalse(any()))
                 .thenThrow(new RuntimeException("DB error"));
 
@@ -138,7 +138,26 @@ class PaymentEventConsumerTest {
                 .packageId("plus").packageJobLimit(5).packageCvLimit(10)
                 .paidAt(LocalDateTime.now()).orderId("ord5").build();
 
-        // must NOT throw
+        // must throw so Spring AMQP routes to DLQ
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> consumer.handlePaymentCompleted(event));
+    }
+
+    @Test
+    void handlePaymentCompleted_duplicateOrderId_skipsProcessing() {
+        Recruiter recruiter = Recruiter.builder()
+                .userId("u6").quotaJobPost(5).quotaCvViews(3)
+                .lastPaymentOrderId("ord-already-processed").build();
+        when(recruiterRepository.findByUserIdAndDeletedFalse("u6"))
+                .thenReturn(Optional.of(recruiter));
+
+        PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+                .userId("u6").userRole("RECRUITER")
+                .packageId("plus").packageJobLimit(10).packageCvLimit(20)
+                .paidAt(LocalDateTime.now()).orderId("ord-already-processed").build();
+
         consumer.handlePaymentCompleted(event);
+
+        verify(recruiterRepository, never()).save(any());
     }
 }

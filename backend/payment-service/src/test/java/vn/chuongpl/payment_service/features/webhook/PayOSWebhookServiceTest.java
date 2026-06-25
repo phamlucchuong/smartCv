@@ -1,13 +1,14 @@
 package vn.chuongpl.payment_service.features.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.result.UpdateResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import vn.chuongpl.payment_service.config.PayOSConfig;
 import vn.chuongpl.payment_service.enums.OrderStatus;
 import vn.chuongpl.payment_service.features.order.PaymentOrder;
@@ -19,10 +20,8 @@ import vn.payos.type.WebhookData;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class PayOSWebhookServiceTest {
@@ -31,6 +30,7 @@ class PayOSWebhookServiceTest {
     @Mock PayOSConfig payOSConfig;
     @Mock PaymentOrderRepository paymentOrderRepository;
     @Mock PaymentOrderService paymentOrderService;
+    @Mock MongoTemplate mongoTemplate;
     @Mock ObjectMapper objectMapper;
 
     @InjectMocks
@@ -60,10 +60,15 @@ class PayOSWebhookServiceTest {
                 .id("order-1").orderCode(123L).status(OrderStatus.PAID).build();
         when(paymentOrderRepository.findByOrderCode(123L)).thenReturn(Optional.of(order));
 
+        // updateFirst finds no PENDING doc (already PAID) → modifiedCount=0
+        UpdateResult noopResult = mock(UpdateResult.class);
+        when(noopResult.getModifiedCount()).thenReturn(0L);
+        when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(noopResult);
+
         payOSWebhookService.handleWebhook("valid-token", "{}");
 
-        verify(paymentOrderRepository, never()).save(any());
         verify(paymentOrderService, never()).publishPaymentCompleted(any());
+        verify(paymentOrderRepository, never()).save(any());
     }
 
     @Test
@@ -77,15 +82,17 @@ class PayOSWebhookServiceTest {
         PaymentOrder order = PaymentOrder.builder()
                 .id("order-2").orderCode(456L).status(OrderStatus.PENDING).build();
         when(paymentOrderRepository.findByOrderCode(456L)).thenReturn(Optional.of(order));
-        when(paymentOrderRepository.save(any())).thenReturn(order);
+
+        // updateFirst transitions PENDING → PAID → modifiedCount=1
+        UpdateResult updateResult = mock(UpdateResult.class);
+        when(updateResult.getModifiedCount()).thenReturn(1L);
+        when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(updateResult);
 
         payOSWebhookService.handleWebhook("valid-token", "{}");
 
-        ArgumentCaptor<PaymentOrder> captor = ArgumentCaptor.forClass(PaymentOrder.class);
-        verify(paymentOrderRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.PAID);
-        assertThat(captor.getValue().getPaidAt()).isNotNull();
+        verify(mongoTemplate).updateFirst(any(), any(), eq(PaymentOrder.class));
         verify(paymentOrderService).publishPaymentCompleted(any());
+        verify(paymentOrderRepository, never()).save(any());
     }
 
     @Test
@@ -99,13 +106,14 @@ class PayOSWebhookServiceTest {
         PaymentOrder order = PaymentOrder.builder()
                 .id("order-3").orderCode(789L).status(OrderStatus.PENDING).build();
         when(paymentOrderRepository.findByOrderCode(789L)).thenReturn(Optional.of(order));
-        when(paymentOrderRepository.save(any())).thenReturn(order);
+
+        UpdateResult updateResult = mock(UpdateResult.class);
+        when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(updateResult);
 
         payOSWebhookService.handleWebhook("valid-token", "{}");
 
-        ArgumentCaptor<PaymentOrder> captor = ArgumentCaptor.forClass(PaymentOrder.class);
-        verify(paymentOrderRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.FAILED);
+        verify(mongoTemplate).updateFirst(any(), any(), eq(PaymentOrder.class));
         verify(paymentOrderService, never()).publishPaymentCompleted(any());
+        verify(paymentOrderRepository, never()).save(any());
     }
 }

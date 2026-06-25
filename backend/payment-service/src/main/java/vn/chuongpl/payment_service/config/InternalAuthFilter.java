@@ -26,11 +26,11 @@ public class InternalAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return "/payment/api/webhook/payos".equals(path)
-                || path.startsWith("/payment/v3/api-docs")
-                || path.startsWith("/payment/swagger-ui")
-                || path.startsWith("/payment/actuator");
+        String path = request.getServletPath();
+        return "/api/webhook/payos".equals(path)
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/actuator");
     }
 
     @Override

@@ -170,14 +170,14 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public MessageConverter converter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter converter(com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 
     @Bean
-    public AmqpTemplate amqpTemplate(ConnectionFactory connectionFactory) {
+    public AmqpTemplate amqpTemplate(ConnectionFactory connectionFactory, com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(converter());
+        rabbitTemplate.setMessageConverter(converter(objectMapper));
         return rabbitTemplate;
     }
 }

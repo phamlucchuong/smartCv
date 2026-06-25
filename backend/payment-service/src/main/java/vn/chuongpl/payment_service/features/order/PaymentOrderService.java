@@ -10,6 +10,10 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -51,6 +55,7 @@ public class PaymentOrderService {
     RabbitTemplate rabbitTemplate;
     RestTemplate restTemplate;
     ObjectMapper objectMapper;
+    MongoTemplate mongoTemplate;
 
     @Value("${integration.user-service-url}")
     String userServiceUrl;
@@ -97,13 +102,13 @@ public class PaymentOrderService {
             try {
                 PaymentData paymentData = PaymentData.builder()
                         .orderCode(orderCode)
-                        .amount((int) price.longValue())
+                        .amount(Math.toIntExact(price))
                         .description(description)
                         .returnUrl(payOSConfig.getReturnUrl())
                         .cancelUrl(payOSConfig.getCancelUrl())
                         .item(ItemData.builder()
                                 .name(packageName)
-                                .price((int) price.longValue())
+                                .price(Math.toIntExact(price))
                                 .quantity(1)
                                 .build())
                         .build();
@@ -146,7 +151,7 @@ public class PaymentOrderService {
     public PageResponse<OrderResponse> getOrders(String userId, int page, int size) {
         Page<PaymentOrder> orderPage = paymentOrderRepository.findByUserId(
                 userId,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "created_at"))
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
         List<OrderResponse> items = orderPage.getContent().stream()
                 .map(paymentOrderMapper::toOrderResponse)
@@ -183,9 +188,15 @@ public class PaymentOrderService {
             log.warn("[Payment] Failed to cancel PayOS link orderCode={}: {}", order.getOrderCode(), e.getMessage());
         }
 
-        order.setStatus(OrderStatus.CANCELLED);
-        order.setUpdatedAt(LocalDateTime.now());
-        paymentOrderRepository.save(order);
+        // Atomic transition: only set CANCELLED if still PENDING (guards against concurrent PAID webhook)
+        Query query = Query.query(Criteria.where("id").is(orderId).and("status").is(OrderStatus.PENDING));
+        Update update = new Update()
+                .set("status", OrderStatus.CANCELLED)
+                .set("updated_at", LocalDateTime.now());
+        long modified = mongoTemplate.updateFirst(query, update, PaymentOrder.class).getModifiedCount();
+        if (modified == 0) {
+            log.info("[Payment] Order {} status changed before cancel could apply, ignoring", orderId);
+        }
     }
 
     public void publishPaymentCompleted(PaymentOrder order) {
@@ -211,7 +222,7 @@ public class PaymentOrderService {
             headers.set("X-Gateway-Secret", gatewayInternalSecret);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Map> response = restTemplate.exchange(
-                    userServiceUrl + "/internal/packages/" + packageId,
+                    userServiceUrl + "/api/internal/packages/" + packageId,
                     HttpMethod.GET,
                     entity,
                     Map.class
@@ -246,6 +257,6 @@ public class PaymentOrderService {
 
     private long generateOrderCode() {
         return (System.currentTimeMillis() % 1_000_000_000_000L) * 1000
-                + ThreadLocalRandom.current().nextInt(1000);
+                + ThreadLocalRandom.current().nextInt(1_000_000);
     }
 }

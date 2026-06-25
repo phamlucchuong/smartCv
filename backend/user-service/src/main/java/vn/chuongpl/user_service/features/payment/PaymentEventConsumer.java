@@ -35,14 +35,22 @@ public class PaymentEventConsumer {
         } catch (Exception e) {
             log.error("[Payment] Failed to activate package for userId={} orderId={}: {}",
                     event.getUserId(), event.getOrderId(), e.getMessage());
+            // Rethrow so Spring AMQP NACKs the message → routes to DLQ after retries
+            throw new RuntimeException("Failed to process payment event", e);
         }
     }
 
     private void activateForRecruiter(PaymentCompletedEvent event) {
         recruiterRepository.findByUserIdAndDeletedFalse(event.getUserId())
                 .ifPresentOrElse(recruiter -> {
+                    if (event.getOrderId().equals(recruiter.getLastPaymentOrderId())) {
+                        log.info("[Payment] Duplicate event orderId={} for recruiter userId={}, skipping",
+                                event.getOrderId(), event.getUserId());
+                        return;
+                    }
                     setActivationFields(recruiter, event);
                     applyRecruiterQuota(recruiter, event);
+                    recruiter.setLastPaymentOrderId(event.getOrderId());
                     recruiter.setUpdatedAt(LocalDateTime.now());
                     recruiterRepository.save(recruiter);
                     log.info("[Payment] Package {} activated for recruiter userId={}", event.getPackageId(), event.getUserId());
@@ -52,7 +60,13 @@ public class PaymentEventConsumer {
     private void activateForCandidate(PaymentCompletedEvent event) {
         candidateRepository.findByUserIdAndDeletedFalse(event.getUserId())
                 .ifPresentOrElse(candidate -> {
+                    if (event.getOrderId().equals(candidate.getLastPaymentOrderId())) {
+                        log.info("[Payment] Duplicate event orderId={} for candidate userId={}, skipping",
+                                event.getOrderId(), event.getUserId());
+                        return;
+                    }
                     setActivationFields(candidate, event);
+                    candidate.setLastPaymentOrderId(event.getOrderId());
                     candidate.setUpdatedAt(LocalDateTime.now());
                     candidateRepository.save(candidate);
                     log.info("[Payment] Package {} activated for candidate userId={}", event.getPackageId(), event.getUserId());

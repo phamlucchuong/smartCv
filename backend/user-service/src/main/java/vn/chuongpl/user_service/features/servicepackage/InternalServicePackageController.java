@@ -14,7 +14,7 @@ import vn.chuongpl.user_service.dtos.response.ServicePackageResponse;
  * Guarded by InternalAuthFilter (X-Gateway-Secret). No JWT required.
  */
 @RestController
-@RequestMapping("/internal/packages")
+@RequestMapping("/api/internal/packages")
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class InternalServicePackageController {

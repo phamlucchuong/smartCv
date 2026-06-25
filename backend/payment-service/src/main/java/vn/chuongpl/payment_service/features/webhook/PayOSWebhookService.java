@@ -4,6 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.payment_service.config.PayOSConfig;
 import vn.chuongpl.payment_service.enums.OrderStatus;
@@ -15,7 +19,6 @@ import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -27,6 +30,7 @@ public class PayOSWebhookService {
     PayOSConfig payOSConfig;
     PaymentOrderRepository paymentOrderRepository;
     PaymentOrderService paymentOrderService;
+    MongoTemplate mongoTemplate;
     ObjectMapper objectMapper;
 
     public void handleWebhook(String token, String rawBody) {
@@ -49,28 +53,37 @@ public class PayOSWebhookService {
         Long orderCode = webhookData.getOrderCode();
         String code = webhookData.getCode();
 
-        Optional<PaymentOrder> orderOpt = paymentOrderRepository.findByOrderCode(orderCode);
-        if (orderOpt.isEmpty()) {
+        // Verify order exists before attempting update
+        if (paymentOrderRepository.findByOrderCode(orderCode).isEmpty()) {
             log.warn("[Webhook] Order not found for orderCode={}", orderCode);
             return;
         }
 
-        PaymentOrder order = orderOpt.get();
-        if (order.getStatus() != OrderStatus.PENDING) {
-            log.info("[Webhook] Order already in terminal status={} orderCode={}", order.getStatus(), orderCode);
-            return;
-        }
-
         if ("00".equals(code)) {
-            order.setStatus(OrderStatus.PAID);
-            order.setPaidAt(LocalDateTime.now());
-            order.setUpdatedAt(LocalDateTime.now());
-            paymentOrderRepository.save(order);
-            paymentOrderService.publishPaymentCompleted(order);
+            // Atomic transition PENDING → PAID; publishEvent only if this request won the race
+            LocalDateTime now = LocalDateTime.now();
+            Query query = Query.query(
+                    Criteria.where("order_code").is(orderCode).and("status").is(OrderStatus.PENDING));
+            Update update = new Update()
+                    .set("status", OrderStatus.PAID)
+                    .set("paid_at", now)
+                    .set("updated_at", now);
+            long modified = mongoTemplate.updateFirst(query, update, PaymentOrder.class).getModifiedCount();
+
+            if (modified == 0) {
+                log.info("[Webhook] Order already processed orderCode={}", orderCode);
+                return;
+            }
+
+            paymentOrderRepository.findByOrderCode(orderCode).ifPresent(paymentOrderService::publishPaymentCompleted);
         } else {
-            order.setStatus(OrderStatus.FAILED);
-            order.setUpdatedAt(LocalDateTime.now());
-            paymentOrderRepository.save(order);
+            // Atomic transition PENDING → FAILED
+            Query query = Query.query(
+                    Criteria.where("order_code").is(orderCode).and("status").is(OrderStatus.PENDING));
+            Update update = new Update()
+                    .set("status", OrderStatus.FAILED)
+                    .set("updated_at", LocalDateTime.now());
+            mongoTemplate.updateFirst(query, update, PaymentOrder.class);
         }
     }
 }

@@ -110,6 +110,9 @@ public class Candidate {
     @Field(name = "package_expires_at")
     LocalDateTime packageExpiresAt;
 
+    @Field(name = "last_payment_order_id")
+    String lastPaymentOrderId;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;
