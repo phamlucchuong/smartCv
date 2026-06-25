@@ -12,20 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as AboutRouteImport } from './routes/about'
-import { Route as AccountRouteImport } from './routes/_account'
+import { Route as AccountRouteRouteImport } from './routes/_account/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as CompaniesIndexRouteImport } from './routes/companies/index'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
 import { Route as CompaniesCompanyIdRouteImport } from './routes/companies/$companyId'
-import { Route as AccountWishlistsRouteImport } from './routes/_account.wishlists'
-import { Route as AccountSettingsRouteImport } from './routes/_account.settings'
-import { Route as AccountProfileRouteImport } from './routes/_account.profile'
-import { Route as AccountNotificationsRouteImport } from './routes/_account.notifications'
-import { Route as AccountJobSuggestionsRouteImport } from './routes/_account.job-suggestions'
-import { Route as AccountCvRouteImport } from './routes/_account.cv'
-import { Route as AccountAssessmentsRouteImport } from './routes/_account.assessments'
-import { Route as AccountApplicationsRouteImport } from './routes/_account.applications'
+import { Route as AccountWishlistsRouteImport } from './routes/_account/wishlists'
+import { Route as AccountSettingsRouteImport } from './routes/_account/settings'
+import { Route as AccountProfileRouteImport } from './routes/_account/profile'
+import { Route as AccountNotificationsRouteImport } from './routes/_account/notifications'
+import { Route as AccountJobSuggestionsRouteImport } from './routes/_account/job-suggestions'
+import { Route as AccountCvRouteImport } from './routes/_account/cv'
+import { Route as AccountAssessmentsRouteImport } from './routes/_account/assessments'
+import { Route as AccountApplicationsRouteImport } from './routes/_account/applications'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -42,7 +42,7 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountRoute = AccountRouteImport.update({
+const AccountRouteRoute = AccountRouteRouteImport.update({
   id: '/_account',
   getParentRoute: () => rootRouteImport,
 } as any)
@@ -74,42 +74,42 @@ const CompaniesCompanyIdRoute = CompaniesCompanyIdRouteImport.update({
 const AccountWishlistsRoute = AccountWishlistsRouteImport.update({
   id: '/wishlists',
   path: '/wishlists',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountSettingsRoute = AccountSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountProfileRoute = AccountProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountNotificationsRoute = AccountNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountJobSuggestionsRoute = AccountJobSuggestionsRouteImport.update({
   id: '/job-suggestions',
   path: '/job-suggestions',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountCvRoute = AccountCvRouteImport.update({
   id: '/cv',
   path: '/cv',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountAssessmentsRoute = AccountAssessmentsRouteImport.update({
   id: '/assessments',
   path: '/assessments',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 const AccountApplicationsRoute = AccountApplicationsRouteImport.update({
   id: '/applications',
   path: '/applications',
-  getParentRoute: () => AccountRoute,
+  getParentRoute: () => AccountRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -151,7 +151,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_account': typeof AccountRouteWithChildren
+  '/_account': typeof AccountRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
@@ -228,7 +228,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountRoute: typeof AccountRouteWithChildren
+  AccountRouteRoute: typeof AccountRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
@@ -265,7 +265,7 @@ declare module '@tanstack/react-router' {
       id: '/_account'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AccountRouteImport
+      preLoaderRoute: typeof AccountRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -308,61 +308,61 @@ declare module '@tanstack/react-router' {
       path: '/wishlists'
       fullPath: '/wishlists'
       preLoaderRoute: typeof AccountWishlistsRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/settings': {
       id: '/_account/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AccountSettingsRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/profile': {
       id: '/_account/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AccountProfileRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/notifications': {
       id: '/_account/notifications'
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof AccountNotificationsRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/job-suggestions': {
       id: '/_account/job-suggestions'
       path: '/job-suggestions'
       fullPath: '/job-suggestions'
       preLoaderRoute: typeof AccountJobSuggestionsRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/cv': {
       id: '/_account/cv'
       path: '/cv'
       fullPath: '/cv'
       preLoaderRoute: typeof AccountCvRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/assessments': {
       id: '/_account/assessments'
       path: '/assessments'
       fullPath: '/assessments'
       preLoaderRoute: typeof AccountAssessmentsRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
     '/_account/applications': {
       id: '/_account/applications'
       path: '/applications'
       fullPath: '/applications'
       preLoaderRoute: typeof AccountApplicationsRouteImport
-      parentRoute: typeof AccountRoute
+      parentRoute: typeof AccountRouteRoute
     }
   }
 }
 
-interface AccountRouteChildren {
+interface AccountRouteRouteChildren {
   AccountApplicationsRoute: typeof AccountApplicationsRoute
   AccountAssessmentsRoute: typeof AccountAssessmentsRoute
   AccountCvRoute: typeof AccountCvRoute
@@ -373,7 +373,7 @@ interface AccountRouteChildren {
   AccountWishlistsRoute: typeof AccountWishlistsRoute
 }
 
-const AccountRouteChildren: AccountRouteChildren = {
+const AccountRouteRouteChildren: AccountRouteRouteChildren = {
   AccountApplicationsRoute: AccountApplicationsRoute,
   AccountAssessmentsRoute: AccountAssessmentsRoute,
   AccountCvRoute: AccountCvRoute,
@@ -384,12 +384,13 @@ const AccountRouteChildren: AccountRouteChildren = {
   AccountWishlistsRoute: AccountWishlistsRoute,
 }
 
-const AccountRouteWithChildren =
-  AccountRoute._addFileChildren(AccountRouteChildren)
+const AccountRouteRouteWithChildren = AccountRouteRoute._addFileChildren(
+  AccountRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccountRoute: AccountRouteWithChildren,
+  AccountRouteRoute: AccountRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,

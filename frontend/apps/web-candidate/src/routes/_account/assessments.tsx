@@ -16,7 +16,7 @@ import {
   ApplicationModels,
   useSubmitAttemptWithFlag,
 } from '@smart-cv/api'
-import { useAuthStore } from '../store/useAuthStore'
+import { useAuthStore } from '../../store/useAuthStore'
 
 type AssessmentsSearch = {
   take?: string

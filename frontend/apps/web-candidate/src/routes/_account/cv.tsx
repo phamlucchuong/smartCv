@@ -10,10 +10,10 @@ import {
 } from '@smart-cv/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { onMessage } from 'firebase/messaging'
-import { useAuthStore } from '../store/useAuthStore'
-import { usePreferencesStore } from '../store/usePreferencesStore'
-import { CvAnalysisPanel } from '../components/cv/CvAnalysisPanel'
-import { messaging } from '../lib/firebase'
+import { useAuthStore } from '../../store/useAuthStore'
+import { usePreferencesStore } from '../../store/usePreferencesStore'
+import { CvAnalysisPanel } from '../../components/cv/CvAnalysisPanel'
+import { messaging } from '../../lib/firebase'
 
 export const Route = createFileRoute('/_account/cv')({
   component: MyCVPage,

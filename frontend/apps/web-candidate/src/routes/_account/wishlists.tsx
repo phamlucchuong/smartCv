@@ -5,7 +5,7 @@ import { useTranslation } from '@smart-cv/i18n'
 import { Clock3, DollarSign, Heart, MapPin, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useGetMyWishlists, useRemove } from '@smart-cv/api'
-import { useAuthStore } from '../store/useAuthStore'
+import { useAuthStore } from '../../store/useAuthStore'
 
 export const Route = createFileRoute('/_account/wishlists')({
   component: WishlistsPage,
