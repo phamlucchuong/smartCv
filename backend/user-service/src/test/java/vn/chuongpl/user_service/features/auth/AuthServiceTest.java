@@ -13,7 +13,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import vn.chuongpl.user_service.dtos.request.GoogleAuthRequest;
 import vn.chuongpl.user_service.dtos.response.AuthResponse;
+import vn.chuongpl.user_service.enums.ErrorCode;
+import vn.chuongpl.user_service.exception.AppException;
+import vn.chuongpl.user_service.features.role.Role;
 import vn.chuongpl.user_service.features.candidate.CandidateService;
 import vn.chuongpl.user_service.features.recruiter.RecruiterService;
 import vn.chuongpl.user_service.features.role.RoleService;
@@ -26,11 +30,15 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +63,8 @@ class AuthServiceTest {
     private CandidateService candidateService;
     @Mock
     private RecruiterService recruiterService;
+    @Mock
+    private GoogleIdTokenVerifierService googleIdTokenVerifierService;
 
     private AuthService authService;
 
@@ -68,7 +78,8 @@ class AuthServiceTest {
                 jwtBlacklistService,
                 notificationClient,
                 candidateService,
-                recruiterService
+                recruiterService,
+                googleIdTokenVerifierService
         );
         ReflectionTestUtils.setField(authService, "SIGNER_KEY", SIGNER_KEY);
         ReflectionTestUtils.setField(authService, "VALID_DURATION", 5L);
@@ -124,6 +135,134 @@ class AuthServiceTest {
 
         assertTrue(response.isAuthenticated());
         assertNotEquals(refreshToken, response.getRefreshToken());
+    }
+
+    @Test
+    void authenticateWithGoogleCreatesRecruiterAccountAndProfile() {
+        Role recruiterRole = Role.builder().name("RECRUITER").build();
+        GoogleTokenPayload googleToken = new GoogleTokenPayload(
+                "google-sub-1",
+                "recruiter@example.com",
+                true,
+                "Recruiter User",
+                "Recruiter",
+                "User",
+                null
+        );
+
+        when(googleIdTokenVerifierService.verify("google-id-token")).thenReturn(googleToken);
+        when(userService.findAllByEmail("recruiter@example.com")).thenReturn(java.util.List.of());
+        when(roleService.findById("RECRUITER")).thenReturn(Optional.of(recruiterRole));
+        when(userService.saveUser(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId("user-google-1");
+            return user;
+        });
+
+        AuthResponse response = authService.authenticateWithGoogle(new GoogleAuthRequest() {{
+            setIdToken("google-id-token");
+            setRole("RECRUITER");
+        }});
+
+        assertTrue(response.isAuthenticated());
+        verify(recruiterService).createBasicProfile("user-google-1");
+    }
+
+    @Test
+    void authenticateWithGoogleLinksExistingLocalCandidate() {
+        Role candidateRole = Role.builder().name("CANDIDATE").build();
+        User existing = User.builder()
+                .id("user-local-1")
+                .email("candidate@example.com")
+                .password("hashed")
+                .verified(false)
+                .roles(Set.of(candidateRole))
+                .build();
+        GoogleTokenPayload googleToken = new GoogleTokenPayload(
+                "google-sub-2",
+                "candidate@example.com",
+                true,
+                "Candidate User",
+                "Candidate",
+                "User",
+                null
+        );
+
+        when(googleIdTokenVerifierService.verify("google-id-token")).thenReturn(googleToken);
+        when(userService.findAllByEmail("candidate@example.com")).thenReturn(java.util.List.of(existing));
+        when(userService.saveUser(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AuthResponse response = authService.authenticateWithGoogle(new GoogleAuthRequest() {{
+            setIdToken("google-id-token");
+            setRole("CANDIDATE");
+        }});
+
+        assertTrue(response.isAuthenticated());
+        verify(candidateService).createBasicProfile("user-local-1");
+    }
+
+    @Test
+    void authenticateWithGoogleRejectsRoleMismatch() {
+        Role candidateRole = Role.builder().name("CANDIDATE").build();
+        User existing = User.builder()
+                .id("user-local-2")
+                .email("candidate@example.com")
+                .fullName("Candidate User")
+                .verified(true)
+                .authProvider("LOCAL")
+                .googleSubject("google-sub-3")
+                .roles(Set.of(candidateRole))
+                .build();
+        GoogleTokenPayload googleToken = new GoogleTokenPayload(
+                "google-sub-3",
+                "candidate@example.com",
+                true,
+                "Candidate User",
+                "Candidate",
+                "User",
+                null
+        );
+
+        when(googleIdTokenVerifierService.verify("google-id-token")).thenReturn(googleToken);
+        when(userService.findAllByEmail("candidate@example.com")).thenReturn(java.util.List.of(existing));
+
+        AppException exception = assertThrows(AppException.class, () -> authService.authenticateWithGoogle(new GoogleAuthRequest() {{
+            setIdToken("google-id-token");
+            setRole("RECRUITER");
+        }}));
+
+        assertTrue(exception.getErrorCode() == ErrorCode.ROLE_MISMATCH);
+    }
+
+    @Test
+    void authenticateWithGoogleRejectsGoogleSubjectConflict() {
+        Role candidateRole = Role.builder().name("CANDIDATE").build();
+        User existing = User.builder()
+                .id("user-local-3")
+                .email("candidate@example.com")
+                .verified(true)
+                .googleSubject("google-sub-old")
+                .roles(Set.of(candidateRole))
+                .build();
+        GoogleTokenPayload googleToken = new GoogleTokenPayload(
+                "google-sub-new",
+                "candidate@example.com",
+                true,
+                "Candidate User",
+                "Candidate",
+                "User",
+                null
+        );
+
+        when(googleIdTokenVerifierService.verify("google-id-token")).thenReturn(googleToken);
+        when(userService.findAllByEmail("candidate@example.com")).thenReturn(java.util.List.of(existing));
+
+        AppException exception = assertThrows(AppException.class, () -> authService.authenticateWithGoogle(new GoogleAuthRequest() {{
+            setIdToken("google-id-token");
+            setRole("CANDIDATE");
+        }}));
+
+        assertTrue(exception.getErrorCode() == ErrorCode.GOOGLE_ACCOUNT_CONFLICT);
     }
 
     private String createRefreshToken(String subject, Instant issueTime, Instant expirationTime) throws Exception {

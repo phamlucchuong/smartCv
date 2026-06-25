@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"smartCv/notification-service/internal/config"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v5"
@@ -57,7 +58,25 @@ func New(cfg *config.Config, log *slog.Logger, gormDB *gorm.DB, rdb *redis.Clien
 
 	// 1. Initialize Platforms/Adapters
 	emailProvider := platformEmail.NewService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPFrom, cfg.SMTPName)
-	smsProvider := platformSms.NewTwilioProvider(cfg.TwilioAccountSID, cfg.TwilioAuthToken, cfg.TwilioFromNumber)
+	var smsProvider sms.SMSProvider
+	switch strings.ToLower(strings.TrimSpace(cfg.SMSProvider)) {
+	case "twilio":
+		smsProvider = platformSms.NewTwilioProvider(cfg.TwilioAccountSID, cfg.TwilioAuthToken, cfg.TwilioFromNumber)
+	default:
+		smsProvider = platformSms.NewSNSProvider(
+			context.Background(),
+			cfg.AWSRegion,
+			cfg.AWSSNSSenderID,
+			cfg.AWSSNSMaxPriceUSD,
+			cfg.AWSSNSSMSType,
+			cfg.AWSSNSOriginationNumber,
+			cfg.AWSSNSEntityID,
+			cfg.AWSSNSTemplateID,
+		)
+		if smsProvider == nil {
+			smsProvider = platformSms.NewTwilioProvider(cfg.TwilioAccountSID, cfg.TwilioAuthToken, cfg.TwilioFromNumber)
+		}
+	}
 
 	// 2. Initialize Domain Services
 	emailSvc := email.NewService(emailProvider)

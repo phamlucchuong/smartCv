@@ -22,6 +22,8 @@
   "signup_title": "Tạo tài khoản ứng viên",
   "signin_welcome": "Chào mừng quay lại SmartCV",
   "signup_welcome": "Tham gia SmartCV hôm nay",
+  "continue_with_google": "Tiếp tục với Google",
+  "google_signin_unavailable": "Google sign-in chưa được cấu hình.",
   "email": "Email",
   "password": "Mật khẩu",
   "confirm_password": "Xác nhận mật khẩu",

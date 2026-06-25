@@ -83,6 +83,8 @@ app:
     - method: POST
       path: /user/api/auth/login
     - method: POST
+      path: /user/api/auth/google
+    - method: POST
       path: /user/api/auth/introspect
     - method: POST
       path: /user/api/auth/refresh

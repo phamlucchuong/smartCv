@@ -20,6 +20,18 @@ type Config struct {
 	SMTPFrom     string `mapstructure:"SMTP_FROM"`
 	SMTPName     string `mapstructure:"SMTP_NAME"`
 
+	// SMS configuration.
+	SMSProvider string `mapstructure:"SMS_PROVIDER"`
+
+	// AWS SNS configuration for SMS delivery.
+	AWSRegion                string `mapstructure:"AWS_REGION"`
+	AWSSNSSenderID           string `mapstructure:"AWS_SNS_SENDER_ID"`
+	AWSSNSMaxPriceUSD        string `mapstructure:"AWS_SNS_MAX_PRICE_USD"`
+	AWSSNSSMSType            string `mapstructure:"AWS_SNS_SMS_TYPE"`
+	AWSSNSOriginationNumber  string `mapstructure:"AWS_SNS_ORIGINATION_NUMBER"`
+	AWSSNSEntityID           string `mapstructure:"AWS_SNS_ENTITY_ID"`
+	AWSSNSTemplateID         string `mapstructure:"AWS_SNS_TEMPLATE_ID"`
+
 	// Twilio configuration for SMS delivery.
 	TwilioAccountSID string `mapstructure:"TWILIO_ACCOUNT_SID"`
 	TwilioAuthToken  string `mapstructure:"TWILIO_AUTH_TOKEN"`
@@ -49,6 +61,14 @@ func Load() (*Config, error) {
 	viper.SetDefault("SMTP_PORT", "587")
 	viper.SetDefault("SMTP_FROM", "Smart CV <noreply@smartcv.com>")
 	viper.SetDefault("SMTP_NAME", "Smart CV")
+	viper.SetDefault("SMS_PROVIDER", "aws_sns")
+	viper.SetDefault("AWS_REGION", "ap-southeast-1")
+	viper.SetDefault("AWS_SNS_SMS_TYPE", "Transactional")
+	viper.SetDefault("AWS_SNS_MAX_PRICE_USD", "")
+	viper.SetDefault("AWS_SNS_SENDER_ID", "")
+	viper.SetDefault("AWS_SNS_ORIGINATION_NUMBER", "")
+	viper.SetDefault("AWS_SNS_ENTITY_ID", "")
+	viper.SetDefault("AWS_SNS_TEMPLATE_ID", "")
 	viper.SetDefault("TWILIO_ACCOUNT_SID", "")
 	viper.SetDefault("TWILIO_AUTH_TOKEN", "")
 	viper.SetDefault("TWILIO_FROM_NUMBER", "")

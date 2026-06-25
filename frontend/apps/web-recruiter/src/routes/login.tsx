@@ -3,8 +3,8 @@ import { Button } from "@smart-cv/ui";
 import { Sparkles, Mail, Lock, Brain, Target, Zap, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@smart-cv/i18n";
-import { useState, useRef, useEffect } from "react";
-import { getRecruiterLoginUser, useLoginCandidate, RecruiterApi, useVerifyCandidateRegistration, useResendRegistrationOtp } from "@smart-cv/api";
+import { useState, useRef, useEffect, useEffectEvent } from "react";
+import { getRecruiterLoginUser, useAuthenticateWithGoogle, useLoginCandidate, RecruiterApi, useVerifyCandidateRegistration, useResendRegistrationOtp } from "@smart-cv/api";
 import {
   buildRecruiterProfilePayload,
   ensureRecruiterRole,
@@ -22,6 +22,39 @@ type ApiError = {
     };
   };
 };
+
+type GoogleAccounts = {
+  id: {
+    initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void
+    renderButton: (element: HTMLElement, options: Record<string, unknown>) => void
+  }
+}
+
+function loadGoogleIdentityScript() {
+  return new Promise<void>((resolve, reject) => {
+    const googleWindow = window as Window & { google?: { accounts?: GoogleAccounts } }
+    if (googleWindow.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-google-identity="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Failed to load Google Identity script')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Identity script'));
+    document.head.appendChild(script);
+  });
+}
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Đăng nhập — SmartCV" }] }),
@@ -46,6 +79,8 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [otpOpen, setOtpOpen] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
   // OTP Verification States
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
@@ -54,6 +89,7 @@ function Login() {
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const loginMutation = useLoginCandidate();
+  const googleLogin = useAuthenticateWithGoogle();
   const verifyMutation = useVerifyCandidateRegistration();
   const resendMutation = useResendRegistrationOtp();
 
@@ -78,6 +114,103 @@ function Login() {
     setOtpCountdown(60);
     setOtpOpen(true);
   }
+
+  const completeRecruiterSignIn = useEffectEvent(async (accessToken: string, refreshToken: string) => {
+    ensureRecruiterRole(accessToken);
+    signIn(accessToken, refreshToken);
+
+    try {
+      const recruiter = await ensureRecruiterProfile();
+      switch (getRecruiterAccessState(recruiter)) {
+        case "approved":
+          toast.success(t("recruiter_login_success"));
+          navigate({ to: "/employer" });
+          return;
+        case "draft":
+          toast.success("Đăng nhập thành công. Hãy hoàn thiện hồ sơ doanh nghiệp.");
+          navigate({ to: "/employer/setup" });
+          return;
+        case "pending":
+          toast.info("Hồ sơ doanh nghiệp đang chờ admin phê duyệt.");
+          navigate({ to: "/employer/pending" });
+          return;
+        case "rejected":
+          toast.info("Hồ sơ doanh nghiệp đã bị từ chối. Vui lòng xem chi tiết và cập nhật lại.");
+          navigate({ to: "/employer/pending" });
+          return;
+        case "missing":
+        default:
+          signOut();
+          toast.error("Không thể khởi tạo hồ sơ nhà tuyển dụng. Vui lòng thử lại.");
+          return;
+      }
+    } catch (err: unknown) {
+      signOut();
+      const error = err as ApiError;
+      toast.error(
+        error.response?.status === 404
+          ? "Tài khoản này chưa có hồ sơ nhà tuyển dụng. Vui lòng đăng ký lại và hoàn tất hồ sơ doanh nghiệp."
+          : "Không thể kiểm tra trạng thái hồ sơ nhà tuyển dụng. Vui lòng thử lại.",
+      );
+    }
+  });
+
+  useEffect(() => {
+    if (otpOpen || !googleClientId || !googleButtonRef.current) return;
+
+    let cancelled = false;
+    loadGoogleIdentityScript()
+      .then(() => {
+        const googleWindow = window as Window & { google?: { accounts?: GoogleAccounts } };
+        const googleAccounts = googleWindow.google?.accounts;
+        if (cancelled || !googleAccounts || !googleButtonRef.current) return;
+
+        googleButtonRef.current.innerHTML = "";
+        googleAccounts.id.initialize({
+          client_id: googleClientId,
+          callback: async ({ credential }) => {
+            if (!credential) {
+              toast.error("Google sign-in failed. Please try again.");
+              return;
+            }
+            try {
+              const result = await googleLogin.mutateAsync({
+                data: { idToken: credential, role: "RECRUITER" },
+              });
+              if (!result.data) {
+                throw new Error(result.message || "Không nhận được phản hồi từ máy chủ.");
+              }
+              const { accessToken, refreshToken } = extractAuthTokens(result);
+              await completeRecruiterSignIn(accessToken, refreshToken);
+            } catch (err: unknown) {
+              if (err instanceof Error && err.message === "This account does not have recruiter access.") {
+                signOut();
+                toast.error("Tài khoản này không có quyền nhà tuyển dụng.");
+                return;
+              }
+              const error = err as ApiError;
+              toast.error(error.response?.data?.message || "Google sign-in failed. Please try again.");
+            }
+          },
+        });
+        googleAccounts.id.renderButton(googleButtonRef.current, {
+          theme: "outline",
+          size: "large",
+          shape: "pill",
+          text: "continue_with",
+          width: 380,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error(t("google_signin_unavailable"));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, googleLogin, otpOpen, signOut, t]);
 
   const handleOtpChange = (index: number, value: string) => {
     const char = value.replace(/\D/g, "").slice(-1);
@@ -198,45 +331,7 @@ function Login() {
       }
 
       const { accessToken, refreshToken } = extractAuthTokens(result);
-      ensureRecruiterRole(accessToken);
-      // Set cookies first so RecruiterApi.getMe1() can make an authenticated request
-      signIn(accessToken, refreshToken);
-
-      try {
-        const recruiter = await ensureRecruiterProfile();
-        switch (getRecruiterAccessState(recruiter)) {
-          case "approved":
-            toast.success(t("recruiter_login_success"));
-            navigate({ to: "/employer" });
-            return;
-          case "draft":
-            toast.success("Đăng nhập thành công. Hãy hoàn thiện hồ sơ doanh nghiệp.");
-            navigate({ to: "/employer/setup" });
-            return;
-          case "pending":
-            toast.info("Hồ sơ doanh nghiệp đang chờ admin phê duyệt.");
-            navigate({ to: "/employer/pending" });
-            return;
-          case "rejected":
-            toast.info("Hồ sơ doanh nghiệp đã bị từ chối. Vui lòng xem chi tiết và cập nhật lại.");
-            navigate({ to: "/employer/pending" });
-            return;
-          case "missing":
-          default:
-            signOut();
-            toast.error("Không thể khởi tạo hồ sơ nhà tuyển dụng. Vui lòng thử lại.");
-            return;
-        }
-      } catch (err: unknown) {
-        signOut();
-        const error = err as ApiError;
-        toast.error(
-          error.response?.status === 404
-            ? "Tài khoản này chưa có hồ sơ nhà tuyển dụng. Vui lòng đăng ký lại và hoàn tất hồ sơ doanh nghiệp."
-            : "Không thể kiểm tra trạng thái hồ sơ nhà tuyển dụng. Vui lòng thử lại.",
-        );
-        return;
-      }
+      await completeRecruiterSignIn(accessToken, refreshToken);
 
     } catch (err: unknown) {
       if (err instanceof Error && err.message === "This account does not have recruiter access.") {
@@ -380,6 +475,14 @@ function Login() {
                     )}
                     {t("recruiter_continue")}
                   </Button>
+                  {googleClientId ? (
+                    <>
+                      <div className="relative py-2 text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="bg-background px-3">or</span>
+                      </div>
+                      <div ref={googleButtonRef} className="flex min-h-11 items-center justify-center" />
+                    </>
+                  ) : null}
 
                   <p className="text-center text-sm text-muted-foreground">
                     {t("recruiter_no_account")}{" "}

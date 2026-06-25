@@ -5,11 +5,44 @@ import { ArrowRight, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import { jwtDecode } from 'jwt-decode'
 import { toast } from 'sonner'
-import { useLoginCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from '@smart-cv/api'
+import { useAuthenticateWithGoogle, useLoginCandidate, useVerifyCandidateRegistration, useResendRegistrationOtp } from '@smart-cv/api'
 import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
 
 interface JwtPayload {
   scope?: string
+}
+
+type GoogleAccounts = {
+  id: {
+    initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void
+    renderButton: (element: HTMLElement, options: Record<string, unknown>) => void
+  }
+}
+
+function loadGoogleIdentityScript() {
+  return new Promise<void>((resolve, reject) => {
+    const googleWindow = window as Window & { google?: { accounts?: GoogleAccounts } }
+    if (googleWindow.google?.accounts?.id) {
+      resolve()
+      return
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-google-identity="true"]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Failed to load Google Identity script')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.dataset.googleIdentity = 'true'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Google Identity script'))
+    document.head.appendChild(script)
+  })
 }
 
 function maskContact(contact: string): string {
@@ -37,6 +70,8 @@ function SignInComponent() {
   const [showPassword, setShowPassword] = React.useState(false)
   const [error, setError] = React.useState('')
   const [otpOpen, setOtpOpen] = React.useState(false)
+  const googleButtonRef = React.useRef<HTMLDivElement | null>(null)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim()
 
   // OTP states
   const [otpDigits, setOtpDigits] = React.useState<string[]>(Array(6).fill(''))
@@ -78,6 +113,64 @@ function SignInComponent() {
   }, [otpOpen])
 
   const login = useLoginCandidate()
+  const googleLogin = useAuthenticateWithGoogle()
+
+  React.useEffect(() => {
+    if (otpOpen || !googleClientId || !googleButtonRef.current) return
+
+    let cancelled = false
+    loadGoogleIdentityScript()
+      .then(() => {
+        const googleWindow = window as Window & { google?: { accounts?: GoogleAccounts } }
+        const googleAccounts = googleWindow.google?.accounts
+        if (cancelled || !googleAccounts || !googleButtonRef.current) return
+
+        googleButtonRef.current.innerHTML = ''
+        googleAccounts.id.initialize({
+          client_id: googleClientId,
+          callback: async ({ credential }) => {
+            if (!credential) {
+              toast.error('Google sign-in failed. Please try again.')
+              return
+            }
+            try {
+              const result = await googleLogin.mutateAsync({
+                data: { idToken: credential, role: 'CANDIDATE' },
+              })
+              const accessToken = result.data?.token
+              const refreshToken = result.data?.refreshToken
+              if (!accessToken || !refreshToken) throw new Error('Invalid token response')
+              const payload = jwtDecode<JwtPayload>(accessToken)
+              if (!hasCandidateRole(payload.scope)) {
+                throw new Error('This account does not have candidate access.')
+              }
+              signIn(accessToken, refreshToken)
+              toast.success(t('login'))
+              navigate({ to: '/' })
+            } catch (err: unknown) {
+              const e = err as { response?: { data?: { message?: string } }; message?: string }
+              toast.error(e?.response?.data?.message ?? e?.message ?? 'Google sign-in failed.')
+            }
+          },
+        })
+        googleAccounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          text: 'continue_with',
+          width: 380,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error(t('google_signin_unavailable'))
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [googleClientId, googleLogin, navigate, otpOpen, signIn, t])
 
   async function attemptLogin(emailVal: string, passwordVal: string) {
     const result = await login.mutateAsync({ data: { email: emailVal, password: passwordVal } })
@@ -284,6 +377,14 @@ function SignInComponent() {
                   <Button type="submit" className="h-11 w-full gap-2" disabled={login.isPending}>
                     {login.isPending ? 'Signing in...' : <>{t('login')} <ArrowRight className="h-4 w-4" /></>}
                   </Button>
+                  {googleClientId ? (
+                    <>
+                      <div className="relative py-2 text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="bg-card px-3">or</span>
+                      </div>
+                      <div ref={googleButtonRef} className="flex min-h-11 items-center justify-center" />
+                    </>
+                  ) : null}
                 </form>
               )}
             </CardContent>

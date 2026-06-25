@@ -25,6 +25,11 @@ public class User {
     @Indexed
     String email;
     String password;
+    @Field(name = "auth_provider")
+    String authProvider;
+    @Indexed(sparse = true)
+    @Field(name = "google_subject")
+    String googleSubject;
     @Indexed(sparse = true)
     String phone;
     @Field(name = "avt_image_id")
