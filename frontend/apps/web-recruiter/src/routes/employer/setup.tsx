@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { RecruiterApi } from "@smart-cv/api";
 import { Sparkles, Upload, FileText, Clock, ExternalLink } from "lucide-react";
-import { isAuthError } from "../lib/recruiterAuth";
-import { useAuthStore } from "../store/useAuthStore";
+import { isAuthError } from "../../lib/recruiterAuth";
+import { useAuthStore } from "../../store/useAuthStore";
 
 export const Route = createFileRoute("/employer/setup")({
   head: () => ({ meta: [{ title: "Company Profile Setup — SmartCV" }] }),

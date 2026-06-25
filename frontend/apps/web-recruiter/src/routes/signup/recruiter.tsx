@@ -11,7 +11,7 @@ import {
 } from "@smart-cv/api";
 import {
   buildRecruiterRegistrationPayload,
-} from "../lib/recruiterAuth";
+} from "../../lib/recruiterAuth";
 
 type ApiError = {
   response?: {
