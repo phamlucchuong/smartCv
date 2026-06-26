@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+
 	"github.com/spf13/viper"
 )
 
@@ -20,6 +22,18 @@ type Config struct {
 	SMTPFrom     string `mapstructure:"SMTP_FROM"`
 	SMTPName     string `mapstructure:"SMTP_NAME"`
 
+	// SMS configuration.
+	SMSProvider string `mapstructure:"SMS_PROVIDER"`
+
+	// AWS SNS configuration for SMS delivery.
+	AWSRegion               string `mapstructure:"AWS_REGION"`
+	AWSSNSSenderID          string `mapstructure:"AWS_SNS_SENDER_ID"`
+	AWSSNSMaxPriceUSD       string `mapstructure:"AWS_SNS_MAX_PRICE_USD"`
+	AWSSNSSMSType           string `mapstructure:"AWS_SNS_SMS_TYPE"`
+	AWSSNSOriginationNumber string `mapstructure:"AWS_SNS_ORIGINATION_NUMBER"`
+	AWSSNSEntityID          string `mapstructure:"AWS_SNS_ENTITY_ID"`
+	AWSSNSTemplateID        string `mapstructure:"AWS_SNS_TEMPLATE_ID"`
+
 	// Twilio configuration for SMS delivery.
 	TwilioAccountSID string `mapstructure:"TWILIO_ACCOUNT_SID"`
 	TwilioAuthToken  string `mapstructure:"TWILIO_AUTH_TOKEN"`
@@ -37,8 +51,6 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	viper.SetConfigFile("../.env")
-	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
 	viper.SetDefault("NOTI_SERVICE_PORT", "8084")
@@ -49,6 +61,14 @@ func Load() (*Config, error) {
 	viper.SetDefault("SMTP_PORT", "587")
 	viper.SetDefault("SMTP_FROM", "Smart CV <noreply@smartcv.com>")
 	viper.SetDefault("SMTP_NAME", "Smart CV")
+	viper.SetDefault("SMS_PROVIDER", "")
+	viper.SetDefault("AWS_REGION", "ap-southeast-1")
+	viper.SetDefault("AWS_SNS_SMS_TYPE", "Transactional")
+	viper.SetDefault("AWS_SNS_MAX_PRICE_USD", "")
+	viper.SetDefault("AWS_SNS_SENDER_ID", "")
+	viper.SetDefault("AWS_SNS_ORIGINATION_NUMBER", "")
+	viper.SetDefault("AWS_SNS_ENTITY_ID", "")
+	viper.SetDefault("AWS_SNS_TEMPLATE_ID", "")
 	viper.SetDefault("TWILIO_ACCOUNT_SID", "")
 	viper.SetDefault("TWILIO_AUTH_TOKEN", "")
 	viper.SetDefault("TWILIO_FROM_NUMBER", "")
@@ -57,7 +77,22 @@ func Load() (*Config, error) {
 	viper.SetDefault("RABBITMQ_USER", "admin")
 	viper.SetDefault("RABBITMQ_PASSWORD", "admin123")
 
-	_ = viper.ReadInConfig()
+	for _, candidate := range []string{
+		os.Getenv("ENV_FILE"),
+		"../.env",
+		"backend/.env",
+		".env",
+	} {
+		if candidate == "" {
+			continue
+		}
+
+		viper.SetConfigFile(candidate)
+		viper.SetConfigType("env")
+		if err := viper.ReadInConfig(); err == nil {
+			break
+		}
+	}
 
 	cfg := &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {

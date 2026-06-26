@@ -75,6 +75,7 @@ class AuthServiceTest {
                 .roles(Set.of())
                 .build();
         when(userService.findByEmailAndDeletedFalse("a@b.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("admin", user.getPassword())).thenReturn(true);
 
         AppException ex = assertThrows(AppException.class,
                 () -> authService.authenticated(AuthRequest.builder().email("a@b.com").password("admin").build()));
@@ -147,6 +148,7 @@ class AuthServiceTest {
         String encoded = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(10).encode(rawPassword);
         User user = User.builder().id("u1").email("a@b.com").password(encoded).verified(true).roles(Set.of()).build();
         when(userService.findByEmailAndDeletedFalse("a@b.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(rawPassword, encoded)).thenReturn(true);
 
         Map<String, String> tokens = authService.authenticated(AuthRequest.builder().email("a@b.com").password(rawPassword).build());
 

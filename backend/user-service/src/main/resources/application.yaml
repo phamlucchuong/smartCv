@@ -84,3 +84,9 @@ app:
 
 integration:
   job-service-url: ${JOB_SERVICE_URL:http://localhost:8082/job}
+
+google:
+  oauth:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+    allowed-audiences: ${GOOGLE_OAUTH_ALLOWED_AUDIENCES:}
+    jwk-set-uri: ${GOOGLE_OAUTH_JWK_SET_URI:https://www.googleapis.com/oauth2/v3/certs}

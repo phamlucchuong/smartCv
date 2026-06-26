@@ -22,6 +22,8 @@
   "signup_title": "Create Candidate Account",
   "signin_welcome": "Welcome back to SmartCV",
   "signup_welcome": "Join SmartCV today",
+  "continue_with_google": "Continue with Google",
+  "google_signin_unavailable": "Google sign-in is not configured.",
   "email": "Email",
   "password": "Password",
   "confirm_password": "Confirm Password",

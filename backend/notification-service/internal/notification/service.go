@@ -42,8 +42,8 @@ type ServiceInterface interface {
 	DeleteNotificationForUser(ctx context.Context, notificationID string, userID string) error
 
 	// OTP methods
-	SendOTP(ctx context.Context, target string, targetType string, ttlMinutes int) error
-	VerifyOTP(ctx context.Context, target string, targetType string, code string) (bool, error)
+	SendOTP(ctx context.Context, target string, targetType string, otpType string, ttlMinutes int) error
+	VerifyOTP(ctx context.Context, target string, targetType string, otpType string, code string) (bool, error)
 	SendApplicationResultEmail(ctx context.Context, msg ApplicationEventMessage) error
 
 	// Recruiter & job approval notifications
@@ -596,8 +596,8 @@ func (s *Service) NotifyOrderStatusUpdated(ctx context.Context, userID string, o
 	// Implementation placeholder
 }
 
-func (s *Service) SendOTP(ctx context.Context, target string, targetType string, ttlMinutes int) error {
-	code, err := s.otpService.GenerateOTP(ctx, target, targetType, ttlMinutes)
+func (s *Service) SendOTP(ctx context.Context, target string, targetType string, otpType string, ttlMinutes int) error {
+	code, err := s.otpService.GenerateOTP(ctx, target, targetType, otpType, ttlMinutes)
 	if err != nil {
 		return err
 	}
@@ -612,8 +612,8 @@ func (s *Service) SendOTP(ctx context.Context, target string, targetType string,
 	}
 }
 
-func (s *Service) VerifyOTP(ctx context.Context, target string, targetType string, code string) (bool, error) {
-	return s.otpService.VerifyOTP(ctx, target, targetType, code)
+func (s *Service) VerifyOTP(ctx context.Context, target string, targetType string, otpType string, code string) (bool, error) {
+	return s.otpService.VerifyOTP(ctx, target, targetType, otpType, code)
 }
 
 func (s *Service) syncFirestoreUnreadCount(userID string, role string) {

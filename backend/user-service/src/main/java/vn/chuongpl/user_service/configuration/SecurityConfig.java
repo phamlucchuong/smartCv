@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 "/api/auth/register", "/api/auth/verify-registration",
                                 "/api/auth/resend-otp", "/api/auth/forgot-password",
                                 "/api/auth/reset-password", "/api/auth/login",
+                                "/api/auth/google",
                                 "/api/auth/introspect", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/users/verify-email/**",

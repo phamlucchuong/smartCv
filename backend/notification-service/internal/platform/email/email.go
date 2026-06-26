@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"strings"
 	"time"
@@ -35,7 +36,17 @@ func NewService(host, port, user, password, fromMail, fromName string) *Service 
 	if user == "" || password == "" {
 		return nil
 	}
-	return &Service{host: host, port: port, user: user, password: password, fromMail: fromMail, fromName: fromName}
+
+	normalizedFromMail, normalizedFromName := normalizeFromAddress(fromMail, fromName, user)
+
+	return &Service{
+		host:     host,
+		port:     port,
+		user:     user,
+		password: password,
+		fromMail: normalizedFromMail,
+		fromName: normalizedFromName,
+	}
 }
 
 func (s *Service) SendOTP(ctx context.Context, to, code string, ttlMinutes int) error {
@@ -153,7 +164,7 @@ func (s *Service) dialAndSend(to, message string) error {
 		return fmt.Errorf("smtp auth: %w", err)
 	}
 
-	if err := client.Mail(s.user); err != nil {
+	if err := client.Mail(s.fromMail); err != nil {
 		return fmt.Errorf("smtp mail from: %w", err)
 	}
 	if err := client.Rcpt(to); err != nil {
@@ -182,4 +193,26 @@ func generateBoundary() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return "==SmartCV" + hex.EncodeToString(b) + "=="
+}
+
+func normalizeFromAddress(fromMail, fromName, fallback string) (string, string) {
+	trimmedMail := strings.TrimSpace(fromMail)
+	trimmedName := strings.TrimSpace(fromName)
+
+	if trimmedMail == "" {
+		trimmedMail = strings.TrimSpace(fallback)
+	}
+
+	if parsed, err := mail.ParseAddress(trimmedMail); err == nil {
+		if trimmedName == "" {
+			trimmedName = parsed.Name
+		}
+		trimmedMail = parsed.Address
+	}
+
+	if trimmedMail == "" {
+		trimmedMail = strings.TrimSpace(fallback)
+	}
+
+	return trimmedMail, trimmedName
 }

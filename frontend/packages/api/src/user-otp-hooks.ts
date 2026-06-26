@@ -7,6 +7,8 @@ import { useMutation } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
 import { customInstance } from './axios-instance';
 
+const OTP_TTL_MINUTES = 5;
+
 // ---- Request / Response types ----
 
 export interface SendUpdateOtpRequest {
@@ -39,6 +41,7 @@ export const sendUpdateOtp = (
       data: {
         target: request.contact,
         target_type: request.preferredVerification === 'PHONE' ? 'SMS' : request.preferredVerification,
+        ttl_minutes: OTP_TTL_MINUTES,
       },
     },
     options,
