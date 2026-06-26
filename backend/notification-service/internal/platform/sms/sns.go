@@ -12,13 +12,13 @@ import (
 )
 
 type SNSProvider struct {
-	client             *sns.Client
-	senderID           string
-	maxPriceUSD        string
-	smsType            string
-	originationNumber  string
-	entityID           string
-	templateID         string
+	client            *sns.Client
+	senderID          string
+	maxPriceUSD       string
+	smsType           string
+	originationNumber string
+	entityID          string
+	templateID        string
 }
 
 func NewSNSProvider(
