@@ -80,7 +80,8 @@ public class AuthService {
         }
         if (!user.isVerified()) {
             notificationClient.sendOTP(user.getEmail(), "EMAIL", "VERIFY_ACCOUNT");
-            throw new AppException(ErrorCode.USER_NOT_VERIFIED);
+            Map<String, Object> data = Map.of("phone", user.getPhone() != null ? user.getPhone() : "");
+            throw new AppException(ErrorCode.USER_NOT_VERIFIED, data);
         }
 
         Map<String, String> tokens = new HashMap<>();
