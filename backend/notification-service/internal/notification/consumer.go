@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"smartCv/notification-service/internal/otp"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -25,6 +26,8 @@ func NewConsumer(conn *amqp.Connection, notiSvc ServiceInterface, logger *slog.L
 type OTPMessage struct {
 	Target     string `json:"target"`
 	TargetType string `json:"targetType"`
+	OtpType    string `json:"otpType"`
+	TTLMinutes int    `json:"ttlMinutes"`
 }
 
 type ApplicationEventMessage struct {
@@ -230,9 +233,14 @@ func (c *Consumer) Listen() error {
 				continue
 			}
 
-			c.logger.Info("received otp message from rabbitmq", "target", msg.Target, "type", msg.TargetType)
+			c.logger.Info("received otp message from rabbitmq", "target", msg.Target, "type", msg.TargetType, "otpType", msg.OtpType)
 
-			err := c.notiSvc.SendOTP(context.Background(), msg.Target, msg.TargetType, 1)
+			ttl := msg.TTLMinutes
+			if ttl == 0 {
+				ttl = otp.DefaultTTLMinutes
+			}
+
+			err := c.notiSvc.SendOTP(context.Background(), msg.Target, msg.TargetType, msg.OtpType, ttl)
 			if err != nil {
 				c.logger.Error("failed to send otp from consumer", "error", err)
 			}
