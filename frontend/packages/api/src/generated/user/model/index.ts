@@ -65,6 +65,7 @@ export * from './getAll3Params';
 export * from './getAllParams';
 export * from './getAllStatus';
 export * from './getAllUsersParams';
+export * from './googleAuthRequest';
 export * from './introspectRequest';
 export * from './introspectResponse';
 export * from './jobSummary';

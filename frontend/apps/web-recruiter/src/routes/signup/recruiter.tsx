@@ -8,10 +8,52 @@ import {
   useRegisterCandidate,
   useResendRegistrationOtp,
   useVerifyCandidateRegistration,
+  getRecruiterLoginUser,
+  useAuthenticateWithGoogle,
+  RecruiterApi,
 } from "@smart-cv/api";
 import {
   buildRecruiterRegistrationPayload,
+  buildRecruiterProfilePayload,
+  ensureRecruiterRole,
+  extractAuthTokens,
+  getRecruiterAccessState,
 } from "../../lib/recruiterAuth";
+import { useAuthStore } from "../../store/useAuthStore";
+import { formatOtpCountdown, OTP_RESEND_SECONDS } from "../../constants/otp";
+
+type GoogleAccounts = {
+  id: {
+    initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void
+    renderButton: (element: HTMLElement, options: Record<string, unknown>) => void
+  }
+}
+
+function loadGoogleIdentityScript() {
+  return new Promise<void>((resolve, reject) => {
+    const googleWindow = window as Window & { google?: { accounts?: GoogleAccounts } }
+    if (googleWindow.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-google-identity="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Failed to load Google Identity script')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Identity script'));
+    document.head.appendChild(script);
+  });
+}
 
 type ApiError = {
   response?: {
@@ -50,15 +92,147 @@ function RecruiterSignup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [otpOpen, setOtpOpen] = useState(false);
 
+  // Google Login / Registration state
+  const signIn = useAuthStore((state) => state.signIn);
+  const signOut = useAuthStore((state) => state.signOut);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+
   // OTP Verification States
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
-  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [otpCountdown, setOtpCountdown] = useState(OTP_RESEND_SECONDS);
   const [otpError, setOtpError] = useState("");
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const registerMutation = useRegisterCandidate();
   const verifyMutation = useVerifyCandidateRegistration();
   const resendMutation = useResendRegistrationOtp();
+  const googleLogin = useAuthenticateWithGoogle();
+
+  async function ensureRecruiterProfile() {
+    try {
+      const recruiter = await RecruiterApi.getMe1();
+      if (recruiter?.data) {
+        return recruiter.data;
+      }
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      if (error.response?.status !== 404) {
+        throw err;
+      }
+    }
+
+    const currentUser = await getRecruiterLoginUser();
+    const recruiter = await RecruiterApi.create(
+      buildRecruiterProfilePayload({
+        fullName: currentUser.data?.fullName,
+        email: currentUser.data?.email ?? email.trim(),
+        phone: currentUser.data?.phone,
+      }),
+    );
+
+    return recruiter.data;
+  }
+
+  const completeRecruiterSignIn = async (accessToken: string, refreshToken: string) => {
+    ensureRecruiterRole(accessToken);
+    signIn(accessToken, refreshToken);
+
+    try {
+      const recruiter = await ensureRecruiterProfile();
+      switch (getRecruiterAccessState(recruiter)) {
+        case "approved":
+          toast.success(t("recruiter_login_success"));
+          navigate({ to: "/employer" });
+          return;
+        case "draft":
+          toast.success("Đăng nhập thành công. Hãy hoàn thiện hồ sơ doanh nghiệp.");
+          navigate({ to: "/employer/setup" });
+          return;
+        case "pending":
+          toast.info("Hồ sơ doanh nghiệp đang chờ admin phê duyệt.");
+          navigate({ to: "/employer/pending" });
+          return;
+        case "rejected":
+          toast.info("Hồ sơ doanh nghiệp đã bị từ chối. Vui lòng xem chi tiết và cập nhật lại.");
+          navigate({ to: "/employer/pending" });
+          return;
+        case "missing":
+        default:
+          signOut();
+          toast.error("Không thể khởi tạo hồ sơ nhà tuyển dụng. Vui lòng thử lại.");
+          return;
+      }
+    } catch (err: unknown) {
+      signOut();
+      const error = err as ApiError;
+      toast.error(
+        error.response?.status === 404
+          ? "Tài khoản này chưa có hồ sơ nhà tuyển dụng. Vui lòng đăng ký lại và hoàn tất hồ sơ doanh nghiệp."
+          : "Không thể kiểm tra trạng thái hồ sơ nhà tuyển dụng. Vui lòng thử lại.",
+      );
+    }
+  };
+
+
+
+  useEffect(() => {
+    if (otpOpen || !googleClientId || !googleButtonRef.current) return;
+
+    let cancelled = false;
+    loadGoogleIdentityScript()
+      .then(() => {
+        const googleWindow = window as Window & { google?: { accounts?: GoogleAccounts } };
+        const googleAccounts = googleWindow.google?.accounts;
+        if (cancelled || !googleAccounts || !googleButtonRef.current) return;
+
+        googleButtonRef.current.innerHTML = "";
+        googleAccounts.id.initialize({
+          client_id: googleClientId,
+          callback: async ({ credential }) => {
+            if (!credential) {
+              toast.error("Google sign-in failed. Please try again.");
+              return;
+            }
+            try {
+              const result = await googleLogin.mutateAsync({
+                data: { idToken: credential, role: "RECRUITER" },
+              });
+              if (!result.data) {
+                throw new Error(result.message || "Không nhận được phản hồi từ máy chủ.");
+              }
+              const { accessToken, refreshToken } = extractAuthTokens(result);
+              await completeRecruiterSignIn(accessToken, refreshToken);
+            } catch (err: unknown) {
+              if (err instanceof Error && err.message === "This account does not have recruiter access.") {
+                signOut();
+                toast.error("Tài khoản này không có quyền nhà tuyển dụng.");
+                return;
+              }
+              const error = err as ApiError;
+              toast.error(error.response?.data?.message || "Google sign-in failed. Please try again.");
+            }
+          },
+        });
+        googleAccounts.id.renderButton(googleButtonRef.current, {
+          theme: "outline",
+          size: "large",
+          shape: "rectangular",
+          text: "continue_with",
+          width: 320,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error(t("google_signin_unavailable"));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleClientId, googleLogin, otpOpen, signOut, t]);
 
   // Timer Effect when OTP active
   useEffect(() => {
@@ -78,7 +252,7 @@ function RecruiterSignup() {
   function openOtpPanel() {
     setOtpDigits(Array(6).fill(""));
     setOtpError("");
-    setOtpCountdown(60);
+    setOtpCountdown(OTP_RESEND_SECONDS);
     setOtpOpen(true);
   }
 
@@ -177,7 +351,7 @@ function RecruiterSignup() {
           preferredVerification: "EMAIL",
         },
       });
-      setOtpCountdown(60);
+      setOtpCountdown(OTP_RESEND_SECONDS);
       toast.success("Mã OTP mới đã được gửi!");
     } catch {
       setOtpError("Không thể gửi lại mã OTP. Vui lòng thử lại sau.");
@@ -230,7 +404,7 @@ function RecruiterSignup() {
 
                   <Button
                     type="submit"
-                    className="h-11 w-full font-semibold"
+                    className="h-10 w-full font-semibold"
                     disabled={otpDigits.join("").length < 6 || verifyMutation.isPending}
                   >
                     {verifyMutation.isPending ? "Đang xác minh..." : "Xác minh tài khoản"}
@@ -238,7 +412,7 @@ function RecruiterSignup() {
 
                   <div className="text-center text-sm text-muted-foreground mt-4">
                     {otpCountdown > 0 ? (
-                      <span>Gửi lại mã sau {otpCountdown}s</span>
+                      <span>Gửi lại mã sau {formatOtpCountdown(otpCountdown)}</span>
                     ) : (
                       <button
                         type="button"
@@ -272,7 +446,7 @@ function RecruiterSignup() {
                         type="text"
                         value={fullname}
                         onChange={(e) => setFullname(e.target.value)}
-                        className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
+                        className="w-full h-10 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
                       />
                     </div>
                   </div>
@@ -286,7 +460,7 @@ function RecruiterSignup() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
+                        className="w-full h-10 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
                       />
                     </div>
                   </div>
@@ -300,7 +474,7 @@ function RecruiterSignup() {
                         type="text"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full h-11 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
+                        className="w-full h-10 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
                       />
                     </div>
                   </div>
@@ -314,7 +488,7 @@ function RecruiterSignup() {
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full h-11 pl-9 pr-10 rounded-md border border-input bg-background text-sm"
+                        className="w-full h-10 pl-9 pr-10 rounded-md border border-input bg-background text-sm"
                       />
                       <button
                         type="button"
@@ -335,7 +509,7 @@ function RecruiterSignup() {
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full h-11 pl-9 pr-10 rounded-md border border-input bg-background text-sm"
+                        className="w-full h-10 pl-9 pr-10 rounded-md border border-input bg-background text-sm"
                       />
                       <button
                         type="button"
@@ -349,7 +523,7 @@ function RecruiterSignup() {
 
                   <Button
                     type="submit"
-                    className="w-full h-11 font-semibold flex items-center justify-center gap-2"
+                    className="w-full h-10 font-semibold flex items-center justify-center gap-2"
                     disabled={registerMutation.isPending}
                   >
                     {registerMutation.isPending && (
@@ -357,6 +531,39 @@ function RecruiterSignup() {
                     )}
                     {t("recruiter_create_account")} <ArrowRight className="size-4" />
                   </Button>
+                  {googleClientId ? (
+                    <>
+                      <div className="relative text-center text-xs uppercase tracking-[0.2em] text-muted-foreground my-2">
+                        <span className="bg-background px-3">or</span>
+                      </div>
+                      <div className="relative w-[320px] mx-auto h-10 overflow-hidden rounded-md border border-input shadow-sm transition-colors hover:bg-accent cursor-pointer">
+                        {/* Custom Button UI */}
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background text-sm font-medium text-foreground">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24">
+                            <path
+                              fill="#EA4335"
+                              d="M23.49 12.27c0-.82-.07-1.61-.21-2.38H12v4.51h6.44a5.5 5.5 0 0 1-2.39 3.61v3h3.86c2.26-2.08 3.58-5.14 3.58-8.74z"
+                            />
+                            <path
+                              fill="#34A853"
+                              d="M12 24c3.24 0 5.97-1.08 7.96-2.92l-3.86-3c-1.08.72-2.45 1.16-4.1 1.16-3.15 0-5.81-2.13-6.76-5.01H1.37v3.1A11.99 11.99 0 0 0 12 24z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M5.24 14.23a7.22 7.22 0 0 1 0-4.46v-3.1H1.37a11.99 11.99 0 0 0 0 10.66l3.87-3.1z"
+                            />
+                            <path
+                              fill="#4285F4"
+                              d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43A11.94 11.94 0 0 0 12 0 11.99 11.99 0 0 0 1.37 6.67l3.87 3.1c.95-2.88 3.61-5 6.76-5z"
+                            />
+                          </svg>
+                          <span>Tiếp tục với Google</span>
+                        </div>
+                        {/* Invisible GSI button container */}
+                        <div ref={googleButtonRef} className="absolute inset-0 opacity-0 cursor-pointer z-10 [&_iframe]:w-full [&_iframe]:h-full" />
+                      </div>
+                    </>
+                  ) : null}
                 </form>
               )}
 
