@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -44,6 +45,7 @@ class ServicePackageServiceTest {
                 .aiCredits(25)
                 .jobLimit(12)
                 .cvLimit(-1)
+                .durationDays(30)
                 .featured(true)
                 .features(List.of("  AI screening ", "", "Priority support", "AI screening"))
                 .build();
@@ -55,6 +57,7 @@ class ServicePackageServiceTest {
                 .aiCredits(25)
                 .jobLimit(12)
                 .cvLimit(-1)
+                .durationDays(30)
                 .featured(true)
                 .features(List.of("AI screening", "Priority support"))
                 .build();
@@ -69,6 +72,7 @@ class ServicePackageServiceTest {
 
         assertEquals("premium-plus", mapped.getId());
         assertEquals("Premium Plus", mapped.getName());
+        assertEquals(30, mapped.getDurationDays());
         assertEquals(List.of("AI screening", "Priority support"), mapped.getFeatures());
         assertEquals(response, actual);
     }
@@ -81,6 +85,7 @@ class ServicePackageServiceTest {
                 .aiCredits(20)
                 .jobLimit(10)
                 .cvLimit(10)
+                .durationDays(30)
                 .build();
 
         when(servicePackageRepository.findByNameIgnoreCase("Plus"))
@@ -101,6 +106,7 @@ class ServicePackageServiceTest {
                 .aiCredits(20)
                 .jobLimit(10)
                 .cvLimit(10)
+                .durationDays(30)
                 .featured(true)
                 .features(List.of("Old"))
                 .build();
@@ -110,6 +116,7 @@ class ServicePackageServiceTest {
                 .aiCredits(30)
                 .jobLimit(-1)
                 .cvLimit(20)
+                .durationDays(null)
                 .featured(false)
                 .features(List.of(" New feature "))
                 .build();
@@ -127,6 +134,7 @@ class ServicePackageServiceTest {
         assertEquals(30, existing.getAiCredits());
         assertEquals(-1, existing.getJobLimit());
         assertEquals(20, existing.getCvLimit());
+        assertNull(existing.getDurationDays());
         assertFalse(existing.isFeatured());
         assertEquals(List.of("New feature"), existing.getFeatures());
         assertEquals(response, actual);

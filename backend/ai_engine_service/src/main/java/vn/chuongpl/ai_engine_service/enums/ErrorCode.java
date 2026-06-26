@@ -19,7 +19,8 @@ public enum ErrorCode {
     PROVIDER_NOT_FOUND(8008, "AI provider config not found"),
     PROVIDER_ACTIVE(8009, "Cannot delete the currently active provider"),
     CV_NOT_FOUND(8010, "CV not found"),
-    USER_SERVICE_UNAVAILABLE(8011, "User service is currently unavailable");
+    USER_SERVICE_UNAVAILABLE(8011, "User service is currently unavailable"),
+    AI_CREDIT_EXHAUSTED(8012, "Insufficient AI credit quota");
 
     private final int code;
     private final String message;

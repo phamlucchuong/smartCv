@@ -55,6 +55,11 @@ public class RecruiterResponse {
     int quotaJobPost;
     int quotaCvViews;
 
+    // ── Package Activation ───────────────────────────────────────────────────
+    String activePackageId;
+    LocalDateTime packageActivatedAt;
+    LocalDateTime packageExpiresAt;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     LocalDateTime createdAt;
     LocalDateTime updatedAt;

@@ -14,13 +14,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/packages")
-@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ServicePackageController {
     ServicePackageService servicePackageService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ServicePackageResponse> create(@Valid @RequestBody ServicePackageUpsertRequest request) {
         return ApiResponse.<ServicePackageResponse>builder()
                 .message("Created service package successfully")
@@ -45,6 +45,7 @@ public class ServicePackageController {
     }
 
     @PutMapping("/{packageId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ServicePackageResponse> update(@PathVariable String packageId,
                                                       @Valid @RequestBody ServicePackageUpsertRequest request) {
         return ApiResponse.<ServicePackageResponse>builder()
@@ -54,6 +55,7 @@ public class ServicePackageController {
     }
 
     @DeleteMapping("/{packageId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> delete(@PathVariable String packageId) {
         servicePackageService.delete(packageId);
         return ApiResponse.<Void>builder()

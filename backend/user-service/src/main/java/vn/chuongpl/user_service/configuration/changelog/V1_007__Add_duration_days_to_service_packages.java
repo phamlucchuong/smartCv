@@ -10,7 +10,7 @@ public class V1_007__Add_duration_days_to_service_packages {
 
     @Execution
     public void execute(MongoTemplate mongoTemplate) {
-        // no-op: durationDays defaults to null on existing documents (no expiry)
+        // no-op: V1_009 backfills seeded packages for existing databases
     }
 
     @RollbackExecution

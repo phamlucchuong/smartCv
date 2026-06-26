@@ -53,6 +53,11 @@ public class CandidateResponse {
     // ── CV ────────────────────────────────────────────────────────────────────
     String cvUrl;
 
+    // ── Package Activation ───────────────────────────────────────────────────
+    String activePackageId;
+    LocalDateTime packageActivatedAt;
+    LocalDateTime packageExpiresAt;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     LocalDateTime createdAt;
     LocalDateTime updatedAt;

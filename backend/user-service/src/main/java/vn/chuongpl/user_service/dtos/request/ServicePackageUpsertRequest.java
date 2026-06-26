@@ -37,6 +37,7 @@ public class ServicePackageUpsertRequest {
     @NotNull
     Integer cvLimit;
 
+    @PositiveOrZero
     Integer durationDays;
 
     boolean featured;

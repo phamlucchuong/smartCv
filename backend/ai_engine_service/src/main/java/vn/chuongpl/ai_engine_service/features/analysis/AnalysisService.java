@@ -64,6 +64,13 @@ public class AnalysisService {
         return analyzeCvText(cvText, job);
     }
 
+    public CvAnalysisResponse analyze(CvAnalyzeRequest request, String userId, boolean consumeQuota) {
+        if (consumeQuota) {
+            userClient.consumeCandidateAiCredit(userId);
+        }
+        return analyze(request);
+    }
+
     public CvAnalysisResponse analyzeUploadedCv(MultipartFile file, String jobId) {
         if (jobId == null || jobId.isBlank()) {
             throw new AppException(ErrorCode.JOB_ID_REQUIRED);
@@ -72,6 +79,13 @@ public class AnalysisService {
         String cvText = cvTextExtractor.extractFromUpload(file);
         JobSummary job = jobClient.getJobById(jobId);
         return analyzeCvText(cvText, job);
+    }
+
+    public CvAnalysisResponse analyzeUploadedCv(MultipartFile file, String jobId, String userId, boolean consumeQuota) {
+        if (consumeQuota) {
+            userClient.consumeCandidateAiCredit(userId);
+        }
+        return analyzeUploadedCv(file, jobId);
     }
 
     private CvAnalysisResponse analyzeCvText(String cvText, JobSummary job) {
@@ -128,11 +142,21 @@ public class AnalysisService {
         return parse(aiContent, CvImprovementResponse.class);
     }
 
-    public JobRecommendationResponse recommend(JobRecommendRequest request) {
-        return recommend(request, null);
+    public CvImprovementResponse improve(CvImproveRequest request, String userId, boolean consumeQuota) {
+        if (consumeQuota) {
+            userClient.consumeCandidateAiCredit(userId);
+        }
+        return improve(request);
     }
 
-    public JobRecommendationResponse recommend(JobRecommendRequest request, String candidateId) {
+    public JobRecommendationResponse recommend(JobRecommendRequest request) {
+        return recommend(request, null, false);
+    }
+
+    public JobRecommendationResponse recommend(JobRecommendRequest request, String candidateId, boolean consumeQuota) {
+        if (consumeQuota && candidateId != null && !candidateId.isBlank()) {
+            userClient.consumeCandidateAiCredit(candidateId);
+        }
         String cvText = cvTextExtractor.resolveCvText(request.cvText(), request.cvUrl());
         int topK = request.topK() == null ? 5 : request.topK();
 
@@ -186,6 +210,13 @@ public class AnalysisService {
 
         String aiContent = callAi(prompt);
         return parse(aiContent, InterviewQuestionsResponse.class);
+    }
+
+    public InterviewQuestionsResponse generateInterviewQuestions(InterviewQuestionsRequest request, String userId, boolean consumeQuota) {
+        if (consumeQuota) {
+            userClient.consumeRecruiterAiCredit(userId);
+        }
+        return generateInterviewQuestions(request);
     }
 
     private String callAi(String prompt) {
@@ -285,10 +316,13 @@ public class AnalysisService {
         return values == null ? Collections.emptyList() : values;
     }
 
-    public CvFullAnalysisResponse analyzeCv(CvFullAnalysisRequest request, String userId) {
+    public CvFullAnalysisResponse analyzeCv(CvFullAnalysisRequest request, String userId, boolean consumeQuota) {
         CvInfoResponse cvInfo = userClient.getCvInfo(request.cvId());
         if (!cvInfo.ownerId().equals(userId)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        if (consumeQuota) {
+            userClient.consumeCandidateAiCredit(userId);
         }
 
         String cvText = cvTextExtractor.resolveCvText(null, cvInfo.cvUrl());

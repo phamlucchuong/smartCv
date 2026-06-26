@@ -3,6 +3,7 @@ package vn.chuongpl.ai_engine_service.features.analysis;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,9 +28,11 @@ public class AnalysisController {
 
     @PostMapping("/analyze")
     @PreAuthorize("hasAnyAuthority('ROLE_CANDIDATE','ROLE_ADMIN')")
-    public ApiResponse<CvAnalysisResponse> analyze(@RequestBody @Valid CvAnalyzeRequest request) {
+    public ApiResponse<CvAnalysisResponse> analyze(@RequestBody @Valid CvAnalyzeRequest request,
+                                                   @AuthenticationPrincipal String userId,
+                                                   Authentication authentication) {
         return ApiResponse.<CvAnalysisResponse>builder()
-                .data(analysisService.analyze(request))
+                .data(analysisService.analyze(request, userId, !isAdmin(authentication)))
                 .message("Analyze CV successfully")
                 .build();
     }
@@ -37,18 +40,22 @@ public class AnalysisController {
     @PostMapping(value = "/analyze-upload-test", consumes = "multipart/form-data")
     @PreAuthorize("hasAnyAuthority('ROLE_CANDIDATE','ROLE_ADMIN')")
     public ApiResponse<CvAnalysisResponse> analyzeUploadTest(@RequestParam("file") MultipartFile file,
-                                                             @RequestParam("jobId") String jobId) {
+                                                             @RequestParam("jobId") String jobId,
+                                                             @AuthenticationPrincipal String userId,
+                                                             Authentication authentication) {
         return ApiResponse.<CvAnalysisResponse>builder()
-                .data(analysisService.analyzeUploadedCv(file, jobId))
+                .data(analysisService.analyzeUploadedCv(file, jobId, userId, !isAdmin(authentication)))
                 .message("Analyze uploaded CV successfully")
                 .build();
     }
 
     @PostMapping("/improve")
     @PreAuthorize("hasAnyAuthority('ROLE_CANDIDATE','ROLE_ADMIN')")
-    public ApiResponse<CvImprovementResponse> improve(@RequestBody @Valid CvImproveRequest request) {
+    public ApiResponse<CvImprovementResponse> improve(@RequestBody @Valid CvImproveRequest request,
+                                                      @AuthenticationPrincipal String userId,
+                                                      Authentication authentication) {
         return ApiResponse.<CvImprovementResponse>builder()
-                .data(analysisService.improve(request))
+                .data(analysisService.improve(request, userId, !isAdmin(authentication)))
                 .message("Improve CV successfully")
                 .build();
     }
@@ -56,9 +63,10 @@ public class AnalysisController {
     @PostMapping("/recommend")
     @PreAuthorize("hasAnyAuthority('ROLE_CANDIDATE','ROLE_ADMIN')")
     public ApiResponse<JobRecommendationResponse> recommend(@RequestBody @Valid JobRecommendRequest request,
-                                                            @AuthenticationPrincipal String userId) {
+                                                            @AuthenticationPrincipal String userId,
+                                                            Authentication authentication) {
         return ApiResponse.<JobRecommendationResponse>builder()
-                .data(analysisService.recommend(request, userId))
+                .data(analysisService.recommend(request, userId, !isAdmin(authentication)))
                 .message("Recommend jobs successfully")
                 .build();
     }
@@ -66,9 +74,11 @@ public class AnalysisController {
     @PostMapping("/interview-questions")
     @PreAuthorize("hasAnyAuthority('ROLE_RECRUITER','ROLE_ADMIN')")
     public ApiResponse<InterviewQuestionsResponse> interviewQuestions(
-            @RequestBody @Valid InterviewQuestionsRequest request) {
+            @RequestBody @Valid InterviewQuestionsRequest request,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication) {
         return ApiResponse.<InterviewQuestionsResponse>builder()
-                .data(analysisService.generateInterviewQuestions(request))
+                .data(analysisService.generateInterviewQuestions(request, userId, !isAdmin(authentication)))
                 .message("Interview questions generated successfully")
                 .build();
     }
@@ -77,10 +87,16 @@ public class AnalysisController {
     @PreAuthorize("hasAuthority('ROLE_CANDIDATE')")
     public ApiResponse<CvFullAnalysisResponse> analyzeCv(
             @RequestBody @Valid CvFullAnalysisRequest request,
-            @AuthenticationPrincipal String userId) {
+            @AuthenticationPrincipal String userId,
+            Authentication authentication) {
         return ApiResponse.<CvFullAnalysisResponse>builder()
-                .data(analysisService.analyzeCv(request, userId))
+                .data(analysisService.analyzeCv(request, userId, !isAdmin(authentication)))
                 .message("CV analyzed successfully")
                 .build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 }

@@ -51,6 +51,7 @@ class AnalysisServiceCvFullTest {
     @BeforeEach
     void setUp() {
         when(promptBuilder.systemPrompt()).thenReturn("You are an HR expert.");
+        doNothing().when(userClient).consumeCandidateAiCredit(anyString());
     }
 
     @Test
@@ -77,7 +78,7 @@ class AnalysisServiceCvFullTest {
         doNothing().when(userClient).updateCvAnalysis(anyString(), anyString(), anyString());
 
         CvFullAnalysisResponse result = analysisService.analyzeCv(
-                new CvFullAnalysisRequest(CV_ID, null), USER_ID);
+                new CvFullAnalysisRequest(CV_ID, null), USER_ID, true);
 
         assertThat(result.overallScore()).isEqualTo(78);
         assertThat(result.scoreLabel()).isEqualTo("Good");
@@ -118,7 +119,7 @@ class AnalysisServiceCvFullTest {
         doNothing().when(userClient).updateCvAnalysis(anyString(), anyString(), anyString());
 
         CvFullAnalysisResponse result = analysisService.analyzeCv(
-                new CvFullAnalysisRequest(CV_ID, null), USER_ID);
+                new CvFullAnalysisRequest(CV_ID, null), USER_ID, true);
 
         assertThat(result.matchScore()).isEqualTo(78);
         assertThat(result.matchedSkills()).containsExactly("Java");
@@ -207,7 +208,7 @@ class AnalysisServiceCvFullTest {
         when(userClient.getCvInfo(CV_ID)).thenReturn(cvInfo);
 
         assertThatThrownBy(() -> analysisService.analyzeCv(
-                new CvFullAnalysisRequest(CV_ID, null), USER_ID))
+                new CvFullAnalysisRequest(CV_ID, null), USER_ID, true))
                 .isInstanceOf(AppException.class)
                 .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.UNAUTHORIZED));

@@ -124,6 +124,13 @@ public class Recruiter {
     @Field(name = "last_payment_order_id")
     String lastPaymentOrderId;
 
+    @Field(name = "monthly_ai_credits_used")
+    @Builder.Default
+    int monthlyAiCreditsUsed = 0;
+
+    @Field(name = "monthly_ai_credits_month")
+    String monthlyAiCreditsMonth;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;

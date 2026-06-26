@@ -47,6 +47,12 @@ public class InternalRecruiterController {
                 .build();
     }
 
+    @PostMapping("/by-user/{userId}/consume-ai-credit")
+    public ApiResponse<Void> consumeAiCredit(@PathVariable String userId) {
+        recruiterService.consumeMonthlyAiCredit(userId);
+        return ApiResponse.<Void>builder().message("AI credit consumed").build();
+    }
+
     /** Called by job_service on createJob — atomically deducts 1 job post slot. */
     @PostMapping("/by-user/{userId}/consume-job-quota")
     public ApiResponse<Void> consumeJobQuota(@PathVariable String userId) {

@@ -63,6 +63,7 @@ public class ServicePackageService {
         existing.setAiCredits(request.getAiCredits());
         existing.setJobLimit(request.getJobLimit());
         existing.setCvLimit(request.getCvLimit());
+        existing.setDurationDays(request.getDurationDays());
         existing.setFeatured(request.isFeatured());
         existing.setFeatures(normalizeFeatures(request.getFeatures()));
         existing.setUpdatedAt(LocalDateTime.now());
@@ -87,7 +88,8 @@ public class ServicePackageService {
         if (request.getPrice() == null || request.getPrice() < 0
                 || request.getAiCredits() == null || request.getAiCredits() < 0
                 || request.getJobLimit() == null || request.getJobLimit() < -1
-                || request.getCvLimit() == null || request.getCvLimit() < -1) {
+                || request.getCvLimit() == null || request.getCvLimit() < -1
+                || (request.getDurationDays() != null && request.getDurationDays() < 0)) {
             throw new AppException(ErrorCode.INVALID_SERVICE_PACKAGE_CONFIG);
         }
         if (normalizeName(request.getName()).isBlank()) {
