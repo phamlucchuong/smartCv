@@ -66,6 +66,7 @@ export * from './service-package-hooks';
 export * from './recruiter-applications-hooks';
 export * from './assessment-manual-hooks';
 export * from './google-auth';
+export * from './payment-hooks';
 
 // Job-service types not re-exported by root model
 export type { JobUpdateRequest, JobResponse } from './generated/job/model';

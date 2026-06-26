@@ -12,6 +12,7 @@ import {
   Sparkles,
   Sun,
   UserRound,
+  CreditCard,
 } from 'lucide-react'
 import * as React from 'react'
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, NotificationPopover, cn } from '@smart-cv/ui'
@@ -107,6 +108,7 @@ export function CandidateDashboardLayout() {
       label: t('candidate_sidebar_group_other'),
       items: [
         { key: 'settings', label: t('account_settings'), to: '/settings', icon: Settings },
+        { key: 'billing', label: 'Gói & Thanh toán', to: '/billing', icon: CreditCard },
       ],
     },
   ]

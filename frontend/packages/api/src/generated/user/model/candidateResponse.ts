@@ -36,6 +36,9 @@ export interface CandidateResponse {
   githubUrl?: string;
   linkedinUrl?: string;
   cvUrl?: string;
+  activePackageId?: string;
+  packageActivatedAt?: string;
+  packageExpiresAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

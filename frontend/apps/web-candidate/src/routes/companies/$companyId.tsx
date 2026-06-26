@@ -13,7 +13,7 @@ import {
   MapPin,
   Users,
 } from 'lucide-react'
-import { useGetById3, useGetCompanyJobs, useGetRelatedCompanies, useGetAssessmentsByRecruiter } from '@smart-cv/api'
+import { useGetById4, useGetCompanyJobs, useGetRelatedCompanies, useGetAssessmentsByRecruiter } from '@smart-cv/api'
 import type { UserModels } from '@smart-cv/api'
 
 export const Route = createFileRoute('/companies/$companyId')({
@@ -28,7 +28,7 @@ function CompanyDetailPage() {
   const [activeTab, setActiveTab] = React.useState<TabKey>('overview')
   const [jobQuery, setJobQuery] = React.useState('')
 
-  const { data: companyData, isLoading, isError } = useGetById3(companyId)
+  const { data: companyData, isLoading, isError } = useGetById4(companyId)
   const company = companyData?.data
 
   const { data: relatedData } = useGetRelatedCompanies(companyId)

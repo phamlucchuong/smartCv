@@ -11,6 +11,7 @@ export interface ServicePackageUpsertRequest {
   aiCredits: number;
   jobLimit: number;
   cvLimit: number;
+  durationDays?: number;
   featured?: boolean;
   features?: string[];
 }

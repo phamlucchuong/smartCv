@@ -12,6 +12,7 @@ export interface ServicePackageResponse {
   aiCredits?: number;
   jobLimit?: number;
   cvLimit?: number;
+  durationDays?: number;
   featured?: boolean;
   features?: string[];
   createdAt?: string;

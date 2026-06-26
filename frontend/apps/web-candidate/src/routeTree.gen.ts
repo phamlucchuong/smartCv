@@ -16,6 +16,8 @@ import { Route as AccountRouteRouteImport } from './routes/_account/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as CompaniesIndexRouteImport } from './routes/companies/index'
+import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
+import { Route as PaymentCancelRouteImport } from './routes/payment.cancel'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
 import { Route as CompaniesCompanyIdRouteImport } from './routes/companies/$companyId'
 import { Route as AccountWishlistsRouteImport } from './routes/_account/wishlists'
@@ -24,6 +26,7 @@ import { Route as AccountProfileRouteImport } from './routes/_account/profile'
 import { Route as AccountNotificationsRouteImport } from './routes/_account/notifications'
 import { Route as AccountJobSuggestionsRouteImport } from './routes/_account/job-suggestions'
 import { Route as AccountCvRouteImport } from './routes/_account/cv'
+import { Route as AccountBillingRouteImport } from './routes/_account/billing'
 import { Route as AccountAssessmentsRouteImport } from './routes/_account/assessments'
 import { Route as AccountApplicationsRouteImport } from './routes/_account/applications'
 
@@ -59,6 +62,16 @@ const JobsIndexRoute = JobsIndexRouteImport.update({
 const CompaniesIndexRoute = CompaniesIndexRouteImport.update({
   id: '/companies/',
   path: '/companies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
+  id: '/payment/success',
+  path: '/payment/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentCancelRoute = PaymentCancelRouteImport.update({
+  id: '/payment/cancel',
+  path: '/payment/cancel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsJobIdRoute = JobsJobIdRouteImport.update({
@@ -101,6 +114,11 @@ const AccountCvRoute = AccountCvRouteImport.update({
   path: '/cv',
   getParentRoute: () => AccountRouteRoute,
 } as any)
+const AccountBillingRoute = AccountBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AccountRouteRoute,
+} as any)
 const AccountAssessmentsRoute = AccountAssessmentsRouteImport.update({
   id: '/assessments',
   path: '/assessments',
@@ -119,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/applications': typeof AccountApplicationsRoute
   '/assessments': typeof AccountAssessmentsRoute
+  '/billing': typeof AccountBillingRoute
   '/cv': typeof AccountCvRoute
   '/job-suggestions': typeof AccountJobSuggestionsRoute
   '/notifications': typeof AccountNotificationsRoute
@@ -127,6 +146,8 @@ export interface FileRoutesByFullPath {
   '/wishlists': typeof AccountWishlistsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/payment/cancel': typeof PaymentCancelRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/companies/': typeof CompaniesIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -137,6 +158,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/applications': typeof AccountApplicationsRoute
   '/assessments': typeof AccountAssessmentsRoute
+  '/billing': typeof AccountBillingRoute
   '/cv': typeof AccountCvRoute
   '/job-suggestions': typeof AccountJobSuggestionsRoute
   '/notifications': typeof AccountNotificationsRoute
@@ -145,6 +167,8 @@ export interface FileRoutesByTo {
   '/wishlists': typeof AccountWishlistsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/payment/cancel': typeof PaymentCancelRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/companies': typeof CompaniesIndexRoute
   '/jobs': typeof JobsIndexRoute
 }
@@ -157,6 +181,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_account/applications': typeof AccountApplicationsRoute
   '/_account/assessments': typeof AccountAssessmentsRoute
+  '/_account/billing': typeof AccountBillingRoute
   '/_account/cv': typeof AccountCvRoute
   '/_account/job-suggestions': typeof AccountJobSuggestionsRoute
   '/_account/notifications': typeof AccountNotificationsRoute
@@ -165,6 +190,8 @@ export interface FileRoutesById {
   '/_account/wishlists': typeof AccountWishlistsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/payment/cancel': typeof PaymentCancelRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/companies/': typeof CompaniesIndexRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -177,6 +204,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/applications'
     | '/assessments'
+    | '/billing'
     | '/cv'
     | '/job-suggestions'
     | '/notifications'
@@ -185,6 +213,8 @@ export interface FileRouteTypes {
     | '/wishlists'
     | '/companies/$companyId'
     | '/jobs/$jobId'
+    | '/payment/cancel'
+    | '/payment/success'
     | '/companies/'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
@@ -195,6 +225,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/applications'
     | '/assessments'
+    | '/billing'
     | '/cv'
     | '/job-suggestions'
     | '/notifications'
@@ -203,6 +234,8 @@ export interface FileRouteTypes {
     | '/wishlists'
     | '/companies/$companyId'
     | '/jobs/$jobId'
+    | '/payment/cancel'
+    | '/payment/success'
     | '/companies'
     | '/jobs'
   id:
@@ -214,6 +247,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_account/applications'
     | '/_account/assessments'
+    | '/_account/billing'
     | '/_account/cv'
     | '/_account/job-suggestions'
     | '/_account/notifications'
@@ -222,6 +256,8 @@ export interface FileRouteTypes {
     | '/_account/wishlists'
     | '/companies/$companyId'
     | '/jobs/$jobId'
+    | '/payment/cancel'
+    | '/payment/success'
     | '/companies/'
     | '/jobs/'
   fileRoutesById: FileRoutesById
@@ -234,6 +270,8 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   CompaniesCompanyIdRoute: typeof CompaniesCompanyIdRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
+  PaymentCancelRoute: typeof PaymentCancelRoute
+  PaymentSuccessRoute: typeof PaymentSuccessRoute
   CompaniesIndexRoute: typeof CompaniesIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
@@ -287,6 +325,20 @@ declare module '@tanstack/react-router' {
       path: '/companies'
       fullPath: '/companies/'
       preLoaderRoute: typeof CompaniesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment/success': {
+      id: '/payment/success'
+      path: '/payment/success'
+      fullPath: '/payment/success'
+      preLoaderRoute: typeof PaymentSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment/cancel': {
+      id: '/payment/cancel'
+      path: '/payment/cancel'
+      fullPath: '/payment/cancel'
+      preLoaderRoute: typeof PaymentCancelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/$jobId': {
@@ -345,6 +397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountCvRouteImport
       parentRoute: typeof AccountRouteRoute
     }
+    '/_account/billing': {
+      id: '/_account/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AccountBillingRouteImport
+      parentRoute: typeof AccountRouteRoute
+    }
     '/_account/assessments': {
       id: '/_account/assessments'
       path: '/assessments'
@@ -365,6 +424,7 @@ declare module '@tanstack/react-router' {
 interface AccountRouteRouteChildren {
   AccountApplicationsRoute: typeof AccountApplicationsRoute
   AccountAssessmentsRoute: typeof AccountAssessmentsRoute
+  AccountBillingRoute: typeof AccountBillingRoute
   AccountCvRoute: typeof AccountCvRoute
   AccountJobSuggestionsRoute: typeof AccountJobSuggestionsRoute
   AccountNotificationsRoute: typeof AccountNotificationsRoute
@@ -376,6 +436,7 @@ interface AccountRouteRouteChildren {
 const AccountRouteRouteChildren: AccountRouteRouteChildren = {
   AccountApplicationsRoute: AccountApplicationsRoute,
   AccountAssessmentsRoute: AccountAssessmentsRoute,
+  AccountBillingRoute: AccountBillingRoute,
   AccountCvRoute: AccountCvRoute,
   AccountJobSuggestionsRoute: AccountJobSuggestionsRoute,
   AccountNotificationsRoute: AccountNotificationsRoute,
@@ -396,6 +457,8 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   CompaniesCompanyIdRoute: CompaniesCompanyIdRoute,
   JobsJobIdRoute: JobsJobIdRoute,
+  PaymentCancelRoute: PaymentCancelRoute,
+  PaymentSuccessRoute: PaymentSuccessRoute,
   CompaniesIndexRoute: CompaniesIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
 }

@@ -35,9 +35,10 @@ function RootComponent() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const accountPaths = ['/profile', '/cv', '/assessments', '/settings', '/applications', '/wishlists', '/job-suggestions']
+  const accountPaths = ['/profile', '/cv', '/assessments', '/settings', '/applications', '/wishlists', '/job-suggestions', '/billing']
   const isAccountArea = accountPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-  const hidePublicChrome = isAccountArea || pathname === '/signin' || pathname === '/signup'
+  const isPaymentArea = pathname.startsWith('/payment/')
+  const hidePublicChrome = isAccountArea || isPaymentArea || pathname === '/signin' || pathname === '/signup'
   const hideFooter = pathname === '/signin' || pathname === '/signup' || hidePublicChrome
   const [jobMenuOpen, setJobMenuOpen] = React.useState(false)
   const [resourceMenuOpen, setResourceMenuOpen] = React.useState(false)

@@ -28,6 +28,7 @@ const STATUS_MAP: Record<string, Tone> = {
   Paid: "success",
   Pending: "warning",
   Failed: "danger",
+  Cancelled: "danger",
   Refunded: "muted",
   // verification
   Verified: "success",
