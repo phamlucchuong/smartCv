@@ -16,6 +16,7 @@ public class OrderResponse {
     String orderId;
     Long orderCode;
     String userRole;
+    String userId;
     String packageId;
     String packageName;
     Integer packageAiCredits;
@@ -26,6 +27,7 @@ public class OrderResponse {
     OrderStatus status;
     String paymentUrl;
     String qrCode;
+    String paymentType;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
     LocalDateTime paidAt;

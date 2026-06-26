@@ -1,11 +1,16 @@
 package vn.chuongpl.payment_service.features.webhook;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.chuongpl.payment_service.dtos.ApiResponse;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @RestController
@@ -16,17 +21,20 @@ public class PayOSWebhookController {
 
     PayOSWebhookService payOSWebhookService;
 
-    @PostMapping("/payos")
-    public ResponseEntity<ApiResponse<Void>> handlePayOSWebhook(
-            @RequestParam String token,
-            @RequestBody String rawBody) {
+    @RequestMapping(value = {"/payos", "/payos/"}, method = {RequestMethod.GET, RequestMethod.HEAD})
+    public ResponseEntity<Void> checkPayOSWebhook() {
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping({"/payos", "/payos/"})
+    public ResponseEntity<ApiResponse<Void>> handlePayOSWebhook(HttpServletRequest request) throws IOException {
+        String rawBody = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         try {
-            payOSWebhookService.handleWebhook(token, rawBody);
-            return ResponseEntity.ok(ApiResponse.<Void>builder().message("received").build());
+            payOSWebhookService.handleWebhook(rawBody);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
-            log.error("[Webhook] Processing failed: {}", e.getMessage());
-            return ResponseEntity.internalServerError()
-                    .body(ApiResponse.<Void>builder().ok(false).message("Processing failed").build());
+            log.error("[Webhook] Processing failed", e);
+            return ResponseEntity.status(HttpStatus.OK).build();
         }
     }
 }

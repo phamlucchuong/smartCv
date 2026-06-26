@@ -22,6 +22,8 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/webhook/payos",
+            "/api/webhook/payos/",
+            "/api/webhook/payos/**",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
             "/swagger-resources/**", "/webjars/**",
             "/actuator/health"

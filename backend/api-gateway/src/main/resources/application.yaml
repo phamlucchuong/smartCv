@@ -114,6 +114,20 @@ app:
       path: /job/api/jobs/*/related
     - method: POST
       path: /payment/api/webhook/payos
+    - method: POST
+      path: /payment/api/webhook/payos/
+    - method: GET
+      path: /payment/api/webhook/payos
+    - method: GET
+      path: /payment/api/webhook/payos/
+    - method: HEAD
+      path: /payment/api/webhook/payos
+    - method: HEAD
+      path: /payment/api/webhook/payos/
+    - method: OPTIONS
+      path: /payment/api/webhook/payos
+    - method: OPTIONS
+      path: /payment/api/webhook/payos/
 
 logging:
   level:

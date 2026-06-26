@@ -9,7 +9,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
-import vn.chuongpl.payment_service.config.PayOSConfig;
 import vn.chuongpl.payment_service.enums.OrderStatus;
 import vn.chuongpl.payment_service.features.order.PaymentOrder;
 import vn.chuongpl.payment_service.features.order.PaymentOrderRepository;
@@ -27,20 +26,13 @@ import java.time.LocalDateTime;
 public class PayOSWebhookService {
 
     PayOS payOS;
-    PayOSConfig payOSConfig;
     PaymentOrderRepository paymentOrderRepository;
     PaymentOrderService paymentOrderService;
     MongoTemplate mongoTemplate;
     ObjectMapper objectMapper;
 
-    public void handleWebhook(String token, String rawBody) {
-        // Layer 1: token check
-        if (!payOSConfig.getWebhookToken().equals(token)) {
-            log.warn("[Webhook] Invalid token received");
-            return;
-        }
-
-        // Layer 2: signature verification
+    public void handleWebhook(String rawBody) {
+        // Signature verification via PayOS SDK (uses checksumKey)
         WebhookData webhookData;
         try {
             Webhook webhook = objectMapper.readValue(rawBody, Webhook.class);
@@ -53,9 +45,9 @@ public class PayOSWebhookService {
         Long orderCode = webhookData.getOrderCode();
         String code = webhookData.getCode();
 
-        // Verify order exists before attempting update
+        // PayOS sends a test webhook with a fake orderCode when verifying the URL — just acknowledge it
         if (paymentOrderRepository.findByOrderCode(orderCode).isEmpty()) {
-            log.warn("[Webhook] Order not found for orderCode={}", orderCode);
+            log.info("[Webhook] No order found for orderCode={} (likely a PayOS verification test)", orderCode);
             return;
         }
 
@@ -76,8 +68,17 @@ public class PayOSWebhookService {
             }
 
             paymentOrderRepository.findByOrderCode(orderCode).ifPresent(paymentOrderService::publishPaymentCompleted);
+        } else if ("01".equals(code)) {
+            // User cancelled the payment on PayOS interface → CANCELLED
+            Query query = Query.query(
+                    Criteria.where("order_code").is(orderCode).and("status").is(OrderStatus.PENDING));
+            Update update = new Update()
+                    .set("status", OrderStatus.CANCELLED)
+                    .set("updated_at", LocalDateTime.now());
+            mongoTemplate.updateFirst(query, update, PaymentOrder.class);
+            log.info("[Webhook] Order cancelled by user orderCode={}", orderCode);
         } else {
-            // Atomic transition PENDING → FAILED
+            // Payment failed for other reasons → FAILED
             Query query = Query.query(
                     Criteria.where("order_code").is(orderCode).and("status").is(OrderStatus.PENDING));
             Update update = new Update()

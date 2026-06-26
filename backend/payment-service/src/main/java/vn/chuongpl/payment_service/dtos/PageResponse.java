@@ -12,9 +12,9 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PageResponse<T> {
-    List<T> items;
-    long total;
+    List<T> content;
+    long totalElements;
     int page;
-    int pageSize;
+    int size;
     int totalPages;
 }

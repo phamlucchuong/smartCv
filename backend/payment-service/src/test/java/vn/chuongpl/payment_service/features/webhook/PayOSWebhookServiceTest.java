@@ -2,14 +2,12 @@ package vn.chuongpl.payment_service.features.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.result.UpdateResult;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import vn.chuongpl.payment_service.config.PayOSConfig;
 import vn.chuongpl.payment_service.enums.OrderStatus;
 import vn.chuongpl.payment_service.features.order.PaymentOrder;
 import vn.chuongpl.payment_service.features.order.PaymentOrderRepository;
@@ -27,7 +25,6 @@ import static org.mockito.Mockito.*;
 class PayOSWebhookServiceTest {
 
     @Mock PayOS payOS;
-    @Mock PayOSConfig payOSConfig;
     @Mock PaymentOrderRepository paymentOrderRepository;
     @Mock PaymentOrderService paymentOrderService;
     @Mock MongoTemplate mongoTemplate;
@@ -36,16 +33,14 @@ class PayOSWebhookServiceTest {
     @InjectMocks
     PayOSWebhookService payOSWebhookService;
 
-    @BeforeEach
-    void setUp() {
-        lenient().when(payOSConfig.getWebhookToken()).thenReturn("valid-token");
-    }
-
     @Test
-    void handleWebhook_invalidToken_returnsWithoutProcessing() {
-        payOSWebhookService.handleWebhook("wrong-token", "{}");
+    void handleWebhook_invalidSignature_returnsWithoutProcessing() throws Exception {
+        when(objectMapper.readValue(anyString(), eq(Webhook.class))).thenReturn(mock(Webhook.class));
+        when(payOS.verifyPaymentWebhookData(any(Webhook.class))).thenThrow(new RuntimeException("bad signature"));
+
+        payOSWebhookService.handleWebhook("{}");
+
         verifyNoInteractions(paymentOrderRepository);
-        verifyNoInteractions(payOS);
     }
 
     @Test
@@ -60,12 +55,11 @@ class PayOSWebhookServiceTest {
                 .id("order-1").orderCode(123L).status(OrderStatus.PAID).build();
         when(paymentOrderRepository.findByOrderCode(123L)).thenReturn(Optional.of(order));
 
-        // updateFirst finds no PENDING doc (already PAID) → modifiedCount=0
         UpdateResult noopResult = mock(UpdateResult.class);
         when(noopResult.getModifiedCount()).thenReturn(0L);
         when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(noopResult);
 
-        payOSWebhookService.handleWebhook("valid-token", "{}");
+        payOSWebhookService.handleWebhook("{}");
 
         verify(paymentOrderService, never()).publishPaymentCompleted(any());
         verify(paymentOrderRepository, never()).save(any());
@@ -83,12 +77,11 @@ class PayOSWebhookServiceTest {
                 .id("order-2").orderCode(456L).status(OrderStatus.PENDING).build();
         when(paymentOrderRepository.findByOrderCode(456L)).thenReturn(Optional.of(order));
 
-        // updateFirst transitions PENDING → PAID → modifiedCount=1
         UpdateResult updateResult = mock(UpdateResult.class);
         when(updateResult.getModifiedCount()).thenReturn(1L);
         when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(updateResult);
 
-        payOSWebhookService.handleWebhook("valid-token", "{}");
+        payOSWebhookService.handleWebhook("{}");
 
         verify(mongoTemplate).updateFirst(any(), any(), eq(PaymentOrder.class));
         verify(paymentOrderService).publishPaymentCompleted(any());
@@ -110,7 +103,7 @@ class PayOSWebhookServiceTest {
         UpdateResult updateResult = mock(UpdateResult.class);
         when(mongoTemplate.updateFirst(any(), any(), eq(PaymentOrder.class))).thenReturn(updateResult);
 
-        payOSWebhookService.handleWebhook("valid-token", "{}");
+        payOSWebhookService.handleWebhook("{}");
 
         verify(mongoTemplate).updateFirst(any(), any(), eq(PaymentOrder.class));
         verify(paymentOrderService, never()).publishPaymentCompleted(any());

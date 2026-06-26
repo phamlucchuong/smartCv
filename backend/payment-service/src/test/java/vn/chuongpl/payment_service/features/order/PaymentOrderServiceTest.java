@@ -30,6 +30,7 @@ import vn.payos.type.PaymentData;
 import static org.mockito.Mockito.mock;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,12 +67,15 @@ class PaymentOrderServiceTest {
 
         lenient().when(payOSConfig.getReturnUrl()).thenReturn("http://localhost:3000/success");
         lenient().when(payOSConfig.getCancelUrl()).thenReturn("http://localhost:3000/cancel");
+        lenient().when(payOSConfig.getChecksumKey()).thenReturn("test-checksum-key");
+        lenient().when(payOSConfig.getClientId()).thenReturn("test-client-id");
+        lenient().when(payOSConfig.getApiKey()).thenReturn("test-api-key");
     }
 
     @Test
     void createOrder_newOrder_success() throws Exception {
         // Arrange
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(Map.class)))
+        when(restTemplate.exchange(contains("packages"), eq(HttpMethod.GET), any(), eq(Map.class)))
                 .thenReturn(ResponseEntity.ok(Map.of("data", Map.of(
                         "name", "Pro", "price", 20000, "aiCredits", 30,
                         "jobLimit", 15, "cvLimit", -1, "durationDays", 30))));
@@ -79,10 +83,16 @@ class PaymentOrderServiceTest {
         when(paymentOrderRepository.findByUserIdAndPackageIdAndStatus(any(), any(), any()))
                 .thenReturn(Optional.empty());
 
-        CheckoutResponseData checkoutData = mock(CheckoutResponseData.class);
-        when(checkoutData.getCheckoutUrl()).thenReturn("https://pay.payos.vn/abc");
-        when(checkoutData.getQrCode()).thenReturn("qr-data");
-        when(payOS.createPaymentLink(any(PaymentData.class))).thenReturn(checkoutData);
+        Map<String, Object> payosData = new HashMap<>();
+        payosData.put("bin", "970422"); payosData.put("accountNumber", "1234");
+        payosData.put("accountName", "Test"); payosData.put("amount", 20000);
+        payosData.put("description", "Pro"); payosData.put("orderCode", 123L);
+        payosData.put("currency", "VND"); payosData.put("paymentLinkId", "link-1");
+        payosData.put("status", "PENDING"); payosData.put("checkoutUrl", "https://pay.payos.vn/abc");
+        payosData.put("qrCode", "qr-data");
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(restTemplate.exchange(contains("payment-requests"), eq(HttpMethod.POST), any(), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("code", "00", "data", payosData)));
 
         PaymentOrder savedOrder = PaymentOrder.builder()
                 .id("order-1").orderCode(123L).paymentUrl("https://pay.payos.vn/abc").qrCode("qr-data")
@@ -98,7 +108,6 @@ class PaymentOrderServiceTest {
 
         // Assert
         assertThat(response.getPaymentUrl()).isEqualTo("https://pay.payos.vn/abc");
-        verify(payOS).createPaymentLink(any());
         verify(paymentOrderRepository).save(any());
     }
 
@@ -126,13 +135,13 @@ class PaymentOrderServiceTest {
 
         // Assert
         assertThat(response.getOrderId()).isEqualTo("existing-order");
-        verify(payOS, never()).createPaymentLink(any());
+        verify(restTemplate, never()).exchange(contains("payment-requests"), eq(HttpMethod.POST), any(), eq(Map.class));
     }
 
     @Test
     void createOrder_existingStalePendingOrder_cancelsAndCreatesNew() throws Exception {
         // Arrange
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(Map.class)))
+        when(restTemplate.exchange(contains("packages"), eq(HttpMethod.GET), any(), eq(Map.class)))
                 .thenReturn(ResponseEntity.ok(Map.of("data", Map.of(
                         "name", "Pro", "price", 20000, "aiCredits", 30, "jobLimit", 15, "cvLimit", -1))));
 
@@ -143,10 +152,16 @@ class PaymentOrderServiceTest {
         when(paymentOrderRepository.findByUserIdAndPackageIdAndStatus(any(), any(), any()))
                 .thenReturn(Optional.of(staleOrder));
 
-        CheckoutResponseData checkoutData = mock(CheckoutResponseData.class);
-        when(checkoutData.getCheckoutUrl()).thenReturn("https://pay.payos.vn/new");
-        when(checkoutData.getQrCode()).thenReturn("new-qr");
-        when(payOS.createPaymentLink(any())).thenReturn(checkoutData);
+        Map<String, Object> payosData2 = new HashMap<>();
+        payosData2.put("bin", "970422"); payosData2.put("accountNumber", "1234");
+        payosData2.put("accountName", "Test"); payosData2.put("amount", 20000);
+        payosData2.put("description", "Pro"); payosData2.put("orderCode", 777L);
+        payosData2.put("currency", "VND"); payosData2.put("paymentLinkId", "link-2");
+        payosData2.put("status", "PENDING"); payosData2.put("checkoutUrl", "https://pay.payos.vn/new");
+        payosData2.put("qrCode", "new-qr");
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(restTemplate.exchange(contains("payment-requests"), eq(HttpMethod.POST), any(), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("code", "00", "data", payosData2)));
 
         PaymentOrder newOrder = PaymentOrder.builder().id("new-order").orderCode(777L)
                 .paymentUrl("https://pay.payos.vn/new").status(OrderStatus.PENDING).build();
@@ -162,7 +177,7 @@ class PaymentOrderServiceTest {
         // Assert
         assertThat(response.getOrderId()).isEqualTo("new-order");
         verify(payOS).cancelPaymentLink(eq(888L), isNull());
-        verify(payOS).createPaymentLink(any());
+        verify(restTemplate).exchange(contains("payment-requests"), eq(HttpMethod.POST), any(), eq(Map.class));
     }
 
     @Test

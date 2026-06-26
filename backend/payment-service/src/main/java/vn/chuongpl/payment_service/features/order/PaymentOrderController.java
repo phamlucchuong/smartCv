@@ -37,6 +37,16 @@ public class PaymentOrderController {
                 .build();
     }
 
+    @GetMapping("/admin")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ApiResponse<PageResponse<OrderResponse>> getAllOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.<PageResponse<OrderResponse>>builder()
+                .data(paymentOrderService.getAllOrders(page, size))
+                .build();
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> getOrderById(@PathVariable String id) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString();
@@ -49,6 +59,13 @@ public class PaymentOrderController {
     public ApiResponse<Void> cancelOrder(@PathVariable String id) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString();
         paymentOrderService.cancelOrder(id, userId);
+        return ApiResponse.<Void>builder().message("Order cancelled").build();
+    }
+
+    @PostMapping("/cancel-by-code")
+    public ApiResponse<Void> cancelOrderByCode(@RequestParam Long orderCode) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString();
+        paymentOrderService.cancelOrderByCode(orderCode, userId);
         return ApiResponse.<Void>builder().message("Order cancelled").build();
     }
 }
