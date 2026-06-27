@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
+import vn.chuongpl.user_service.features.servicepackage.PackageCategory;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +27,7 @@ public class ServicePackageResponse {
     Integer jobLimit;
     Integer cvLimit;
     Integer durationDays;
+    PackageCategory category;
     boolean featured;
     List<String> features;
     LocalDateTime createdAt;

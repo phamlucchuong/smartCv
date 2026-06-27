@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
+import vn.chuongpl.user_service.features.servicepackage.PackageCategory;
+
 import java.util.List;
 
 @Getter
@@ -22,6 +24,8 @@ import java.util.List;
 public class ServicePackageUpsertRequest {
     @NotBlank
     String name;
+
+    PackageCategory category;
 
     @NotNull
     @PositiveOrZero

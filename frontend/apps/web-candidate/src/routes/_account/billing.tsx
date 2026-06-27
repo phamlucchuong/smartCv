@@ -34,7 +34,7 @@ function BillingPage() {
   const candidate = meData?.data
 
   const { data: packagesData, isLoading: packagesLoading } = useGetServicePackages()
-  const packages = packagesData?.data ?? []
+  const packages = (packagesData?.data ?? []).filter((p) => p.category !== 'PLATFORM_FEE')
 
   // Fetch all payment orders (up to 1000) for client-side filtering/cascade options
   const { data: ordersData, isLoading: ordersLoading } = useGetPaymentOrders(0, 1000, {

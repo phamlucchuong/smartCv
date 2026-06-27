@@ -43,6 +43,8 @@ public class ServicePackage {
     @Field(name = "duration_days")
     Integer durationDays;
 
+    PackageCategory category;
+
     boolean featured;
 
     List<String> features;

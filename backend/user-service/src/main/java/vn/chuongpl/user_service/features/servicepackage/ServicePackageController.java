@@ -29,10 +29,11 @@ public class ServicePackageController {
     }
 
     @GetMapping
-    public ApiResponse<List<ServicePackageResponse>> getAll() {
+    public ApiResponse<List<ServicePackageResponse>> getAll(
+            @RequestParam(required = false) PackageCategory category) {
         return ApiResponse.<List<ServicePackageResponse>>builder()
                 .message("Fetched service packages successfully")
-                .data(servicePackageService.getAll())
+                .data(servicePackageService.getAll(category))
                 .build();
     }
 

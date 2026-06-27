@@ -5,6 +5,14 @@
  * OpenAPI spec version: v0
  */
 
+export type ServicePackageResponseCategory = typeof ServicePackageResponseCategory[keyof typeof ServicePackageResponseCategory];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ServicePackageResponseCategory = {
+  STANDARD: 'STANDARD',
+  PLATFORM_FEE: 'PLATFORM_FEE',
+} as const;
+
 export interface ServicePackageResponse {
   id?: string;
   name?: string;
@@ -13,6 +21,7 @@ export interface ServicePackageResponse {
   jobLimit?: number;
   cvLimit?: number;
   durationDays?: number;
+  category?: ServicePackageResponseCategory;
   featured?: boolean;
   features?: string[];
   createdAt?: string;

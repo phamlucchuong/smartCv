@@ -9,6 +9,7 @@ export interface ServicePackageResponse {
   aiCredits?: number;
   jobLimit?: number;
   cvLimit?: number;
+  category?: string;
   featured?: boolean;
   features?: string[];
   createdAt?: string;

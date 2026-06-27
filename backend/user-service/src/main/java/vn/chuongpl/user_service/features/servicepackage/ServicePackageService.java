@@ -34,6 +34,8 @@ public class ServicePackageService {
         ServicePackage servicePackage = servicePackageMapper.toEntity(request);
         servicePackage.setId(generateId(normalizedName));
         servicePackage.setName(normalizedName);
+        servicePackage.setDurationDays(request.getDurationDays());
+        servicePackage.setCategory(request.getCategory() != null ? request.getCategory() : PackageCategory.STANDARD);
         servicePackage.setFeatures(normalizeFeatures(request.getFeatures()));
         servicePackage.setCreatedAt(LocalDateTime.now());
         servicePackage.setUpdatedAt(LocalDateTime.now());
@@ -41,8 +43,11 @@ public class ServicePackageService {
         return servicePackageMapper.toResponse(servicePackageRepository.save(servicePackage));
     }
 
-    public List<ServicePackageResponse> getAll() {
-        return servicePackageRepository.findAll().stream()
+    public List<ServicePackageResponse> getAll(PackageCategory category) {
+        List<ServicePackage> packages = category != null
+                ? servicePackageRepository.findAllByCategory(category)
+                : servicePackageRepository.findAll();
+        return packages.stream()
                 .sorted(Comparator.comparing(ServicePackage::getPrice).thenComparing(ServicePackage::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(servicePackageMapper::toResponse)
                 .toList();
