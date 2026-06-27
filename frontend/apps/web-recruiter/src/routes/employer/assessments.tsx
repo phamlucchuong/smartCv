@@ -722,7 +722,7 @@ function AssessmentsManager() {
                 <li>• <strong className="text-foreground">Option A, Option B</strong> — bắt buộc với MCQ</li>
                 <li>• <strong className="text-foreground">Option C, Option D</strong> — tuỳ chọn</li>
                 <li>• <strong className="text-foreground">Correct</strong> — A, B, C hoặc D</li>
-                <li>• <strong className="text-foreground">Type</strong> — MCQ (mặc định) hoặc TEXT</li>
+                <li>• Chỉ hỗ trợ câu hỏi <strong className="text-foreground">trắc nghiệm (MCQ)</strong></li>
               </ul>
             </div>
           </div>

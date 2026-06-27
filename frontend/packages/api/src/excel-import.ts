@@ -50,16 +50,8 @@ export async function parseAssessmentFile(file: File): Promise<ParseResult> {
     }
 
     const typeRaw = typeIdx !== -1 ? String(row[typeIdx] ?? '').trim().toUpperCase() : '';
-    const isText = typeRaw === 'TEXT';
-
-    if (isText) {
-      questions.push({
-        id: `q_import_${i}_${ts}`,
-        text: questionText,
-        type: 'TEXT' as Question['type'],
-        options: [],
-        correctOptionIndex: undefined,
-      });
+    if (typeRaw === 'TEXT') {
+      skippedRows.push({ rowNumber: rowNum, reason: 'Chỉ hỗ trợ câu hỏi trắc nghiệm (MCQ), không hỗ trợ tự luận (TEXT)' });
       continue;
     }
 
@@ -102,7 +94,7 @@ export async function parseAssessmentFile(file: File): Promise<ParseResult> {
 
 export function downloadAssessmentTemplate(): void {
   const data = [
-    ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct', 'Type'],
+    ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct'],
     [
       'Java interface khác abstract class ở điểm nào?',
       'Interface hỗ trợ đa kế thừa',
@@ -110,7 +102,6 @@ export function downloadAssessmentTemplate(): void {
       'Cả hai như nhau',
       '',
       'A',
-      'MCQ',
     ],
     [
       'Closure trong JavaScript là gì?',
@@ -119,15 +110,13 @@ export function downloadAssessmentTemplate(): void {
       'Một kiểu class',
       'Không có câu nào đúng',
       'A',
-      'MCQ',
     ],
-    ['Mô tả kinh nghiệm làm việc nhóm của bạn', '', '', '', '', '', 'TEXT'],
   ];
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [
-    { wch: 50 }, { wch: 30 }, { wch: 30 }, { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
+    { wch: 50 }, { wch: 30 }, { wch: 30 }, { wch: 25 }, { wch: 12 }, { wch: 10 },
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Questions');
   XLSX.writeFile(wb, 'assessment-template.xlsx');

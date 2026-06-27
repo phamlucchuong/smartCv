@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from '@smart-cv/ui';
 import { toast } from 'sonner';
 
-import { Clock, ClipboardCheck, ChevronDown, ChevronLeft, History, Plus, Sparkles, Trash2, Upload, Download, HelpCircle } from 'lucide-react'
+import { Clock, ClipboardCheck, ChevronDown, ChevronLeft, History, Plus, Sparkles, Trash2, Upload, Download, HelpCircle, Edit } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import {
   useGetMyAssessments,
@@ -22,6 +22,7 @@ import {
   useDeleteAttempt,
   parseAssessmentFile,
   downloadAssessmentTemplate,
+  useUpdateAssessment,
 } from '@smart-cv/api'
 import { useAuthStore } from '../../store/useAuthStore'
 
@@ -354,6 +355,7 @@ function AssessmentCard({
   isSelfCreated,
   onDelete,
   onUnsave,
+  onEdit,
 }: {
   assessmentId: string
   attempts: AttemptStateResponse[]
@@ -366,6 +368,7 @@ function AssessmentCard({
   isSelfCreated?: boolean
   onDelete?: (assessmentId: string) => void
   onUnsave?: (attempts: AttemptStateResponse[]) => void
+  onEdit?: (assessmentId: string) => void
 }) {
   const { t } = useTranslation()
   const { data: assessmentData } = useGetAssessment(assessmentId, {
@@ -438,16 +441,27 @@ function AssessmentCard({
 
       <div>
         <p className="font-semibold text-foreground">{title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Lần làm cuối: {latestAttempt.startedAt ? formatDate(latestAttempt.startedAt) : '—'}
-        </p>
+        {itemStatus !== "NOT_STARTED" && (
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              Lần làm cuối: {latestAttempt.startedAt ? `${formatDate(latestAttempt.startedAt)} lúc ${new Date(latestAttempt.startedAt).toLocaleTimeString()}` : "—"}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5" />
-          {latestAttempt.startedAt ? new Date(latestAttempt.startedAt).toLocaleTimeString() : '—'}
-        </span>
+      <div className="text-xs text-muted-foreground space-y-1">
+        <div className="flex items-center gap-3">
+          <span>Số câu: <strong className="text-foreground">{assessmentData?.data?.questions?.length ?? 0}</strong></span>
+          <span>•</span>
+          <span>Thời gian: <strong className="text-foreground">{assessmentData?.data?.timeLimitMinutes ?? 30} phút</strong></span>
+        </div>
+        {assessmentData?.data?.description && (
+          <p className="text-muted-foreground/80 line-clamp-2 mt-1">
+            {assessmentData.data.description}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-2 mt-auto pt-2">
@@ -471,14 +485,24 @@ function AssessmentCard({
         )}
 
         {isSelfCreated ? (
-          <button
-            type="button"
-            onClick={() => onDelete?.(assessmentId)}
-            className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer p-2 border border-border rounded-md shrink-0 flex items-center justify-center h-9 w-9"
-            title="Xóa bài test"
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
+          <div className="flex gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => onEdit?.(assessmentId)}
+              className="text-muted-foreground hover:text-primary transition-colors cursor-pointer p-2 border border-border rounded-md flex items-center justify-center h-9 w-9"
+              title="Chỉnh sửa bài test"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete?.(assessmentId)}
+              className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer p-2 border border-border rounded-md flex items-center justify-center h-9 w-9"
+              title="Xóa bài test"
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </button>
+          </div>
         ) : (
           <button
             type="button"
@@ -512,6 +536,8 @@ function AssessmentsPage() {
   const [historyAssessment, setHistoryAssessment] = React.useState<{ assessmentId: string; title: string } | null>(null)
 
   const [isFormOpen, setIsFormOpen] = React.useState(false)
+  const [isEditMode, setIsEditMode] = React.useState(false)
+  const [currentId, setCurrentId] = React.useState<string | null>(null)
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [timeLimitMinutes, setTimeLimitMinutes] = React.useState(30)
@@ -526,6 +552,28 @@ function AssessmentsPage() {
 
   const importInputRef = React.useRef<HTMLInputElement>(null)
   const [isImporting, setIsImporting] = React.useState(false)
+
+  const handleOpenCreate = () => {
+    setIsEditMode(false)
+    setCurrentId(null)
+    setTitle('')
+    setDescription('')
+    setTimeLimitMinutes(30)
+    setQuestions([])
+    setIsFormOpen(true)
+  }
+
+  const handleOpenEdit = (assessmentId: string) => {
+    const sa = selfAssessments.find((x) => x.id === assessmentId)
+    if (!sa) return
+    setIsEditMode(true)
+    setCurrentId(sa.id || null)
+    setTitle(sa.title || '')
+    setDescription(sa.description || '')
+    setTimeLimitMinutes(sa.timeLimitMinutes || 30)
+    setQuestions(sa.questions ? [...sa.questions] : [])
+    setIsFormOpen(true)
+  }
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -592,20 +640,41 @@ function AssessmentsPage() {
     },
   })
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const updateMutation = useUpdateAssessment({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Cập nhật bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+        setIsFormOpen(false)
+        setTitle('')
+        setDescription('')
+        setTimeLimitMinutes(30)
+        setQuestions([])
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Cập nhật bài kiểm tra thất bại.")
+      }
+    }
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) {
       toast.error("Vui lòng nhập tên bài test")
       return
     }
-    createMutation.mutate({
-      data: {
-        title,
-        description,
-        timeLimitMinutes,
-        questions,
-      }
-    })
+    const payload = {
+      title,
+      description,
+      timeLimitMinutes,
+      questions,
+    }
+    if (isEditMode && currentId) {
+      updateMutation.mutate({ id: currentId, data: payload })
+    } else {
+      createMutation.mutate({ data: payload })
+    }
   }
 
   const startAttemptMutation = useStartAttempt()
@@ -870,7 +939,7 @@ function AssessmentsPage() {
                 <li>• <strong className="text-foreground">Option A, Option B</strong> — bắt buộc với MCQ</li>
                 <li>• <strong className="text-foreground">Option C, Option D</strong> — tuỳ chọn</li>
                 <li>• <strong className="text-foreground">Correct</strong> — A, B, C hoặc D</li>
-                <li>• <strong className="text-foreground">Type</strong> — MCQ (mặc định) hoặc TEXT</li>
+                <li>• Chỉ hỗ trợ câu hỏi <strong className="text-foreground">trắc nghiệm (MCQ)</strong></li>
               </ul>
             </div>
           </div>
@@ -883,7 +952,7 @@ function AssessmentsPage() {
             <Download className="h-4 w-4" />
           </button>
           <Button
-            onClick={() => { setTitle(''); setDescription(''); setTimeLimitMinutes(30); setQuestions([]); setIsFormOpen(true) }}
+            onClick={handleOpenCreate}
             className="gap-2 cursor-pointer"
           >
             <Plus className="h-4 w-4" /> Tạo bài test
@@ -943,6 +1012,7 @@ function AssessmentsPage() {
                 isSelfCreated={selfAssessments.some((sa) => sa.id === group.assessmentId)}
                 onDelete={handleDelete}
                 onUnsave={handleUnsave}
+                onEdit={handleOpenEdit}
               />
             )
           })}
@@ -1022,8 +1092,17 @@ function AssessmentsPage() {
             <DialogHeader className="flex flex-row justify-between items-center pr-6">
               <div>
                 <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-primary" />
-                  Tạo bài kiểm tra mới
+                  {isEditMode ? (
+                    <>
+                      <Edit className="h-5 w-5 text-primary" />
+                      Chỉnh sửa bài kiểm tra
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5 text-primary" />
+                      Tạo bài kiểm tra mới
+                    </>
+                  )}
                 </DialogTitle>
               </div>
               <Button
@@ -1036,7 +1115,7 @@ function AssessmentsPage() {
               </Button>
             </DialogHeader>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-4 my-2 flex-1">
+            <form onSubmit={handleSubmit} className="space-y-4 my-2 flex-1">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-sm font-semibold text-foreground">Tên bài kiểm tra *</label>
@@ -1151,8 +1230,12 @@ function AssessmentsPage() {
                 <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
                   Hủy
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Đang tạo...' : 'Tạo bài test'}
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Đang lưu...'
+                    : isEditMode
+                      ? 'Lưu thay đổi'
+                      : 'Tạo bài test'}
                 </Button>
               </div>
             </form>
