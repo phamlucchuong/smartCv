@@ -101,7 +101,11 @@
       "Bash(rtk ./mvnw test)",
       "Bash(rtk ./mvnw test -q)",
       "Bash(rtk ./mvnw test -Dtest=ServicePackageServiceTest,ServicePackageControllerTest)",
-      "Bash(xargs ls -lh)"
+      "Bash(xargs ls -lh)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm -F @smart-cv/api exec tsc --noEmit)",
+      "Bash(pnpm -F web-candidate exec tsc --noEmit)",
+      "Bash(pnpm -F web-recruiter exec tsc --noEmit)"
     ]
   }
 }
