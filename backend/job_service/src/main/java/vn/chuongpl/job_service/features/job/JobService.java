@@ -338,6 +338,19 @@ public class JobService {
 
     public PageResponse<JobResponse> searchJobs(JobSearchRequest request) {
         expireOverduePublishedJobs();
+        boolean hasKeyword = request.getKeyword() != null && !request.getKeyword().isBlank();
+        boolean hasLocation = request.getLocation() != null && !request.getLocation().isBlank();
+        if (!hasKeyword && !hasLocation) {
+            int page = request.getPage() > 0 ? request.getPage() : 1;
+            int size = request.getSize() > 0 ? request.getSize() : defaultPageSize;
+            Pageable pageable = buildPageable(page, size, "createdAt", "desc");
+            Page<Job> jobs = jobRepository.findByModerationStatusAndVisibilityStatusAndDeletedFalse(
+                    JobModerationStatus.PUBLISHED,
+                    JobVisibilityStatus.ACTIVE,
+                    pageable
+            );
+            return toPageResponse(jobs);
+        }
         JobIndexService jobIndexService = jobIndexServiceProvider.getIfAvailable();
         if (jobIndexService == null) {
             return PageResponse.<JobResponse>builder()
