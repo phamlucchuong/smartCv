@@ -92,6 +92,7 @@ export function AdminLayout() {
       label: t('admin_sidebar_group_operations'),
       items: [
         { to: '/admin/job-moderation', label: t('admin_nav_job_moderation'), icon: FileWarning },
+        { to: '/admin/assessments', label: 'Kiểm duyệt bài test', icon: ScrollText },
         { to: '/admin/packages', label: t('admin_nav_packages'), icon: Package },
         { to: '/admin/payments', label: t('admin_nav_payments'), icon: CreditCard },
       ],

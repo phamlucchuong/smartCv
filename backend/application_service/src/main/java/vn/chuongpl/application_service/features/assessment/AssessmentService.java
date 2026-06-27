@@ -5,12 +5,15 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import vn.chuongpl.application_service.dtos.request.AssessmentAnswerRequest;
 import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
+import vn.chuongpl.application_service.dtos.request.AssessmentGenerateRequest;
+import vn.chuongpl.application_service.dtos.response.AssessmentGenerateResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
 import vn.chuongpl.application_service.enums.*;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.ai.AiEngineClient;
 import vn.chuongpl.application_service.integration.notification.AssessmentNotificationPublisher;
 import vn.chuongpl.application_service.integration.user.UserClient;
 
@@ -28,10 +31,12 @@ public class AssessmentService {
     AssessmentAttemptRepository attemptRepository;
     UserClient userClient;
     AssessmentNotificationPublisher assessmentNotificationPublisher;
+    AiEngineClient aiEngineClient;
 
     private String resolveRecruiterId(String userId) {
         String recruiterId = userClient.resolveRecruiterId(userId);
-        if (recruiterId == null) throw new AppException(ErrorCode.UNAUTHORIZED);
+        if (recruiterId == null)
+            throw new AppException(ErrorCode.UNAUTHORIZED);
         return recruiterId;
     }
 
@@ -51,17 +56,52 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
-    public List<AssessmentResponse> getRecruiterAssessments(String userId) {
-        String recruiterId = resolveRecruiterId(userId);
-        return assessmentRepository.findByRecruiterId(recruiterId).stream()
+    public AssessmentResponse createSelfAssessment(AssessmentCreateRequest req, String candidateUserId) {
+        Assessment assessment = Assessment.builder()
+                .candidateId(candidateUserId)
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .questions(req.getQuestions() != null ? req.getQuestions() : List.of())
+                .timeLimitMinutes(req.getTimeLimitMinutes())
+                .status(AssessmentStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .build();
+        return toResponse(assessmentRepository.save(assessment));
+    }
+
+    public List<AssessmentResponse> getMySelfAssessments(String candidateUserId) {
+        return assessmentRepository.findByCandidateId(candidateUserId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    public List<AssessmentResponse> getRecruiterAssessments(String userId, List<String> roles) {
+        List<AssessmentResponse> assessments;
+        if (!roles.contains("ROLE_ADMIN")) {
+            String recruiterId = resolveRecruiterId(userId);
+            assessments = assessmentRepository.findByRecruiterId(recruiterId).stream()
+                    .map(this::toResponse)
+                    .toList();
+        } else {
+            assessments = assessmentRepository.findAll().stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return assessments;
+    }
+
     public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String userId) {
-        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
-        if (!recruiterId.equals(assessment.getRecruiterId())) {
+        if (assessment.getRecruiterId() != null) {
+            String recruiterId = resolveRecruiterId(userId);
+            if (!recruiterId.equals(assessment.getRecruiterId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if (assessment.getCandidateId() != null) {
+            if (!userId.equals(assessment.getCandidateId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
         assessment.setTitle(req.getTitle());
@@ -74,9 +114,17 @@ public class AssessmentService {
     }
 
     public void deleteAssessment(String id, String userId) {
-        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
-        if (!recruiterId.equals(assessment.getRecruiterId())) {
+        if (assessment.getRecruiterId() != null) {
+            String recruiterId = resolveRecruiterId(userId);
+            if (!recruiterId.equals(assessment.getRecruiterId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if (assessment.getCandidateId() != null) {
+            if (!userId.equals(assessment.getCandidateId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
         assessmentRepository.delete(assessment);
@@ -105,14 +153,23 @@ public class AssessmentService {
         }
         if (assessment.getStatus() == AssessmentStatus.DRAFT) {
             assessment.setStatus(AssessmentStatus.ACTIVE);
-            assessmentRepository.save(assessment);
+        } else if (assessment.getStatus() == AssessmentStatus.ACTIVE) {
+            assessment.setStatus(AssessmentStatus.DRAFT);
         }
+        assessmentRepository.save(assessment);
         return toResponse(assessment);
     }
 
     public void deleteAttempt(String attemptId, String userId) {
-        String recruiterId = resolveRecruiterId(userId);
         AssessmentAttempt attempt = findAttemptById(attemptId);
+        // If candidate owns the attempt, let them delete it
+        if (userId.equals(attempt.getCandidateId())) {
+            attemptRepository.delete(attempt);
+            return;
+        }
+
+        // Otherwise check if recruiter owns the assessment of this attempt
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(attempt.getAssessmentId());
         if (!recruiterId.equals(assessment.getRecruiterId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -138,9 +195,16 @@ public class AssessmentService {
                 .toList();
     }
 
-
     public List<AttemptStateResponse> getMyAssessments(String candidateId) {
         return attemptRepository.findByCandidateId(candidateId).stream()
+                .filter(attempt -> {
+                    try {
+                        Assessment assessment = findAssessmentById(attempt.getAssessmentId());
+                        return assessment.getStatus() == AssessmentStatus.ACTIVE;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
                 .map(this::toAttemptStateResponse)
                 .toList();
     }
@@ -157,8 +221,10 @@ public class AssessmentService {
     public String startAttempt(String assessmentId, String candidateId) {
         findAssessmentById(assessmentId);
         attemptRepository.findByCandidateIdAndAssessmentIdAndStatus(
-                        candidateId, assessmentId, AttemptStatus.IN_PROGRESS)
-                .ifPresent(a -> { throw new AppException(ErrorCode.ATTEMPT_ALREADY_IN_PROGRESS); });
+                candidateId, assessmentId, AttemptStatus.IN_PROGRESS)
+                .ifPresent(a -> {
+                    throw new AppException(ErrorCode.ATTEMPT_ALREADY_IN_PROGRESS);
+                });
 
         AssessmentAttempt attempt = AssessmentAttempt.builder()
                 .assessmentId(assessmentId)
@@ -334,5 +400,9 @@ public class AssessmentService {
                     return res;
                 })
                 .toList();
+    }
+
+    public AssessmentGenerateResponse generateQuestions(AssessmentGenerateRequest request) {
+        return aiEngineClient.generateQuestions(request);
     }
 }

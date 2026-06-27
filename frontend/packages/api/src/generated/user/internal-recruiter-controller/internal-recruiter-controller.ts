@@ -208,6 +208,62 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const consumeAiCredit = (
+    userId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseVoid>(
+      {url: `/api/internal/recruiters/by-user/${userId}/consume-ai-credit`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getConsumeAiCreditMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consumeAiCredit>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof consumeAiCredit>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['consumeAiCredit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof consumeAiCredit>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  consumeAiCredit(userId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConsumeAiCreditMutationResult = NonNullable<Awaited<ReturnType<typeof consumeAiCredit>>>
+    
+    export type ConsumeAiCreditMutationError = unknown
+
+    export const useConsumeAiCredit = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consumeAiCredit>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof consumeAiCredit>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getConsumeAiCreditMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const getUserId = (
     id: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal

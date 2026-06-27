@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Input } from '@smart-cv/ui';
+import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from '@smart-cv/ui';
+import { toast } from 'sonner';
 
-import { Clock, ClipboardCheck, ChevronDown, ChevronLeft } from 'lucide-react'
+import { Clock, ClipboardCheck, ChevronDown, ChevronLeft, History, Plus, Sparkles, Trash2, Upload, Download, HelpCircle, Edit } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import {
   useGetMyAssessments,
@@ -15,6 +16,14 @@ import {
   useGetResult,
   ApplicationModels,
   useSubmitAttemptWithFlag,
+  useCreateSelfAssessment,
+  useGetMySelfAssessments,
+  useDeleteAssessment,
+  useDeleteAttempt,
+  parseAssessmentFile,
+  downloadAssessmentTemplate,
+  useUpdateAssessment,
+  useGenerateAssessmentQuestions,
 } from '@smart-cv/api'
 import { useAuthStore } from '../../store/useAuthStore'
 
@@ -34,6 +43,12 @@ type AssessmentResponse = ApplicationModels.AssessmentResponse
 type AttemptAnswer = ApplicationModels.AttemptAnswer
 type Question = ApplicationModels.Question
 type LocalAnswer = { selectedOptionIndex?: number; textAnswer?: string }
+type MutationError = { message?: string }
+type GroupedAssessment = {
+  assessmentId: string
+  attempts: AttemptStateResponse[]
+  latestAttempt: AttemptStateResponse
+}
 
 const MCQ = 'MCQ' as const
 
@@ -62,7 +77,7 @@ type AssessmentStatusFilter = 'all' | 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED
 
 const statusStyle: Record<string, string> = {
   NOT_STARTED: 'bg-muted text-muted-foreground border border-border',
-  IN_PROGRESS: 'bg-[var(--ai-soft)] text-[var(--ai)] border border-[var(--ai)]/20',
+  IN_PROGRESS: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
   SUBMITTED: 'bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/20',
   EXPIRED: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
 }
@@ -81,11 +96,22 @@ function getFilterLabel(t: (k: string) => string, key: AssessmentStatusFilter) {
   switch (key) {
     case 'all': return t('assessments_filter_all')
     case 'NOT_STARTED': return t('assessments_filter_not_started')
-    case 'IN_PROGRESS': return t('assessments_filter_in_progress')
+    case 'IN_PROGRESS': return t('assessments_status_in_progress')
     case 'SUBMITTED': return t('assessments_filter_submitted')
     case 'EXPIRED': return t('assessments_filter_expired')
   }
 }
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const { message } = error as MutationError
+    if (typeof message === 'string' && message.trim() !== '') {
+      return message
+    }
+  }
+  return fallback
+}
+
 
 function isAnswered(q: Question, answers: Record<string, LocalAnswer>): boolean {
   const ans = answers[q.id ?? '']
@@ -95,104 +121,176 @@ function isAnswered(q: Question, answers: Record<string, LocalAnswer>): boolean 
 
 // Fetches assessment title for a single attempt card
 function AssessmentCard({
-  a,
+  assessmentId,
+  attempts,
+  latestAttempt,
   onTake,
   onTitleLoaded,
   onRetake,
   isRetaking,
-  hasActiveAttempt,
+  onViewHistory,
+  isSelfCreated,
+  onDelete,
+  onUnsave,
+  onEdit,
 }: {
-  a: AttemptStateResponse
+  assessmentId: string
+  attempts: AttemptStateResponse[]
+  latestAttempt: AttemptStateResponse
   onTake: (assessmentId: string, attemptId: string) => void
   onTitleLoaded: (assessmentId: string, title: string) => void
   onRetake?: (assessmentId: string) => void
   isRetaking?: boolean
-  hasActiveAttempt?: boolean
+  onViewHistory: (assessmentId: string, title: string) => void
+  isSelfCreated?: boolean
+  onDelete?: (assessmentId: string) => void
+  onUnsave?: (attempts: AttemptStateResponse[]) => void
+  onEdit?: (assessmentId: string) => void
 }) {
   const { t } = useTranslation()
-  const { data: assessmentData } = useGetAssessment(a.assessmentId ?? '', {
-    query: { enabled: !!a.assessmentId },
+  const { data: assessmentData } = useGetAssessment(assessmentId, {
+    query: { enabled: !!assessmentId },
   })
-  const title = assessmentData?.data?.title ?? a.assessmentId ?? ''
-  const itemStatus = String(a.status ?? 'NOT_STARTED')
+  const title = assessmentData?.data?.title ?? assessmentId
+  const itemStatus = String(latestAttempt.status ?? 'NOT_STARTED')
 
   // Report the loaded title to the parent for search filtering
   React.useEffect(() => {
-    if (assessmentData?.data?.title && a.assessmentId) {
-      onTitleLoaded(a.assessmentId, assessmentData.data.title)
+    if (assessmentData?.data?.title && assessmentId) {
+      onTitleLoaded(assessmentId, assessmentData.data.title)
     }
-  }, [assessmentData?.data?.title, a.assessmentId, onTitleLoaded])
+  }, [assessmentData?.data?.title, assessmentId, onTitleLoaded])
+
+  // Determine active attempt (IN_PROGRESS) or NOT_STARTED
+  const notStartedAttempt = attempts.find((att) => String(att.status) === 'NOT_STARTED')
+
+  const isCancelled = React.useMemo(() => {
+    if (!latestAttempt.attemptId) return false
+    try {
+      const cancelled = JSON.parse(localStorage.getItem('cancelledAttempts') || '[]')
+      return Array.isArray(cancelled) && cancelled.includes(latestAttempt.attemptId)
+    } catch {
+      return false
+    }
+  }, [latestAttempt.attemptId])
 
   return (
-    <div className="card-surface p-5 flex flex-col gap-4">
+    <div className="card-surface p-5 flex flex-col h-full gap-4">
       <div className="flex items-start justify-between">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--ai-soft)] text-[var(--ai)]">
           <ClipboardCheck className="h-5 w-5" />
         </div>
         <div className="flex items-center gap-2">
-          {itemStatus === 'SUBMITTED' && (
-            <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${
-              a.result === 'PENDING'
-                ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
-                : a.result === 'PASS'
-                  ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-600 border border-red-500/20'
-            }`}>
-              {a.result === 'PENDING' ? 'Chờ chấm' : a.score != null ? `${a.score.toFixed(0)}%` : '—'}
+          <button
+            type="button"
+            onClick={() => onViewHistory(assessmentId, title)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer mr-1"
+            title="Lịch sử làm bài"
+          >
+            <History className="h-4 w-4" />
+            <span className="font-medium">{attempts.length}</span>
+          </button>
+          {isCancelled ? (
+            <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold bg-red-500/10 text-red-600 border border-red-500/20">
+              Hủy giữa chừng
             </span>
+          ) : (
+            <>
+              {itemStatus === 'SUBMITTED' && (
+                <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${
+                  latestAttempt.result === 'PENDING'
+                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                    : latestAttempt.result === 'PASS'
+                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                }`}>
+                  {latestAttempt.result === 'PENDING' ? 'Chờ chấm' : latestAttempt.score != null ? `${latestAttempt.score.toFixed(0)}%` : '—'}
+                </span>
+              )}
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                {getStatusLabel(t, itemStatus)}
+              </span>
+            </>
           )}
-          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
-            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-            {getStatusLabel(t, itemStatus)}
-          </span>
         </div>
       </div>
 
       <div>
         <p className="font-semibold text-foreground">{title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{a.startedAt ? formatDate(a.startedAt) : ''}</p>
+        {itemStatus !== "NOT_STARTED" && (
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              Lần làm cuối: {latestAttempt.startedAt ? `${formatDate(latestAttempt.startedAt)} lúc ${new Date(latestAttempt.startedAt).toLocaleTimeString()}` : "—"}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5" />
-          {a.startedAt ? new Date(a.startedAt).toLocaleTimeString() : '—'}
-        </span>
+      <div className="text-xs text-muted-foreground space-y-1">
+        <div className="flex items-center gap-3">
+          <span>Số câu: <strong className="text-foreground">{assessmentData?.data?.questions?.length ?? 0}</strong></span>
+          <span>•</span>
+          <span>Thời gian: <strong className="text-foreground">{assessmentData?.data?.timeLimitMinutes ?? 30} phút</strong></span>
+        </div>
+        {assessmentData?.data?.description && (
+          <p className="text-muted-foreground/80 line-clamp-2 mt-1">
+            {assessmentData.data.description}
+          </p>
+        )}
       </div>
 
-      {itemStatus === 'SUBMITTED' ? (
-        !hasActiveAttempt ? (
+      <div className="flex items-center gap-2 mt-auto pt-2">
+        {attempts.length === 0 || notStartedAttempt ? (
+          <Button
+            className="flex-1 cursor-pointer"
+            onClick={() => onTake(assessmentId, notStartedAttempt?.attemptId ?? '')}
+          >
+            Bắt đầu làm bài
+          </Button>
+        ) : (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onRetake?.(a.assessmentId ?? '')}
+            onClick={() => onRetake?.(assessmentId)}
             disabled={isRetaking}
-            className="w-full cursor-pointer"
+            className="flex-1 cursor-pointer"
           >
             Làm lại
           </Button>
-        ) : null
-      ) : itemStatus === 'EXPIRED' ? (
-        !hasActiveAttempt ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onRetake?.(a.assessmentId ?? '')}
-            disabled={isRetaking}
-            className="w-full cursor-pointer"
+        )}
+
+        {isSelfCreated ? (
+          <div className="flex gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => onEdit?.(assessmentId)}
+              className="text-muted-foreground hover:text-primary transition-colors cursor-pointer p-2 border border-border rounded-md flex items-center justify-center h-9 w-9"
+              title="Chỉnh sửa bài test"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete?.(assessmentId)}
+              className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer p-2 border border-border rounded-md flex items-center justify-center h-9 w-9"
+              title="Xóa bài test"
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onUnsave?.(attempts)}
+            className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer p-2 border border-border rounded-md shrink-0 flex items-center justify-center h-9 w-9"
+            title="Hủy lưu bài test"
           >
-            Làm lại
-          </Button>
-        ) : null
-      ) : (
-        <Button
-          className="w-full"
-          disabled={itemStatus !== 'NOT_STARTED' && itemStatus !== 'IN_PROGRESS'}
-          onClick={() => onTake(a.assessmentId ?? '', a.attemptId ?? '')}
-        >
-          {itemStatus === 'IN_PROGRESS' ? t('assessments_continue') : t('assessments_start')}
-        </Button>
-      )}
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -202,31 +300,289 @@ function AssessmentsPage() {
   const { isAuthenticated } = useAuthStore()
   const { take: takeAssessmentId } = Route.useSearch()
   const { data, isLoading, isError } = useGetMyAssessments({ query: { enabled: isAuthenticated } })
-  const assessments = data?.data ?? []
+  const assessments = React.useMemo(() => data?.data ?? [], [data?.data])
+
+  const { data: selfData, isLoading: isSelfLoading, isError: isSelfError } = useGetMySelfAssessments({ query: { enabled: isAuthenticated } })
+  const selfAssessments = React.useMemo(() => selfData?.data ?? [], [selfData?.data])
+
+  const combinedLoading = isLoading || isSelfLoading
+  const combinedError = isError || isSelfError
 
   const queryClient = useQueryClient()
   const [taking, setTaking] = React.useState<{ assessmentId: string; attemptId: string } | null>(null)
+  const [historyAssessment, setHistoryAssessment] = React.useState<{ assessmentId: string; title: string } | null>(null)
 
-  const startAttemptMutation = useStartAttempt()
-  const hasAutoStarted = React.useRef(false)
+  const [isFormOpen, setIsFormOpen] = React.useState(false)
+  const [isEditMode, setIsEditMode] = React.useState(false)
+  const [currentId, setCurrentId] = React.useState<string | null>(null)
+  const [title, setTitle] = React.useState('')
+  const [description, setDescription] = React.useState('')
+  const [timeLimitMinutes, setTimeLimitMinutes] = React.useState(30)
+  const [questions, setQuestions] = React.useState<Question[]>([])
 
-  const handleRetake = (assessmentId: string) => {
-    startAttemptMutation.mutate(
-      { id: assessmentId },
+  const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false)
+  const [aiJobName, setAiJobName] = React.useState('')
+  const [aiDifficulty, setAiDifficulty] = React.useState('Medium')
+  const [aiLevel, setAiLevel] = React.useState('Junior')
+  const [aiNumQuestions, setAiNumQuestions] = React.useState<number | "">(5)
+
+  const generateMutation = useGenerateAssessmentQuestions()
+
+  const importInputRef = React.useRef<HTMLInputElement>(null)
+  const [isImporting, setIsImporting] = React.useState(false)
+
+  const handleOpenCreate = () => {
+    setIsEditMode(false)
+    setCurrentId(null)
+    setTitle('')
+    setDescription('')
+    setTimeLimitMinutes(30)
+    setQuestions([])
+    setIsFormOpen(true)
+  }
+
+  const handleOpenEdit = (assessmentId: string) => {
+    const sa = selfAssessments.find((x) => x.id === assessmentId)
+    if (!sa) return
+    setIsEditMode(true)
+    setCurrentId(sa.id || null)
+    setTitle(sa.title || '')
+    setDescription(sa.description || '')
+    setTimeLimitMinutes(sa.timeLimitMinutes || 30)
+    setQuestions(sa.questions ? [...sa.questions] : [])
+    setIsFormOpen(true)
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setIsImporting(true)
+    try {
+      const result = await parseAssessmentFile(file)
+      if (result.questions.length === 0) {
+        const reasons = result.skippedRows.map(r => `Dòng ${r.rowNumber}: ${r.reason}`).join(' | ')
+        toast.error(`Không tìm thấy câu hỏi hợp lệ.${reasons ? ' ' + reasons : ''}`)
+        return
+      }
+      toast.success(`Đã import ${result.questions.length} câu hỏi`)
+      if (result.skippedRows.length > 0) {
+        const detail = result.skippedRows.map(r => `Dòng ${r.rowNumber}: ${r.reason}`).join(' | ')
+        toast.warning(`Bỏ qua ${result.skippedRows.length} dòng không hợp lệ: ${detail}`)
+      }
+      setQuestions(result.questions)
+      setTitle('')
+      setDescription('')
+      setTimeLimitMinutes(30)
+      setIsFormOpen(true)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'File không đọc được. Vui lòng dùng file .xlsx hoặc .csv hợp lệ.')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const handleAiConfirm = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!aiJobName.trim()) {
+      toast.error('Vui lòng nhập tên công việc')
+      return
+    }
+    generateMutation.mutate(
+      { jobName: aiJobName, level: aiLevel, difficulty: aiDifficulty, numQuestions: Number(aiNumQuestions) || 5 },
       {
-        onSuccess: (res: { data?: { attemptId?: string } }) => {
-          const attemptId = res?.data?.attemptId ?? ''
-          if (attemptId) {
-            setTaking({ assessmentId, attemptId })
-            queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        onSuccess: (response) => {
+          const generatedQuestions = response.data?.questions ?? []
+          if (generatedQuestions.length === 0) {
+            toast.error('AI không tạo được câu hỏi. Vui lòng thử lại.')
+            return
           }
+          const mapped: Question[] = generatedQuestions.slice(0, Number(aiNumQuestions) || 5).map((q) => ({
+            id: crypto.randomUUID(),
+            text: q.text,
+            type: 'MCQ' as const,
+            options: q.options,
+            correctOptionIndex: q.correctOptionIndex,
+          }))
+          setQuestions(mapped)
+          setTitle(`Bài test ${aiJobName} - Trình độ ${aiLevel}`)
+          setDescription(`Bài test tự động tạo bằng AI cho vị trí ${aiJobName} (${aiLevel}) với độ khó ${aiDifficulty}.`)
+          setIsAiDialogOpen(false)
+          setIsFormOpen(true)
+          toast.success('Đã tạo câu hỏi bằng AI thành công!')
         },
-      },
+        onError: () => {
+          toast.error('Không thể tạo câu hỏi bằng AI. Vui lòng thử lại.')
+        },
+      }
     )
   }
 
+  const createMutation = useCreateSelfAssessment({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Tạo bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+        setIsFormOpen(false)
+        setTitle('')
+        setDescription('')
+        setTimeLimitMinutes(30)
+        setQuestions([])
+      },
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Tạo bài kiểm tra thất bại."))
+      },
+    },
+  })
+
+  const updateMutation = useUpdateAssessment({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Cập nhật bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+        setIsFormOpen(false)
+        setTitle('')
+        setDescription('')
+        setTimeLimitMinutes(30)
+        setQuestions([])
+      },
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Cập nhật bài kiểm tra thất bại."))
+      }
+    }
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) {
+      toast.error("Vui lòng nhập tên bài test")
+      return
+    }
+    const payload = {
+      title,
+      description,
+      timeLimitMinutes,
+      questions,
+    }
+    if (isEditMode && currentId) {
+      updateMutation.mutate({ id: currentId, data: payload })
+    } else {
+      createMutation.mutate({ data: payload })
+    }
+  }
+
+  const startAttemptMutation = useStartAttempt()
+  const submitMutation = useSubmitAttempt()
+  const hasAutoStarted = React.useRef(false)
+
+  const handleRetake = (assessmentId: string) => {
+    // Find if there is any active IN_PROGRESS attempt for this assessment
+    const group = grouped.find((g) => g.assessmentId === assessmentId)
+    const activeAttempt = group?.attempts.find((a) => a.status === 'IN_PROGRESS')
+
+    const proceedToStart = () => {
+      startAttemptMutation.mutate(
+        { id: assessmentId },
+        {
+          onSuccess: (res: { data?: { attemptId?: string } }) => {
+            const attemptId = res?.data?.attemptId ?? ''
+            if (attemptId) {
+              setTaking({ assessmentId, attemptId })
+              queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+            }
+          },
+        },
+      )
+    }
+
+    if (activeAttempt?.attemptId) {
+      // Submit the active attempt first to finalize it
+      submitMutation.mutate(
+        { attemptId: activeAttempt.attemptId },
+        {
+          onSuccess: () => {
+            proceedToStart()
+          },
+          onError: () => {
+            // Even if submit fails (e.g. already submitted), try starting
+            proceedToStart()
+          }
+        }
+      )
+    } else {
+      proceedToStart()
+    }
+  }
+
+  const handleTake = (assessmentId: string, attemptId: string) => {
+    if (attemptId) {
+      setTaking({ assessmentId, attemptId })
+    } else {
+      startAttemptMutation.mutate(
+        { id: assessmentId },
+        {
+          onSuccess: (res: { data?: { attemptId?: string } }) => {
+            const newAttemptId = res?.data?.attemptId ?? ''
+            if (newAttemptId) {
+              setTaking({ assessmentId, attemptId: newAttemptId })
+              queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+              queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+            }
+          },
+          onError: (err: unknown) => {
+            toast.error(getErrorMessage(err, "Không thể bắt đầu làm bài."))
+          }
+        }
+      )
+    }
+  }
+
+  const deleteMutation = useDeleteAssessment({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Xoá bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+      },
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Xoá bài kiểm tra thất bại."))
+      }
+    }
+  })
+
+  const handleDelete = (assessmentId: string) => {
+    if (confirm("Bạn có chắc chắn muốn xoá bài kiểm tra này?")) {
+      deleteMutation.mutate({ id: assessmentId })
+    }
+  }
+
+  const deleteAttemptMutation = useDeleteAttempt({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Hủy lưu bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+      },
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Hủy lưu bài kiểm tra thất bại."))
+      }
+    }
+  })
+
+  const handleUnsave = (attempts: AttemptStateResponse[]) => {
+    if (confirm("Bạn có chắc chắn muốn hủy lưu bài kiểm tra này?")) {
+      attempts.forEach((att) => {
+        if (att.attemptId) {
+          deleteAttemptMutation.mutate({ attemptId: att.attemptId })
+        }
+      })
+    }
+  }
+
   React.useEffect(() => {
-    if (!takeAssessmentId || hasAutoStarted.current || isLoading) return
+    if (!takeAssessmentId || hasAutoStarted.current || combinedLoading) return
     const existing = assessments.find(
       (a) => a.assessmentId === takeAssessmentId && a.status === 'IN_PROGRESS',
     )
@@ -247,7 +603,7 @@ function AssessmentsPage() {
       },
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [takeAssessmentId, assessments, isLoading])
+  }, [takeAssessmentId, assessments, combinedLoading])
   const [query, setQuery] = React.useState('')
   const [status, setStatus] = React.useState<AssessmentStatusFilter>('all')
   const [statusMenuOpen, setStatusMenuOpen] = React.useState(false)
@@ -274,6 +630,42 @@ function AssessmentsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const grouped: GroupedAssessment[] = (() => {
+    const groups: Record<string, AttemptStateResponse[]> = {}
+    assessments.forEach((a) => {
+      if (!a.assessmentId) return
+      if (!groups[a.assessmentId]) {
+        groups[a.assessmentId] = []
+      }
+      groups[a.assessmentId].push(a)
+    })
+
+    selfAssessments.forEach((sa) => {
+      if (!sa.id) return
+      if (!groups[sa.id]) {
+        groups[sa.id] = []
+      }
+    })
+
+    return Object.entries(groups).map(([assessmentId, groupAttempts]) => {
+      const sorted = [...groupAttempts].sort((x, y) => {
+        const dx = x.startedAt ? new Date(x.startedAt).getTime() : 0
+        const dy = y.startedAt ? new Date(y.startedAt).getTime() : 0
+        return dy - dx
+      })
+      const latestAttempt: AttemptStateResponse = sorted[0] ?? {
+        assessmentId,
+        status: 'NOT_STARTED',
+      }
+
+      return {
+        assessmentId,
+        attempts: sorted,
+        latestAttempt,
+      }
+    })
+  })()
+
   if (taking) {
     return (
       <TakeAssessment
@@ -284,8 +676,8 @@ function AssessmentsPage() {
     )
   }
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading assessments...</div>
-  if (isError) return <div className="p-8 text-center text-destructive">Failed to load assessments.</div>
+  if (combinedLoading) return <div className="p-8 text-center text-muted-foreground">Loading assessments...</div>
+  if (combinedError) return <div className="p-8 text-center text-destructive">Failed to load assessments.</div>
 
   const filterOptions: Array<{ key: AssessmentStatusFilter }> = [
     { key: 'all' },
@@ -295,21 +687,73 @@ function AssessmentsPage() {
     { key: 'EXPIRED' },
   ]
 
-  const filtered = assessments.filter((item) => {
-    const itemStatus = String(item.status ?? 'NOT_STARTED')
+  const filteredGroups = grouped.filter((group) => {
+    const itemStatus = String(group.latestAttempt.status ?? 'NOT_STARTED')
     const byStatus = status === 'all' ? true : itemStatus === status
     const q = query.trim().toLowerCase()
     // Search by loaded title; fall back to assessmentId while title is still loading
-    const resolvedTitle = titleMap[item.assessmentId ?? ''] ?? item.assessmentId ?? ''
+    const resolvedTitle = titleMap[group.assessmentId] ?? group.assessmentId
     const byQuery = q === '' ? true : resolvedTitle.toLowerCase().includes(q)
     return byStatus && byQuery
   })
 
   return (
     <div className="space-y-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{t('assessments_page_title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('assessments_page_subtitle')}</p>
+      <header className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('assessments_page_title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('assessments_page_subtitle')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,.csv"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button
+            variant="outline"
+            onClick={() => importInputRef.current?.click()}
+            disabled={isImporting}
+            className="gap-2 cursor-pointer"
+          >
+            <Upload className="h-4 w-4" />
+            {isImporting ? 'Đang đọc...' : 'Import Excel'}
+          </Button>
+          <div className="relative group">
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
+            <div className="absolute right-0 top-10 z-50 hidden group-hover:block w-72 rounded-lg border border-border bg-card p-3 shadow-lg text-xs">
+              <p className="font-semibold text-foreground mb-2">Format mỗi dòng Excel/CSV:</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• <strong className="text-foreground">Question</strong> — nội dung câu hỏi (bắt buộc)</li>
+                <li>• <strong className="text-foreground">Option A, Option B</strong> — bắt buộc với MCQ</li>
+                <li>• <strong className="text-foreground">Option C, Option D</strong> — tuỳ chọn</li>
+                <li>• <strong className="text-foreground">Correct</strong> — A, B, C hoặc D</li>
+                <li>• Chỉ hỗ trợ câu hỏi <strong className="text-foreground">trắc nghiệm (MCQ)</strong></li>
+              </ul>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => downloadAssessmentTemplate()}
+            title="Tải file mẫu"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <Button
+            onClick={handleOpenCreate}
+            className="gap-2 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" /> Tạo bài test
+          </Button>
+        </div>
       </header>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -345,27 +789,354 @@ function AssessmentsPage() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <div className="card-surface p-8 text-center text-sm text-muted-foreground">{t('account_no_results')}</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((a) => {
-            const hasActiveAttempt = assessments.some(
-              (item) => item.assessmentId === a.assessmentId && item.status === 'IN_PROGRESS'
-            )
+          {filteredGroups.map((group) => {
             return (
               <AssessmentCard
-                key={a.attemptId}
-                a={a}
-                onTake={(assessmentId, attemptId) => setTaking({ assessmentId, attemptId })}
+                key={group.assessmentId}
+                assessmentId={group.assessmentId}
+                attempts={group.attempts}
+                latestAttempt={group.latestAttempt}
+                onTake={handleTake}
                 onTitleLoaded={registerTitle}
                 onRetake={handleRetake}
-                isRetaking={startAttemptMutation.isPending}
-                hasActiveAttempt={hasActiveAttempt}
+                isRetaking={startAttemptMutation.isPending || submitMutation.isPending}
+                onViewHistory={(assessmentId, title) => setHistoryAssessment({ assessmentId, title })}
+                isSelfCreated={selfAssessments.some((sa) => sa.id === group.assessmentId)}
+                onDelete={handleDelete}
+                onUnsave={handleUnsave}
+                onEdit={handleOpenEdit}
               />
             )
           })}
         </div>
+      )}
+
+      {historyAssessment && (
+        <Dialog open={!!historyAssessment} onOpenChange={(open) => !open && setHistoryAssessment(null)}>
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-primary" />
+                Lịch sử làm bài: {historyAssessment.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 space-y-4">
+              {(grouped.find(g => g.assessmentId === historyAssessment.assessmentId)?.attempts ?? []).map((attempt, index, arr) => {
+                const itemStatus = String(attempt.status ?? 'NOT_STARTED')
+                const isAttemptCancelled = (() => {
+                  if (!attempt.attemptId) return false
+                  try {
+                    const cancelled = JSON.parse(localStorage.getItem('cancelledAttempts') || '[]')
+                    return Array.isArray(cancelled) && cancelled.includes(attempt.attemptId)
+                  } catch {
+                    return false
+                  }
+                })()
+                return (
+                  <div key={attempt.attemptId} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <span>Lần làm {arr.length - index}</span>
+                        {isAttemptCancelled ? (
+                          <span className="inline-flex items-center rounded px-1.5 py-0.2 text-[10px] font-semibold bg-red-500/10 text-red-600 border border-red-500/20">
+                            Hủy giữa chừng
+                          </span>
+                        ) : (
+                          itemStatus === 'SUBMITTED' && (
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.2 text-[10px] font-semibold ${
+                              attempt.result === 'PENDING'
+                                ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                                : attempt.result === 'PASS'
+                                  ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                                  : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                            }`}>
+                              {attempt.result === 'PENDING' ? 'Chờ chấm' : attempt.score != null ? `${attempt.score.toFixed(0)}%` : '—'}
+                            </span>
+                          )
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-3">
+                        <span>Ngày: {attempt.startedAt ? formatDate(attempt.startedAt) : '—'}</span>
+                        <span>Giờ: {attempt.startedAt ? new Date(attempt.startedAt).toLocaleTimeString() : '—'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        isAttemptCancelled
+                          ? 'bg-red-500/10 text-red-600 border border-red-500/20'
+                          : statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']
+                      }`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                        {isAttemptCancelled ? 'Hủy giữa chừng' : getStatusLabel(t, itemStatus)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isFormOpen && (
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto flex flex-col p-6 rounded-lg border border-border shadow-lg">
+            <DialogHeader className="flex flex-row justify-between items-center pr-6">
+              <div>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  {isEditMode ? (
+                    <>
+                      <Edit className="h-5 w-5 text-primary" />
+                      Chỉnh sửa bài kiểm tra
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5 text-primary" />
+                      Tạo bài kiểm tra mới
+                    </>
+                  )}
+                </DialogTitle>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsFormOpen(false)
+                  setIsAiDialogOpen(true)
+                }}
+                className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Tạo bằng AI
+              </Button>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmit} className="space-y-4 my-2 flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-semibold text-foreground">Tên bài kiểm tra *</label>
+                  <Input
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ví dụ: Kiểm tra kiến thức Java Core"
+                  />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-semibold text-foreground">Thời gian (phút) *</label>
+                  <Input
+                    type="number"
+                    required
+                    min={1}
+                    value={timeLimitMinutes}
+                    onChange={(e) => setTimeLimitMinutes(parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-semibold text-foreground">Mô tả ngắn</label>
+                  <Input
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Mô tả mục đích bài kiểm tra..."
+                  />
+                </div>
+              </div>
+
+              {/* Questions */}
+              <div className="space-y-3 pt-3 border-t border-border">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-bold">Danh sách câu hỏi ({questions.length})</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuestions([...questions, {
+                      id: `q_${Date.now()}`,
+                      text: '',
+                      type: 'MCQ',
+                      options: ['Lựa chọn 1', 'Lựa chọn 2'],
+                      correctOptionIndex: 0
+                    }])}
+                    className="h-8 text-xs cursor-pointer"
+                  >
+                    + Thêm câu hỏi
+                  </Button>
+                </div>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {questions.map((q, qIndex) => (
+                    <div key={q.id || qIndex} className="p-3 border border-border rounded-lg bg-muted/20 space-y-3 relative">
+                      <button
+                        type="button"
+                        onClick={() => setQuestions(questions.filter((_, idx) => idx !== qIndex))}
+                        className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 cursor-pointer text-xs"
+                      >
+                        Xóa
+                      </button>
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-bold text-primary">Câu {qIndex + 1}</span>
+                        <Input
+                          required
+                          value={q.text || ''}
+                          onChange={(e) => {
+                            const updated = [...questions]
+                            updated[qIndex] = { ...q, text: e.target.value }
+                            setQuestions(updated)
+                          }}
+                          placeholder="Nội dung câu hỏi..."
+                        />
+                      </div>
+                      <div className="space-y-2 pl-3 border-l-2 border-primary/20">
+                        <span className="text-[11px] font-semibold text-muted-foreground">Đáp án trắc nghiệm</span>
+                        <div className="grid gap-2">
+                          {q.options?.map((opt, oIdx) => (
+                            <div key={oIdx} className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`q-${qIndex}-correct`}
+                                checked={q.correctOptionIndex === oIdx}
+                                onChange={() => {
+                                  const updated = [...questions]
+                                  updated[qIndex] = { ...q, correctOptionIndex: oIdx }
+                                  setQuestions(updated)
+                                }}
+                                className="cursor-pointer"
+                              />
+                              <Input
+                                required
+                                value={opt}
+                                onChange={(e) => {
+                                  const updated = [...questions]
+                                  const opts = [...(q.options || [])]
+                                  opts[oIdx] = e.target.value
+                                  updated[qIndex] = { ...q, options: opts }
+                                  setQuestions(updated)
+                                }}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Đang lưu...'
+                    : isEditMode
+                      ? 'Lưu thay đổi'
+                      : 'Tạo bài test'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isAiDialogOpen && (
+        <Dialog
+          open={isAiDialogOpen}
+          onOpenChange={(open) => {
+            setIsAiDialogOpen(open)
+            if (!open) setIsFormOpen(true)
+          }}
+        >
+          <DialogContent className="sm:max-w-[450px]">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Tạo bài kiểm tra tự động bằng AI
+              </DialogTitle>
+            </DialogHeader>
+
+            <form onSubmit={handleAiConfirm} className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">Tên công việc / Chủ đề *</label>
+                <Input
+                  required
+                  value={aiJobName}
+                  onChange={(e) => setAiJobName(e.target.value)}
+                  placeholder="Ví dụ: React Developer, Java core..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Trình độ</label>
+                  <select
+                    value={aiLevel}
+                    onChange={(e) => setAiLevel(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                  >
+                    <option value="Intern">Intern</option>
+                    <option value="Junior">Junior</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Lead">Lead</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Độ khó</label>
+                  <select
+                    value={aiDifficulty}
+                    onChange={(e) => setAiDifficulty(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                  >
+                    <option value="Dễ">Dễ</option>
+                    <option value="Trung bình">Trung bình</option>
+                    <option value="Khó">Khó</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">Số câu hỏi</label>
+                <Input
+                  type="number"
+                  required
+                  min={1}
+                  max={20}
+                  value={aiNumQuestions}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setAiNumQuestions("");
+                    } else {
+                      const parsed = parseInt(val);
+                      setAiNumQuestions(isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsAiDialogOpen(false)
+                    setIsFormOpen(true)
+                  }}
+                  disabled={generateMutation.isPending}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={generateMutation.isPending}>
+                  {generateMutation.isPending ? 'Đang tạo bằng AI...' : 'Xác nhận tạo'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
@@ -412,6 +1183,7 @@ function TakeAssessmentContent({
   onClose: () => void
 }) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const questions: Question[] = assessment.questions ?? []
 
   const saveAnswersMutation = useSaveAnswers()
@@ -438,6 +1210,39 @@ function TakeAssessmentContent({
   const [currentQIndex, setCurrentQIndex] = React.useState(0)
   const [showResult, setShowResult] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [confirmExitOpen, setConfirmExitOpen] = React.useState(false)
+  const [isCancellingMidway, setIsCancellingMidway] = React.useState(false)
+
+  const handleCancelMidway = () => {
+    setIsCancellingMidway(true)
+    try {
+      const cancelled = JSON.parse(localStorage.getItem('cancelledAttempts') || '[]')
+      if (Array.isArray(cancelled) && !cancelled.includes(attemptId)) {
+        cancelled.push(attemptId)
+        localStorage.setItem('cancelledAttempts', JSON.stringify(cancelled))
+      }
+    } catch {
+      // ignore storage errors
+    }
+    submitMutation.mutate(
+      { attemptId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+          setIsCancellingMidway(false)
+          setConfirmExitOpen(false)
+          onClose()
+        },
+        onError: () => {
+          setIsCancellingMidway(false)
+          setConfirmExitOpen(false)
+          onClose()
+        },
+      }
+    )
+  }
+
   // Initialize timer from assessment data directly (no useEffect needed)
   const [timeLeft, setTimeLeft] = React.useState((assessment.timeLimitMinutes ?? 30) * 60)
 
@@ -448,7 +1253,12 @@ function TakeAssessmentContent({
       if (isSubmitting) return
       setIsSubmitting(true)
       const callbacks = {
-        onSuccess: () => { setShowResult(true); fetchResult() },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+          setShowResult(true)
+          fetchResult()
+        },
         onError: () => setIsSubmitting(false),
       }
       if (overtime) {
@@ -538,8 +1348,8 @@ function TakeAssessmentContent({
       {/* Header */}
       <div className="card-surface flex items-center justify-between p-4">
         <button
-          onClick={onClose}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          onClick={() => setConfirmExitOpen(true)}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground cursor-pointer"
         >
           <ChevronLeft className="h-4 w-4" />
           {t('btn_exit')}
@@ -672,6 +1482,26 @@ function TakeAssessmentContent({
           </div>
         </div>
       </div>
+      {confirmExitOpen && (
+        <Dialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Xác nhận thoát bài làm</DialogTitle>
+            </DialogHeader>
+            <div className="mt-2 text-sm text-muted-foreground">
+              Bạn có chắc chắn muốn thoát? Bài làm của bạn sẽ được nộp tự động và tính là **Hủy giữa chừng**.
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmExitOpen(false)} disabled={isCancellingMidway}>
+                Hủy
+              </Button>
+              <Button variant="destructive" onClick={handleCancelMidway} disabled={isCancellingMidway}>
+                {isCancellingMidway ? 'Đang thoát...' : 'Thoát & Hủy'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

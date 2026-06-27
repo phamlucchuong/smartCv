@@ -3,15 +3,19 @@ package vn.chuongpl.application_service.features.assessment;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import vn.chuongpl.application_service.dtos.ApiResponse;
 import vn.chuongpl.application_service.dtos.request.AssessmentAnswerRequest;
 import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
+import vn.chuongpl.application_service.dtos.request.AssessmentGenerateRequest;
+import vn.chuongpl.application_service.dtos.response.AssessmentGenerateResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AssessmentResultResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptStateResponse;
-
 import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
 
 import java.util.List;
@@ -37,16 +41,19 @@ public class AssessmentController {
     }
 
     @GetMapping("/api/assessments")
-    @PreAuthorize("hasRole('RECRUITER')")
-    public ApiResponse<List<AssessmentResponse>> getRecruiterAssessments(
-            @AuthenticationPrincipal String userId) {
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('ADMIN')")
+    public ApiResponse<List<AssessmentResponse>> getRecruiterAssessments(Authentication authentication) {
+        String userId = (String) authentication.getPrincipal();
+        List<String> roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
         return ApiResponse.<List<AssessmentResponse>>builder()
-                .data(assessmentService.getRecruiterAssessments(userId))
+                .data(assessmentService.getRecruiterAssessments(userId, roles))
                 .build();
     }
 
     @PutMapping("/api/assessments/{id}")
-    @PreAuthorize("hasRole('RECRUITER')")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
     public ApiResponse<AssessmentResponse> updateAssessment(
             @PathVariable String id,
             @RequestBody AssessmentCreateRequest request,
@@ -57,7 +64,7 @@ public class AssessmentController {
     }
 
     @DeleteMapping("/api/assessments/{id}")
-    @PreAuthorize("hasRole('RECRUITER')")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
     public ApiResponse<Void> deleteAssessment(
             @PathVariable String id,
             @AuthenticationPrincipal String userId) {
@@ -73,6 +80,27 @@ public class AssessmentController {
             @AuthenticationPrincipal String userId) {
         assessmentService.assignToCandidate(id, body.get("candidateId"), userId);
         return ApiResponse.<Void>builder().message("Assessment assigned").build();
+    }
+
+    // ── Candidate self-test endpoints ─────────────────────────────────────────
+
+    @PostMapping("/api/assessments/self")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<AssessmentResponse> createSelfAssessment(
+            @RequestBody AssessmentCreateRequest request,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<AssessmentResponse>builder()
+                .data(assessmentService.createSelfAssessment(request, userId))
+                .build();
+    }
+
+    @GetMapping("/api/assessments/self")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<List<AssessmentResponse>> getMySelfAssessments(
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<AssessmentResponse>>builder()
+                .data(assessmentService.getMySelfAssessments(userId))
+                .build();
     }
 
     // ── Candidate endpoints ────────────────────────────────────────────────────
@@ -175,14 +203,13 @@ public class AssessmentController {
     }
 
     @DeleteMapping("/api/attempts/{attemptId}")
-    @PreAuthorize("hasRole('RECRUITER')")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
     public ApiResponse<Void> deleteAttempt(
             @PathVariable String attemptId,
             @AuthenticationPrincipal String userId) {
         assessmentService.deleteAttempt(attemptId, userId);
         return ApiResponse.<Void>builder().message("Attempt deleted").build();
     }
-
 
     @GetMapping("/api/assessments/job/{jobId}")
     @PreAuthorize("hasRole('CANDIDATE')")
@@ -197,6 +224,15 @@ public class AssessmentController {
     public ApiResponse<List<AssessmentResponse>> getAssessmentsByRecruiter(@PathVariable String recruiterId) {
         return ApiResponse.<List<AssessmentResponse>>builder()
                 .data(assessmentService.getAssessmentsByRecruiter(recruiterId))
+                .build();
+    }
+
+    @PostMapping("/api/assessments/generate-questions")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
+    public ApiResponse<AssessmentGenerateResponse> generateQuestions(
+            @RequestBody @Valid AssessmentGenerateRequest request) {
+        return ApiResponse.<AssessmentGenerateResponse>builder()
+                .data(assessmentService.generateQuestions(request))
                 .build();
     }
 }

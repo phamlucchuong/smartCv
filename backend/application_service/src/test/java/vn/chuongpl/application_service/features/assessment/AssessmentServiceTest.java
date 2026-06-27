@@ -11,7 +11,11 @@ import vn.chuongpl.application_service.dtos.request.AssessmentCreateRequest;
 import vn.chuongpl.application_service.dtos.response.AssessmentResponse;
 import vn.chuongpl.application_service.dtos.response.AttemptSummaryResponse;
 import vn.chuongpl.application_service.enums.*;
+import vn.chuongpl.application_service.dtos.request.AssessmentGenerateRequest;
+import vn.chuongpl.application_service.dtos.response.AssessmentGenerateResponse;
+import vn.chuongpl.application_service.dtos.response.GeneratedQuestion;
 import vn.chuongpl.application_service.exception.AppException;
+import vn.chuongpl.application_service.integration.ai.AiEngineClient;
 import vn.chuongpl.application_service.integration.notification.AssessmentNotificationPublisher;
 import vn.chuongpl.application_service.integration.user.UserClient;
 
@@ -30,6 +34,7 @@ class AssessmentServiceTest {
     @Mock AssessmentAttemptRepository attemptRepository;
     @Mock UserClient userClient;
     @Mock AssessmentNotificationPublisher assessmentNotificationPublisher;
+    @Mock AiEngineClient aiEngineClient;
     @InjectMocks AssessmentService assessmentService;
 
     @Test
@@ -220,15 +225,18 @@ class AssessmentServiceTest {
     }
 
     @Test
-    void publishAssessment_shouldBeIdempotentWhenAlreadyActive() {
+    void publishAssessment_shouldDemoteActiveToDraft() {
         when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
         Assessment assessment = Assessment.builder()
                 .id("a1").recruiterId("r1").status(AssessmentStatus.ACTIVE).build();
         when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+        when(assessmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        assessmentService.publishAssessment("a1", "u1");
+        AssessmentResponse response = assessmentService.publishAssessment("a1", "u1");
 
-        verify(assessmentRepository, never()).save(any());
+        assertEquals(AssessmentStatus.DRAFT, assessment.getStatus());
+        assertEquals(AssessmentStatus.DRAFT, response.getStatus());
+        verify(assessmentRepository).save(assessment);
     }
 
     @Test
@@ -287,5 +295,21 @@ class AssessmentServiceTest {
         AppException ex = assertThrows(AppException.class,
                 () -> assessmentService.getResult("att1", "c1"));
         assertEquals(ErrorCode.ATTEMPT_NOT_SUBMITTED, ex.getErrorCode());
+    }
+
+    @Test
+    void generateQuestions_shouldDelegateToAiEngineClient() {
+        AssessmentGenerateRequest request = new AssessmentGenerateRequest("React Developer", "Junior", "Trung bình", 5);
+        List<GeneratedQuestion> questions = List.of(
+                new GeneratedQuestion("What is JSX?", List.of("A", "B", "C", "D"), 0)
+        );
+        AssessmentGenerateResponse expected = new AssessmentGenerateResponse(questions);
+        when(aiEngineClient.generateQuestions(request)).thenReturn(expected);
+
+        AssessmentGenerateResponse result = assessmentService.generateQuestions(request);
+
+        assertEquals(1, result.questions().size());
+        assertEquals("What is JSX?", result.questions().get(0).text());
+        verify(aiEngineClient).generateQuestions(request);
     }
 }

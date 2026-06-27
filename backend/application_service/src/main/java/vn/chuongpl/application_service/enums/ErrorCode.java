@@ -21,7 +21,8 @@ public enum ErrorCode {
     ATTEMPT_NOT_FOUND(8002, "Attempt not found"),
     ATTEMPT_ALREADY_IN_PROGRESS(8003, "An attempt is already in progress for this assessment"),
     ATTEMPT_ALREADY_SUBMITTED(8004, "This attempt has already been submitted"),
-    ATTEMPT_NOT_SUBMITTED(8005, "Attempt has not been submitted yet");
+    ATTEMPT_NOT_SUBMITTED(8005, "Attempt has not been submitted yet"),
+    AI_SERVICE_UNAVAILABLE(8006, "AI service is currently unavailable");
 
     private final int code;
     private final String message;

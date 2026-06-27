@@ -4,17 +4,16 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-
-export type ServicePackageUpsertRequestCategory = 'STANDARD' | 'PLATFORM_FEE';
+import type { ServicePackageUpsertRequestCategory } from './servicePackageUpsertRequestCategory';
 
 export interface ServicePackageUpsertRequest {
   name: string;
+  category?: ServicePackageUpsertRequestCategory;
   price: number;
   aiCredits: number;
   jobLimit: number;
   cvLimit: number;
   durationDays?: number;
-  category?: ServicePackageUpsertRequestCategory;
   featured?: boolean;
   features?: string[];
 }

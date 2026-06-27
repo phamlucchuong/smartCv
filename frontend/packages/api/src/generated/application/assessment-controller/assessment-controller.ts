@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApiResponseAssessmentGenerateResponse,
   ApiResponseAssessmentResponse,
   ApiResponseAssessmentResultResponse,
   ApiResponseAttemptStateResponse,
@@ -34,6 +35,7 @@ import type {
   ApiResponseVoid,
   AssessmentAnswerRequest,
   AssessmentCreateRequest,
+  AssessmentGenerateRequest,
   AssignToCandidateBody,
   SubmitAttemptParams
 } from '.././model';
@@ -558,6 +560,208 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getStartAttemptMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const generateQuestions = (
+    assessmentGenerateRequest: AssessmentGenerateRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseAssessmentGenerateResponse>(
+      {url: `/api/assessments/generate-questions`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: assessmentGenerateRequest, signal
+    },
+      options);
+    }
+  
+
+
+export const getGenerateQuestionsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateQuestions>>, TError,{data: AssessmentGenerateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateQuestions>>, TError,{data: AssessmentGenerateRequest}, TContext> => {
+
+const mutationKey = ['generateQuestions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateQuestions>>, {data: AssessmentGenerateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateQuestions(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateQuestionsMutationResult = NonNullable<Awaited<ReturnType<typeof generateQuestions>>>
+    export type GenerateQuestionsMutationBody = AssessmentGenerateRequest
+    export type GenerateQuestionsMutationError = unknown
+
+    export const useGenerateQuestions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateQuestions>>, TError,{data: AssessmentGenerateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof generateQuestions>>,
+        TError,
+        {data: AssessmentGenerateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getGenerateQuestionsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const getMySelfAssessments = (
+    
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseListAssessmentResponse>(
+      {url: `/api/assessments/self`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetMySelfAssessmentsQueryKey = () => {
+    return [
+    `/api/assessments/self`
+    ] as const;
+    }
+
+    
+export const getGetMySelfAssessmentsQueryOptions = <TData = Awaited<ReturnType<typeof getMySelfAssessments>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMySelfAssessments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMySelfAssessmentsQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMySelfAssessments>>> = ({ signal }) => getMySelfAssessments(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMySelfAssessments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMySelfAssessmentsQueryResult = NonNullable<Awaited<ReturnType<typeof getMySelfAssessments>>>
+export type GetMySelfAssessmentsQueryError = unknown
+
+
+export function useGetMySelfAssessments<TData = Awaited<ReturnType<typeof getMySelfAssessments>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMySelfAssessments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMySelfAssessments>>,
+          TError,
+          Awaited<ReturnType<typeof getMySelfAssessments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMySelfAssessments<TData = Awaited<ReturnType<typeof getMySelfAssessments>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMySelfAssessments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMySelfAssessments>>,
+          TError,
+          Awaited<ReturnType<typeof getMySelfAssessments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMySelfAssessments<TData = Awaited<ReturnType<typeof getMySelfAssessments>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMySelfAssessments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetMySelfAssessments<TData = Awaited<ReturnType<typeof getMySelfAssessments>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMySelfAssessments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMySelfAssessmentsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const createSelfAssessment = (
+    assessmentCreateRequest: AssessmentCreateRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseAssessmentResponse>(
+      {url: `/api/assessments/self`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: assessmentCreateRequest, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreateSelfAssessmentMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSelfAssessment>>, TError,{data: AssessmentCreateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSelfAssessment>>, TError,{data: AssessmentCreateRequest}, TContext> => {
+
+const mutationKey = ['createSelfAssessment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSelfAssessment>>, {data: AssessmentCreateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSelfAssessment(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSelfAssessmentMutationResult = NonNullable<Awaited<ReturnType<typeof createSelfAssessment>>>
+    export type CreateSelfAssessmentMutationBody = AssessmentCreateRequest
+    export type CreateSelfAssessmentMutationError = unknown
+
+    export const useCreateSelfAssessment = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSelfAssessment>>, TError,{data: AssessmentCreateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createSelfAssessment>>,
+        TError,
+        {data: AssessmentCreateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateSelfAssessmentMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -1327,7 +1531,6 @@ export function useGetAssessmentsByJob<TData = Awaited<ReturnType<typeof getAsse
 
   return query;
 }
-
 
 
 

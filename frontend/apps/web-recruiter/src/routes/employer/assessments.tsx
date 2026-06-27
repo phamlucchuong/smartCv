@@ -1,14 +1,18 @@
 import React, { useState, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@smart-cv/ui";
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from "@smart-cv/ui";
 import {
   Plus,
@@ -25,6 +29,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   RefreshCw,
+  Sparkles,
+  MoreHorizontal,
+  Upload,
+  Download,
 } from "lucide-react";
 import {
   useGetRecruiterAssessments,
@@ -40,6 +48,9 @@ import {
   usePublishAssessment,
   useGetAttemptsByAssessment,
   useGetCandidateByUserId,
+  parseAssessmentFile,
+  downloadAssessmentTemplate,
+  useGenerateAssessmentQuestions,
 } from "@smart-cv/api";
 import { toast } from "sonner";
 
@@ -157,6 +168,87 @@ function AssessmentsManager() {
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(30);
   const [questions, setQuestions] = useState<Question[]>([]);
 
+  // AI Generator States
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [aiJobName, setAiJobName] = useState("");
+  const [aiDifficulty, setAiDifficulty] = useState("Trung bình");
+  const [aiLevel, setAiLevel] = useState("Junior");
+  const [aiNumQuestions, setAiNumQuestions] = useState<number | "">(5);
+
+  const generateMutation = useGenerateAssessmentQuestions();
+
+  // Excel Import
+  const importInputRef = React.useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsImporting(true);
+    try {
+      const result = await parseAssessmentFile(file);
+      if (result.questions.length === 0) {
+        const reasons = result.skippedRows.map(r => `Dòng ${r.rowNumber}: ${r.reason}`).join(" | ");
+        toast.error(`Không tìm thấy câu hỏi hợp lệ.${reasons ? " " + reasons : ""}`);
+        return;
+      }
+      toast.success(`Đã import ${result.questions.length} câu hỏi`);
+      if (result.skippedRows.length > 0) {
+        const detail = result.skippedRows.map(r => `Dòng ${r.rowNumber}: ${r.reason}`).join(" | ");
+        toast.warning(`Bỏ qua ${result.skippedRows.length} dòng không hợp lệ: ${detail}`);
+      }
+      setTitle("");
+      setDescription("");
+      setJobId("");
+      setTimeLimitMinutes(30);
+      setIsEditMode(false);
+      setCurrentId(null);
+      setQuestions(result.questions);
+      setIsFormOpen(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "File không đọc được. Vui lòng dùng file .xlsx hoặc .csv hợp lệ.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleAiConfirm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiJobName.trim()) {
+      toast.error("Vui lòng nhập tên công việc");
+      return;
+    }
+    generateMutation.mutate(
+      { jobName: aiJobName, level: aiLevel, difficulty: aiDifficulty, numQuestions: Number(aiNumQuestions) || 5 },
+      {
+        onSuccess: (response) => {
+          const questions = response.data?.questions ?? [];
+          if (questions.length === 0) {
+            toast.error("AI không tạo được câu hỏi. Vui lòng thử lại.");
+            return;
+          }
+          const mapped: Question[] = questions.slice(0, Number(aiNumQuestions) || 5).map((q) => ({
+            id: crypto.randomUUID(),
+            text: q.text,
+            type: "MCQ" as const,
+            options: q.options,
+            correctOptionIndex: q.correctOptionIndex,
+          }));
+          setQuestions(mapped);
+          setTitle(`Bài test ${aiJobName} - Trình độ ${aiLevel}`);
+          setDescription(`Bài test tự động tạo bằng AI cho vị trí ${aiJobName} (${aiLevel}) với độ khó ${aiDifficulty}.`);
+          setIsAiDialogOpen(false);
+          setIsFormOpen(true);
+          toast.success("Đã tạo câu hỏi bằng AI thành công!");
+        },
+        onError: () => {
+          toast.error("Không thể tạo câu hỏi bằng AI. Vui lòng thử lại.");
+        },
+      }
+    );
+  };
+
   const activeJobs = React.useMemo(() => {
     const list = jobs.filter((j) => j.visibilityStatus === "ACTIVE");
     if (jobId && !list.some((j) => j.id === jobId)) {
@@ -193,20 +285,7 @@ function AssessmentsManager() {
     setDescription("");
     setJobId("");
     setTimeLimitMinutes(30);
-    setQuestions([
-      {
-        id: "q_1",
-        text: "Ví dụ: Sự khác biệt chính giữa interface và abstract class trong Java là gì?",
-        type: QuestionType.MCQ,
-        options: [
-          "Interface chỉ chứa method không có body, abstract class có thể có cả hai",
-          "Interface hỗ trợ đa kế thừa, abstract class thì không",
-          "Cả hai câu trên đều đúng",
-          "Cả hai câu trên đều sai",
-        ],
-        correctOptionIndex: 2,
-      },
-    ]);
+    setQuestions([]);
     setIsFormOpen(true);
   };
 
@@ -391,9 +470,53 @@ function AssessmentsManager() {
             Tạo và quản lý các bài kiểm tra trắc nghiệm, tự luận để đánh giá năng lực ứng viên.
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="gap-2 shadow-sm font-semibold">
-          <Plus className="size-4" /> Tạo bài kiểm tra
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,.csv"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button
+            variant="outline"
+            onClick={() => importInputRef.current?.click()}
+            disabled={isImporting}
+            className="gap-2 cursor-pointer"
+          >
+            <Upload className="size-4" />
+            {isImporting ? "Đang đọc..." : "Import Excel"}
+          </Button>
+          <div className="relative group">
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              <HelpCircle className="size-4" />
+            </button>
+            <div className="absolute right-0 top-10 z-50 hidden group-hover:block w-72 rounded-lg border border-border bg-card p-3 shadow-lg text-xs">
+              <p className="font-semibold text-foreground mb-2">Format mỗi dòng Excel/CSV:</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• <strong className="text-foreground">Question</strong> — nội dung câu hỏi (bắt buộc)</li>
+                <li>• <strong className="text-foreground">Option A, Option B</strong> — bắt buộc với MCQ</li>
+                <li>• <strong className="text-foreground">Option C, Option D</strong> — tuỳ chọn</li>
+                <li>• <strong className="text-foreground">Correct</strong> — A, B, C hoặc D</li>
+                <li>• Chỉ hỗ trợ câu hỏi <strong className="text-foreground">trắc nghiệm (MCQ)</strong></li>
+              </ul>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => downloadAssessmentTemplate()}
+            title="Tải file mẫu"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <Download className="size-4" />
+          </button>
+          <Button onClick={handleOpenCreate} className="gap-2 shadow-sm font-semibold cursor-pointer">
+            <Plus className="size-4" /> Tạo bài kiểm tra
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -474,75 +597,71 @@ function AssessmentsManager() {
                         {a.status === "ACTIVE" ? "Hoạt động" : "Nháp"}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                      {a.status === "DRAFT" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => publishMutation.mutate({ id: a.id! })}
-                          disabled={publishMutation.isPending}
-                          title="Công bố bài kiểm tra"
-                          className="h-8 px-2.5 text-xs font-medium gap-1 text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10"
-                        >
-                          <CheckCircle2 className="size-3.5" /> Công bố
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => publishMutation.mutate({ id: a.id! })}
-                          disabled={publishMutation.isPending}
-                          title="Tạm ẩn bài kiểm tra"
-                          className="h-8 px-2.5 text-xs font-medium gap-1 text-amber-600 border-amber-500/40 hover:bg-amber-500/10"
-                        >
-                          <X className="size-3.5" /> Tạm ẩn
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => { setAssessmentForAttempts(a); setIsAttemptsOpen(true); }}
-                        title="Xem kết quả ứng viên"
-                        className="h-8 px-2.5 text-xs font-medium gap-1"
-                      >
-                        <ListChecks className="size-3.5" /> Kết quả
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPreviewingAssessment(a)}
-                        title="Xem thử bài thi"
-                        className="h-8 px-2.5 text-xs font-medium gap-1"
-                      >
-                        <Eye className="size-3.5" /> Xem thử
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenAssign(a)}
-                        title="Gán cho ứng viên"
-                        className="h-8 px-2.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground gap-1"
-                      >
-                        <UserPlus className="size-3.5" /> Gán
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenEdit(a)}
-                        className="h-8 w-8 p-0"
-                        title="Chỉnh sửa"
-                      >
-                        <Edit className="size-3.5 text-muted-foreground hover:text-foreground" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenDelete(a)}
-                        className="h-8 w-8 p-0 hover:bg-red-500/10"
-                        title="Xoá"
-                      >
-                        <Trash2 className="size-3.5 text-red-500 hover:text-red-600" />
-                      </Button>
+                    <td className="py-4 px-6 text-right whitespace-nowrap">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {a.status === "DRAFT" ? (
+                            <DropdownMenuItem
+                              onClick={() => publishMutation.mutate({ id: a.id! })}
+                              disabled={publishMutation.isPending}
+                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
+                            >
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              <span>Công bố</span>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => publishMutation.mutate({ id: a.id! })}
+                              disabled={publishMutation.isPending}
+                              className="text-amber-600 focus:text-amber-600 cursor-pointer"
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              <span>Tạm ẩn</span>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => { setAssessmentForAttempts(a); setIsAttemptsOpen(true); }}
+                            className="cursor-pointer"
+                          >
+                            <ListChecks className="mr-2 h-4 w-4" />
+                            <span>Kết quả</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setPreviewingAssessment(a)}
+                            className="cursor-pointer"
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            <span>Xem thử</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenAssign(a)}
+                            className="cursor-pointer"
+                          >
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            <span>Gán</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenEdit(a)}
+                            className="cursor-pointer"
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Chỉnh sửa</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenDelete(a)}
+                            className="text-red-600 focus:text-red-600 cursor-pointer"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Xoá</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
@@ -556,14 +675,29 @@ function AssessmentsManager() {
       {isFormOpen && (
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto flex flex-col p-6 rounded-lg border border-border shadow-lg">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <BookOpen className="size-5 text-primary" />
-                {isEditMode ? "Chỉnh sửa bài kiểm tra" : "Tạo bài kiểm tra mới"}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                Nhập các thông tin cơ bản và lập danh sách câu hỏi trắc nghiệm hoặc tự luận bên dưới.
-              </DialogDescription>
+            <DialogHeader className="flex flex-row justify-between items-center pr-6">
+              <div>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <BookOpen className="size-5 text-primary" />
+                  {isEditMode ? "Chỉnh sửa bài kiểm tra" : "Tạo bài kiểm tra mới"}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Nhập các thông tin cơ bản và lập danh sách câu hỏi trắc nghiệm hoặc tự luận bên dưới.
+                </DialogDescription>
+              </div>
+              {!isEditMode && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    setIsAiDialogOpen(true);
+                  }}
+                  className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Tạo bằng AI
+                </Button>
+              )}
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-6 my-2 flex-1">
@@ -930,6 +1064,132 @@ function AssessmentsManager() {
           </DialogContent>
         </Dialog>
       )}
+
+       {isAiDialogOpen && (
+         <Dialog
+           open={isAiDialogOpen}
+           onOpenChange={(open) => {
+             setIsAiDialogOpen(open);
+             if (!open) setIsFormOpen(true);
+           }}
+         >
+           <DialogContent className="max-w-[450px] p-6 rounded-lg border border-border shadow-lg">
+             <DialogHeader>
+               <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                 <Sparkles className="h-5 w-5 text-primary" />
+                 Tạo bài kiểm tra tự động bằng AI
+               </DialogTitle>
+             </DialogHeader>
+
+             <form onSubmit={handleAiConfirm} className="space-y-4 mt-2">
+               <div className="space-y-1.5 w-full min-w-0 max-w-full">
+                 <label className="text-sm font-semibold text-foreground">Liên kết với Job (Vị trí tuyển dụng)</label>
+                 <div className="w-full min-w-0 max-w-full">
+                   <select
+                     value={jobId}
+                     onChange={(e) => {
+                       const selectedVal = e.target.value;
+                       setJobId(selectedVal);
+                       // Also auto-fill the jobName input if it matches an active job
+                       const selectedJob = activeJobs.find(j => j.id === selectedVal);
+                       if (selectedJob && !aiJobName) {
+                         setAiJobName(selectedJob.title ?? '');
+                       }
+                     }}
+                     className="h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none truncate"
+                   >
+                     <option value="">Không liên kết / Chọn vị trí...</option>
+                     {activeJobs.map((j) => (
+                       <option key={j.id} value={j.id}>
+                         {j.title} ({j.company})
+                       </option>
+                   ))}
+                  </select>
+                </div>
+              </div>
+
+               <div className="space-y-1.5">
+                 <label className="text-sm font-semibold text-foreground">Tên công việc / Chủ đề *</label>
+                 <input
+                   type="text"
+                   required
+                   value={aiJobName}
+                   onChange={(e) => setAiJobName(e.target.value)}
+                   placeholder="Ví dụ: React Developer, Java core..."
+                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                 />
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1.5">
+                   <label className="text-sm font-semibold text-foreground">Trình độ</label>
+                   <select
+                     value={aiLevel}
+                     onChange={(e) => setAiLevel(e.target.value)}
+                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                   >
+                     <option value="Intern">Intern</option>
+                     <option value="Junior">Junior</option>
+                     <option value="Senior">Senior</option>
+                     <option value="Lead">Lead</option>
+                   </select>
+                 </div>
+
+                 <div className="space-y-1.5">
+                   <label className="text-sm font-semibold text-foreground">Độ khó</label>
+                   <select
+                     value={aiDifficulty}
+                     onChange={(e) => setAiDifficulty(e.target.value)}
+                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                   >
+                     <option value="Dễ">Dễ</option>
+                     <option value="Trung bình">Trung bình</option>
+                     <option value="Khó">Khó</option>
+                   </select>
+                 </div>
+               </div>
+
+               <div className="space-y-1.5">
+                 <label className="text-sm font-semibold text-foreground">Số câu hỏi</label>
+                 <input
+                   type="number"
+                   required
+                   min={1}
+                   max={20}
+                   value={aiNumQuestions}
+                   onChange={(e) => {
+                     const val = e.target.value;
+                     if (val === "") {
+                       setAiNumQuestions("");
+                     } else {
+                       const parsed = parseInt(val);
+                       setAiNumQuestions(isNaN(parsed) ? "" : parsed);
+                     }
+                   }}
+                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                 />
+               </div>
+
+               <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
+                 <Button
+                   type="button"
+                   variant="outline"
+                   onClick={() => {
+                     setIsAiDialogOpen(false);
+                     setIsFormOpen(true);
+                   }}
+                   disabled={generateMutation.isPending}
+                 >
+                   Hủy
+                 </Button>
+                 <Button type="submit" disabled={generateMutation.isPending}>
+                   {generateMutation.isPending ? "Đang tạo bằng AI..." : "Xác nhận tạo"}
+                 </Button>
+               </div>
+             </form>
+           </DialogContent>
+         </Dialog>
+       )}
     </div>
   );
 }
@@ -1349,4 +1609,3 @@ function CandidateInfoCell({ candidateId, applications }: CandidateInfoCellProps
     </div>
   );
 }
-

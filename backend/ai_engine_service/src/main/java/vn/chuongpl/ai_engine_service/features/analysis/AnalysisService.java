@@ -9,10 +9,12 @@ import org.springframework.beans.factory.annotation.Value;
 import vn.chuongpl.ai_engine_service.model.AiModelGatewayRouter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.chuongpl.ai_engine_service.dtos.request.AssessmentGenerateRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvAnalyzeRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.CvImproveRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.InterviewQuestionsRequest;
 import vn.chuongpl.ai_engine_service.dtos.request.JobRecommendRequest;
+import vn.chuongpl.ai_engine_service.dtos.response.AssessmentGenerateResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvAnalysisResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.CvImprovementResponse;
 import vn.chuongpl.ai_engine_service.dtos.response.InterviewQuestionsResponse;
@@ -217,6 +219,17 @@ public class AnalysisService {
             userClient.consumeRecruiterAiCredit(userId);
         }
         return generateInterviewQuestions(request);
+    }
+
+    public AssessmentGenerateResponse generateAssessmentQuestions(AssessmentGenerateRequest request) {
+        String prompt = promptBuilder.buildAssessmentGeneratePrompt(Map.of(
+                "JOB_NAME", request.jobName(),
+                "LEVEL", nvl(request.level()),
+                "DIFFICULTY", nvl(request.difficulty()),
+                "NUM_QUESTIONS", String.valueOf(request.numQuestions())
+        ));
+        String aiContent = callAi(prompt);
+        return parse(aiContent, AssessmentGenerateResponse.class);
     }
 
     private String callAi(String prompt) {

@@ -53,6 +53,7 @@ export * from './generated/job/home-controller/home-controller';
 // Application service
 export * from './generated/application/application-controller/application-controller';
 export * from './generated/application/assessment-controller/assessment-controller';
+export * from './excel-import';
 
 // AI service
 export * from './generated/ai/analysis-controller/analysis-controller';
@@ -67,6 +68,7 @@ export * from './recruiter-applications-hooks';
 export * from './assessment-manual-hooks';
 export * from './google-auth';
 export * from './payment-hooks';
+export * from './assessment-ai-hooks';
 
 // Job-service types not re-exported by root model
 export type { JobUpdateRequest, JobResponse } from './generated/job/model';
