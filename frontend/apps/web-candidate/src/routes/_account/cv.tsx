@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import {
   useListCvs, useSetDefaultCv, useDeleteCv, useReanalyzeCv, useAnalyzeCv,
   getListCvsQueryKey, AXIOS_INSTANCE,
+  useGetMe2, useGetServicePackages,
 } from '@smart-cv/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { onMessage } from 'firebase/messaging'
@@ -67,6 +68,20 @@ function MyCVPage() {
     },
   })
   const queryClient = useQueryClient()
+
+  const { data: meData } = useGetMe2({
+    query: { enabled: isAuthenticated },
+  })
+  const candidate = meData?.data
+
+  const { data: packagesData } = useGetServicePackages()
+  const packages = packagesData?.data ?? []
+
+  const activePackage = packages.find((p) => p.id === candidate?.activePackageId) || {
+    id: 'free',
+    name: 'Free',
+    cvLimit: 3,
+  }
 
   // When the tab is open, Firebase suppresses background push — listen for foreground messages instead.
   React.useEffect(() => {
@@ -196,15 +211,18 @@ function MyCVPage() {
     },
   })
 
-  const uploadDisabled = uploadMutation.isPending || cvList.length >= 10
+  const maxCvs = activePackage?.cvLimit ?? 3
+  const isUnlimited = maxCvs === -1
+  const maxCvsText = isUnlimited ? (lang === 'VI' ? 'Vô hạn' : 'Unlimited') : String(maxCvs)
+  const uploadDisabled = uploadMutation.isPending || (!isUnlimited && cvList.length >= maxCvs)
 
   const handleUpload = (file: File | null) => {
     if (!file) return
-    if (cvList.length >= 10) {
+    if (!isUnlimited && cvList.length >= maxCvs) {
       toast.error(
         lang === 'VI'
-          ? 'Bạn đã đạt giới hạn 10 CV. Hãy xóa bớt CV trước khi tải lên cái mới.'
-          : 'You have reached the 10 CV limit. Delete a CV before uploading a new one.'
+          ? `Bạn đã đạt giới hạn ${maxCvs} CV của gói hiện tại. Hãy nâng cấp gói hoặc xóa bớt CV trước khi tải lên cái mới.`
+          : `You have reached the ${maxCvs} CV limit of your current package. Please upgrade or delete a CV before uploading.`
       )
       return
     }
@@ -260,7 +278,7 @@ function MyCVPage() {
               {lang === 'VI' ? 'Kéo thả CV vào đây hoặc bấm để chọn' : 'Drag & drop CV here or click to choose'}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {lang === 'VI' ? `Định dạng PDF • Tối đa 5MB • Hiện có ${cvList.length}/10 CV` : `PDF format • Max 5MB • Current: ${cvList.length}/10 CVs`}
+              {lang === 'VI' ? `Định dạng PDF • Tối đa 5MB • Hiện có ${cvList.length}/${maxCvsText} CV` : `PDF format • Max 5MB • Current: ${cvList.length}/${maxCvsText} CVs`}
             </p>
           </div>
           <Button
@@ -313,7 +331,7 @@ function MyCVPage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">{lang === 'VI' ? 'CV của tôi' : 'My CVs'}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                {lang === 'VI' ? 'Tối đa 10 CV • Chỉ hỗ trợ PDF' : 'Max 10 CVs • PDF only'}
+                {lang === 'VI' ? `Tối đa ${maxCvsText} CV • Chỉ hỗ trợ PDF` : `Max ${maxCvsText} CVs • PDF only`}
               </p>
             </div>
           </header>
@@ -342,8 +360,8 @@ function MyCVPage() {
               <h1 className="text-2xl font-bold text-foreground">{lang === 'VI' ? 'CV của tôi' : 'My CVs'}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {lang === 'VI'
-                  ? `Tối đa 10 CV • Chỉ hỗ trợ PDF • Đã dùng ${cvList.length}/10`
-                  : `Max 10 CVs • PDF only • Used ${cvList.length}/10`}
+                  ? `Tối đa ${maxCvsText} CV • Chỉ hỗ trợ PDF • Đã dùng ${cvList.length}/${maxCvsText}`
+                  : `Max ${maxCvsText} CVs • PDF only • Used ${cvList.length}/${maxCvsText}`}
               </p>
             </div>
             <Button type="button" onClick={() => setIsUploadOpen(true)} className="flex items-center gap-2">

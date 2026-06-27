@@ -10,6 +10,9 @@ import type { NotificationItem, NotificationFilter } from "@smart-cv/ui";
 import { useRecruiterStore } from "@/store/useRecruiterStore";
 import { useTranslation } from "@smart-cv/i18n";
 import {
+  RecruiterApi,
+  type RecruiterResponse,
+  useCreatePaymentOrder,
   useNotificationsList,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
@@ -46,6 +49,7 @@ export function DashboardLayout({ role, nav, userName }: Props) {
   const setTheme = useRecruiterStore((s) => s.setTheme);
   const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
   const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [currentTime] = useState(() => Date.now());
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     overview: true,
     hiring: true,
@@ -53,9 +57,12 @@ export function DashboardLayout({ role, nav, userName }: Props) {
     account: true,
   });
 
+  const { data: recruiterMe } = RecruiterApi.useGetMe1();
+  const recruiter = recruiterMe?.data as RecruiterResponse | undefined;
   const { data: notifData } = useNotificationsList({ page: 1, pageSize: 30 });
   const markReadMutation = useMarkNotificationRead();
   const markAllReadMutation = useMarkAllNotificationsRead();
+  const createOrderMutation = useCreatePaymentOrder();
 
   const notifications: NotificationItem[] = useMemo(() => {
     const items = notifData?.data?.items ?? [];
@@ -68,6 +75,8 @@ export function DashboardLayout({ role, nav, userName }: Props) {
       tone: ((): NotificationItem["tone"] => {
         if (item.type === "RECRUITER_APPROVED" || item.type === "JOB_APPROVED") return "success";
         if (item.type === "RECRUITER_REJECTED" || item.type === "JOB_REJECTED") return "danger";
+        if (item.type === "RECRUITER_FEE_LOCKED") return "danger";
+        if (item.type === "RECRUITER_FEE_DUE") return "warning";
         return "info";
       })(),
       url: item.data?.url,
@@ -75,6 +84,10 @@ export function DashboardLayout({ role, nav, userName }: Props) {
   }, [notifData]);
 
   const unreadCount = notifData?.data?.unreadCount ?? 0;
+  const feeDueAt = recruiter?.platformFeeDueAt ? new Date(recruiter.platformFeeDueAt) : null;
+  const feeLockedAt = recruiter?.platformFeeLockedAt ? new Date(recruiter.platformFeeLockedAt) : null;
+  const feeIsOverdue = feeDueAt ? feeDueAt.getTime() <= currentTime : false;
+  const feeIsLocked = Boolean(feeLockedAt);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -84,6 +97,19 @@ export function DashboardLayout({ role, nav, userName }: Props) {
     const nextLanguage = language === "EN" ? "VI" : "EN";
     localStorage.setItem("smartcv_lang", nextLanguage.toLowerCase());
     i18n.changeLanguage(nextLanguage.toLowerCase());
+  };
+
+  const payPlatformFee = () => {
+    createOrderMutation.mutate(
+      { packageId: "fee" },
+      {
+        onSuccess: (res) => {
+          if (res.data?.paymentUrl) {
+            window.location.href = res.data.paymentUrl;
+          }
+        },
+      }
+    );
   };
 
   const navGroups = useMemo(() => ([
@@ -282,6 +308,33 @@ export function DashboardLayout({ role, nav, userName }: Props) {
             </DropdownMenu>
           </div>
         </header>
+        {(role === "employer" && (feeIsOverdue || feeIsLocked)) && (
+          <button
+            type="button"
+            onClick={payPlatformFee}
+            className={cn(
+              "border-b px-4 lg:px-5 py-3 text-left text-sm font-medium transition-colors",
+              feeIsLocked
+                ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/15"
+                : "bg-warning/10 text-warning-foreground border-warning/20 hover:bg-warning/15",
+            )}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold">
+                  {feeIsLocked ? "Tài khoản đã bị khóa do chưa thanh toán phí sàn" : "Phí sàn đã đến hạn thanh toán"}
+                </div>
+                <div className="text-xs opacity-80 mt-1">
+                  {feeDueAt ? `Hạn thanh toán: ${feeDueAt.toLocaleDateString("vi-VN")}` : "Phí sàn hàng tháng: 10.000đ"}
+                </div>
+              </div>
+              <Button size="sm" variant={feeIsLocked ? "destructive" : "default"} disabled={createOrderMutation.isPending}>
+                Thanh toán ngay
+              </Button>
+            </div>
+          </button>
+        )}
+
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
           <Outlet />
         </main>

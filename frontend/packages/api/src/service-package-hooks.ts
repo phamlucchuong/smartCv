@@ -9,6 +9,8 @@ export interface ServicePackageResponse {
   aiCredits?: number;
   jobLimit?: number;
   cvLimit?: number;
+  durationDays?: number;
+  category?: string;
   featured?: boolean;
   features?: string[];
   createdAt?: string;
@@ -21,6 +23,7 @@ export interface ServicePackageUpsertRequest {
   aiCredits: number;
   jobLimit: number;
   cvLimit: number;
+  durationDays?: number;
   featured: boolean;
   features: string[];
 }

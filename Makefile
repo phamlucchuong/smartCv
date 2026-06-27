@@ -5,29 +5,27 @@ BACKEND := backend
 # ── Backend: Tests ────────────────────────────────────────────────────────────
 
 test-user:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/user-service && $(MVN) test
 
 test-gateway:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/api-gateway && $(MVN) test
 
 test-job:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/job_service && $(MVN) test
 
 test-application:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/application_service && $(MVN) test
 
+test-payment:
+	cd $(BACKEND)/payment-service && $(MVN) test
+
 test-ai:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/ai_engine_service && $(MVN) test
 
 test-noti:
-	cd $(BACKEND)/notification-service && go test ./... -v
+	cd $(BACKEND)/notification-service && GOCACHE=/tmp/smartcv-go-build go test ./... -v
 
-test-backend: test-user test-gateway test-job test-application test-ai test-noti
+test-backend: test-user test-gateway test-job test-application test-payment test-ai test-noti
 
 # ── Backend: Run individual ───────────────────────────────────────────────────
 
@@ -51,6 +49,10 @@ run-ai:
 	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/ai_engine_service && $(MVN_RUN) spring-boot:run
 
+run-payment:
+	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
+	cd $(BACKEND)/payment-service && $(MVN_RUN) spring-boot:run
+
 run-noti:
 	cd $(BACKEND)/notification-service && go run cmd/server/main.go
 
@@ -67,6 +69,7 @@ run-backend:
 	(cd $(BACKEND)/job_service         && $(MVN_RUN) spring-boot:run 2>&1 | tee ../logs/job-service.log) & \
 	(cd $(BACKEND)/application_service && $(MVN_RUN) spring-boot:run 2>&1 | tee ../logs/application-service.log) & \
 	(cd $(BACKEND)/ai_engine_service   && $(MVN_RUN) spring-boot:run 2>&1 | tee ../logs/ai-engine-service.log) & \
+	(cd $(BACKEND)/payment-service     && $(MVN_RUN) spring-boot:run 2>&1 | tee ../logs/payment-service.log) & \
 	(cd $(BACKEND)/notification-service && go run cmd/server/main.go 2>&1 | tee ../logs/notification-service.log) & \
 	echo "All services starting. Logs in $(BACKEND)/logs/ — Ctrl+C or 'make stop' to stop all."; \
 	wait
@@ -74,7 +77,7 @@ run-backend:
 stop:
 	@-pkill -f "spring-boot:run" 2>/dev/null; true
 	@-pkill -f "go run cmd/server/main.go" 2>/dev/null; true
-	@-kill -9 $$(lsof -t -i:8080-8085) 2>/dev/null; true
+	@-kill -9 $$(lsof -t -i:8080-8086) 2>/dev/null; true
 	@echo "Services stopped."
 
 logs:

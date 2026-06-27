@@ -87,6 +87,32 @@ public class UserClient {
         }
     }
 
+    public void consumeCandidateAiCredit(String userId) {
+        consumeAiCredit(baseUrl + "/api/internal/candidates/by-user/" + userId + "/consume-ai-credit");
+    }
+
+    public void consumeRecruiterAiCredit(String userId) {
+        consumeAiCredit(baseUrl + "/api/internal/recruiters/by-user/" + userId + "/consume-ai-credit");
+    }
+
+    private void consumeAiCredit(String url) {
+        try {
+            restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    new HttpEntity<>(buildInternalHeaders()),
+                    Map.class
+            );
+        } catch (HttpClientErrorException.BadRequest e) {
+            throw new vn.chuongpl.ai_engine_service.exception.AppException(ErrorCode.AI_CREDIT_EXHAUSTED);
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new vn.chuongpl.ai_engine_service.exception.AppException(ErrorCode.UNAUTHORIZED);
+        } catch (Exception e) {
+            log.warn("Failed to consume AI credit via {}: {}", url, e.getMessage());
+            throw new vn.chuongpl.ai_engine_service.exception.AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
+        }
+    }
+
     private HttpHeaders buildInternalHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

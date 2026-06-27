@@ -5,12 +5,16 @@
  * OpenAPI spec version: v0
  */
 
+export type ServicePackageUpsertRequestCategory = 'STANDARD' | 'PLATFORM_FEE';
+
 export interface ServicePackageUpsertRequest {
   name: string;
   price: number;
   aiCredits: number;
   jobLimit: number;
   cvLimit: number;
+  durationDays?: number;
+  category?: ServicePackageUpsertRequestCategory;
   featured?: boolean;
   features?: string[];
 }

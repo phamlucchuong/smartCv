@@ -86,7 +86,21 @@
       "Bash(git *)",
       "Bash(gofmt -l .)",
       "Bash(gofmt *)",
-      "Bash(go vet *)"
+      "Bash(go vet *)",
+      "Read(//tmp/**)",
+      "Bash(javap -p vn/payos/PayOS.class)",
+      "Bash(javap -c vn/payos/util/SignatureUtils.class)",
+      "Bash(javap -p -c 'vn/payos/PayOS$1.class')",
+      "Bash(javap -p -c vn/payos/PayOS.class)",
+      "Bash(javap -p -c 'vn/payos/PayOS$3.class')",
+      "Bash(javap -p -c vn/payos/constant/PayOSConstant.class)",
+      "Bash(javap -p -c vn/payos/util/SignatureUtils.class)",
+      "Bash(javap -p vn/payos/type/PayOSResponse.class)",
+      "Bash(javap -p vn/payos/type/PaymentData.class)",
+      "Bash(rtk ./mvnw compile -q)",
+      "Bash(rtk ./mvnw test)",
+      "Bash(rtk ./mvnw test -q)",
+      "Bash(rtk ./mvnw test -Dtest=ServicePackageServiceTest,ServicePackageControllerTest)"
     ]
   }
 }

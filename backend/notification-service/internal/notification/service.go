@@ -49,6 +49,9 @@ type ServiceInterface interface {
 	// Recruiter & job approval notifications
 	HandleRecruiterApproved(ctx context.Context, msg RecruiterStatusEventMessage) error
 	HandleRecruiterRejected(ctx context.Context, msg RecruiterStatusEventMessage) error
+	HandleRecruiterBillingNotice(ctx context.Context, msg RecruiterBillingEventMessage) error
+	HandlePackageExpiredNotice(ctx context.Context, msg PackageExpiredEventMessage) error
+	HandlePackageExpiringSoonNotice(ctx context.Context, msg PackageExpiringSoonMessage) error
 	HandleJobApproved(ctx context.Context, msg JobModerationEventMessage) error
 	HandleJobRejected(ctx context.Context, msg JobModerationEventMessage) error
 
@@ -77,6 +80,7 @@ type Service struct {
 	firebaseAuthClient *auth.Client
 	wg                 sync.WaitGroup
 
+	adminEmail   string
 	otpService   otp.Service
 	emailService email.Service
 	smsService   sms.Service
@@ -91,10 +95,12 @@ func NewService(
 	otpService otp.Service,
 	emailService email.Service,
 	smsService sms.Service,
+	adminEmail string,
 ) *Service {
 	s := &Service{
 		repo:         repo,
 		logger:       logger,
+		adminEmail:   adminEmail,
 		otpService:   otpService,
 		emailService: emailService,
 		smsService:   smsService,
@@ -317,6 +323,150 @@ func (s *Service) HandleRecruiterRejected(ctx context.Context, msg RecruiterStat
 		"type":  "RECRUITER_REJECTED",
 	}, audienceForRecipientRole("RECRUITER"))
 	s.syncFirestoreUnreadCount(msg.RecruiterID, "RECRUITER")
+	return nil
+}
+
+func (s *Service) HandleRecruiterBillingNotice(ctx context.Context, msg RecruiterBillingEventMessage) error {
+	targetID := msg.RecruiterUserID
+	if targetID == "" {
+		targetID = msg.RecruiterID
+	}
+
+	var title, body, eventType, emailStatus string
+	switch msg.EventType {
+	case "FEE_APPROACHING":
+		title = "Phí sàn sắp đến hạn thanh toán"
+		eventType = "RECRUITER_FEE_APPROACHING"
+		body = fmt.Sprintf("Phí sàn của công ty %s sẽ đến hạn vào %s. Vui lòng thanh toán để tránh gián đoạn dịch vụ.", msg.CompanyName, msg.DueAt)
+		emailStatus = "APPROACHING"
+	case "FEE_OVERDUE":
+		title = "Phí sàn đã đến hạn thanh toán"
+		eventType = "RECRUITER_FEE_OVERDUE"
+		body = fmt.Sprintf("Phí sàn của công ty %s đã đến hạn (%s). Vui lòng thanh toán ngay để tránh tài khoản bị khóa sau 3 ngày.", msg.CompanyName, msg.DueAt)
+		emailStatus = "OVERDUE"
+	case "FEE_LOCKED":
+		title = "Tài khoản bị khóa do chưa thanh toán phí sàn"
+		eventType = "RECRUITER_FEE_LOCKED"
+		body = fmt.Sprintf("Tài khoản nhà tuyển dụng của công ty %s đã bị khóa vì chưa thanh toán phí sàn. Hạn thanh toán: %s.", msg.CompanyName, msg.DueAt)
+		emailStatus = "LOCKED"
+	default:
+		title = "Thông báo phí sàn"
+		eventType = "RECRUITER_FEE_DUE"
+		body = fmt.Sprintf("Phí sàn của công ty %s cần được thanh toán. Hạn: %s.", msg.CompanyName, msg.DueAt)
+		emailStatus = "DUE"
+	}
+
+	if err := s.CreateNotification(ctx, targetID, "RECRUITER", title, body, eventType, mustJSON(map[string]string{
+		"recruiterId": msg.RecruiterID,
+		"companyName": msg.CompanyName,
+		"dueAt":       msg.DueAt,
+		"lockedAt":    msg.LockedAt,
+		"amount":      msg.Amount,
+		"url":         "/employer/billing",
+	})); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist recruiter billing notification", "err", err)
+	}
+
+	if msg.RecruiterEmail != "" && s.emailService != nil {
+		if err := s.emailService.SendRecruiterBillingNotice(ctx, msg.RecruiterEmail, msg.CompanyName, emailStatus, msg.DueAt); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send recruiter billing email", "to", msg.RecruiterEmail, "err", err)
+		}
+	}
+
+	// When locked: also notify admin
+	if msg.EventType == "FEE_LOCKED" && s.adminEmail != "" && s.emailService != nil {
+		if err := s.emailService.SendAdminRecruiterLockNotice(ctx, s.adminEmail, msg.CompanyName, msg.RecruiterEmail, msg.DueAt); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send admin lock notice", "err", err)
+		}
+	}
+
+	if targetID != "" {
+		s.sendWebpushToUser(ctx, targetID, "/employer/billing", map[string]string{
+			"title":    title,
+			"body":     body,
+			"url":      "/employer/billing",
+			"type":     eventType,
+			"company":  msg.CompanyName,
+			"dueAt":    msg.DueAt,
+			"lockedAt": msg.LockedAt,
+			"amount":   msg.Amount,
+		}, audienceForRecipientRole("RECRUITER"))
+		s.syncFirestoreUnreadCount(targetID, "RECRUITER")
+	}
+	return nil
+}
+
+func (s *Service) HandlePackageExpiredNotice(ctx context.Context, msg PackageExpiredEventMessage) error {
+	recipientRole := "CANDIDATE"
+	if msg.UserRole == "RECRUITER" {
+		recipientRole = "RECRUITER"
+	}
+	title := "Gói dịch vụ đã hết hạn"
+	body := fmt.Sprintf("Gói dịch vụ của bạn đã hết hạn. Tài khoản đã được chuyển về gói miễn phí.")
+	if err := s.CreateNotification(ctx, msg.UserID, recipientRole, title, body, "PACKAGE_EXPIRED", mustJSON(map[string]string{
+		"packageId": msg.PackageID,
+		"expiredAt": msg.ExpiredAt,
+		"url":       "/billing",
+	})); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist package expired notification", "err", err)
+	}
+	if msg.UserEmail != "" && s.emailService != nil {
+		if err := s.emailService.SendPackageExpiredNotice(ctx, msg.UserEmail, msg.PackageID, msg.ExpiredAt); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send package expired email", "to", msg.UserEmail, "err", err)
+		}
+	}
+	if msg.UserID != "" {
+		billingURL := "/billing"
+		if msg.UserRole == "RECRUITER" {
+			billingURL = "/employer/billing"
+		}
+		s.sendWebpushToUser(ctx, msg.UserID, billingURL, map[string]string{
+			"title":     title,
+			"body":      body,
+			"url":       billingURL,
+			"type":      "PACKAGE_EXPIRED",
+			"packageId": msg.PackageID,
+			"expiredAt": msg.ExpiredAt,
+		}, audienceForRecipientRole(recipientRole))
+		s.syncFirestoreUnreadCount(msg.UserID, recipientRole)
+	}
+	return nil
+}
+
+func (s *Service) HandlePackageExpiringSoonNotice(ctx context.Context, msg PackageExpiringSoonMessage) error {
+	recipientRole := "CANDIDATE"
+	if msg.UserRole == "RECRUITER" {
+		recipientRole = "RECRUITER"
+	}
+	title := "Gói dịch vụ của bạn sắp hết hạn"
+	body := fmt.Sprintf("Gói dịch vụ của bạn sẽ hết hạn vào %s. Gia hạn ngay để không gián đoạn dịch vụ.", msg.ExpiresAt)
+	if err := s.CreateNotification(ctx, msg.UserID, recipientRole, title, body, "PACKAGE_EXPIRING_SOON", mustJSON(map[string]string{
+		"packageId": msg.PackageID,
+		"expiresAt": msg.ExpiresAt,
+		"url":       "/billing",
+	})); err != nil {
+		s.logger.ErrorContext(ctx, "failed to persist package expiry warning notification", "err", err)
+	}
+	if msg.UserEmail != "" && s.emailService != nil {
+		if err := s.emailService.SendPackageExpiryWarning(ctx, msg.UserEmail, msg.PackageID, msg.ExpiresAt); err != nil {
+			s.logger.ErrorContext(ctx, "failed to send package expiry warning email", "to", msg.UserEmail, "err", err)
+		}
+	}
+	if msg.UserID != "" {
+		billingURL := "/billing"
+		if msg.UserRole == "RECRUITER" {
+			billingURL = "/employer/billing"
+		}
+		s.sendWebpushToUser(ctx, msg.UserID, billingURL, map[string]string{
+			"title":     title,
+			"body":      body,
+			"url":       billingURL,
+			"type":      "PACKAGE_EXPIRING_SOON",
+			"packageId": msg.PackageID,
+			"expiresAt": msg.ExpiresAt,
+		}, audienceForRecipientRole(recipientRole))
+		s.syncFirestoreUnreadCount(msg.UserID, recipientRole)
+	}
 	return nil
 }
 
@@ -717,4 +867,12 @@ func isSupportedAudience(audience string) bool {
 	default:
 		return false
 	}
+}
+
+func mustJSON(v any) datatypes.JSON {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return datatypes.JSON([]byte("{}"))
+	}
+	return datatypes.JSON(b)
 }

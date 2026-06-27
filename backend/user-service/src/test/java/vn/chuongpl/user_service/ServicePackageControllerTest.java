@@ -40,8 +40,9 @@ class ServicePackageControllerTest {
     }
 
     @Test
-    void controller_shouldRequireAdminRole() {
-        PreAuthorize annotation = ServicePackageController.class.getAnnotation(PreAuthorize.class);
+    void controller_shouldRequireAdminRole() throws NoSuchMethodException {
+        Method createMethod = ServicePackageController.class.getMethod("create", ServicePackageUpsertRequest.class);
+        PreAuthorize annotation = createMethod.getAnnotation(PreAuthorize.class);
 
         assertEquals("hasRole('ADMIN')", annotation.value());
     }

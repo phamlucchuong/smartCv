@@ -1,12 +1,8 @@
 package vn.chuongpl.ai_engine_service.features.admin;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -14,35 +10,19 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.chuongpl.ai_engine_service.config.SecurityConfig;
 import vn.chuongpl.ai_engine_service.model.AiProvider;
-import vn.chuongpl.ai_engine_service.security.InternalAuthFilter;
-
-import java.io.IOException;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AiAdminController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(SecurityConfig.class)
 class AiAdminControllerTest {
 
     @Autowired MockMvc mvc;
     @MockitoBean AiAdminService adminService;
-    @MockitoBean InternalAuthFilter internalAuthFilter;
-
-    @BeforeEach
-    void setUp() throws ServletException, IOException {
-        // Make the mocked filter pass through to the next filter in the chain
-        doAnswer(inv -> {
-            HttpServletRequest req = inv.getArgument(0);
-            HttpServletResponse res = inv.getArgument(1);
-            FilterChain chain = inv.getArgument(2);
-            chain.doFilter(req, res);
-            return null;
-        }).when(internalAuthFilter).doFilter(any(), any(), any());
-    }
 
     @Test
     @WithMockUser(authorities = "ROLE_ADMIN")

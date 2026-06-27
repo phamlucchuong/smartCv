@@ -100,6 +100,35 @@ public class Candidate {
     @Field(name = "followed_company_ids")
     List<String> followedCompanyIds = new ArrayList<>();
 
+    // ── Active package ────────────────────────────────────────────────────────
+    @Field(name = "active_package_id")
+    String activePackageId;
+
+    @Field(name = "package_activated_at")
+    LocalDateTime packageActivatedAt;
+
+    @Field(name = "package_expires_at")
+    LocalDateTime packageExpiresAt;
+
+    @Field(name = "last_payment_order_id")
+    String lastPaymentOrderId;
+
+    @Field(name = "package_expiry_warning_sent_at")
+    LocalDateTime packageExpiryWarningSentAt;
+
+    @Field(name = "package_downgraded_at")
+    LocalDateTime packageDowngradedAt;
+
+    @Field(name = "post_expiry_cleanup_at")
+    LocalDateTime postExpiryCleanupAt;
+
+    @Field(name = "monthly_ai_credits_used")
+    @Builder.Default
+    int monthlyAiCreditsUsed = 0;
+
+    @Field(name = "monthly_ai_credits_month")
+    String monthlyAiCreditsMonth;
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     @Field(name = "created_at")
     LocalDateTime createdAt;

@@ -82,4 +82,21 @@ public class JobClient {
         }
         return List.of();
     }
+
+    public int deactivateExcessActiveJobs(String recruiterId, int keepCount) {
+        try {
+            var response = restTemplate.exchange(
+                    jobServiceUrl + "/api/jobs/internal/deactivate-excess?recruiterId=" + recruiterId + "&keepCount=" + keepCount,
+                    HttpMethod.POST,
+                    internalRequest(),
+                    new ParameterizedTypeReference<JobApiResponse<Integer>>() {}
+            );
+            if (response.getBody() != null && response.getBody().getData() != null) {
+                return response.getBody().getData();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to deactivate excess jobs for recruiter {}: {}", recruiterId, e.getMessage());
+        }
+        return 0;
+    }
 }

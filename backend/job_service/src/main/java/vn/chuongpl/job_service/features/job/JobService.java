@@ -529,4 +529,29 @@ public class JobService {
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
+
+    /**
+     * Deactivates the newest active job posts for a recruiter that exceed keepCount.
+     * Called by the subscription expiry cleanup cron in user-service.
+     */
+    public int deactivateExcessActiveJobs(String recruiterId, int keepCount) {
+        List<Job> activeJobs = jobRepository.findAllByRecruiterIdAndModerationStatusAndVisibilityStatusAndDeletedFalse(
+                recruiterId, JobModerationStatus.PUBLISHED, JobVisibilityStatus.ACTIVE
+        );
+
+        if (activeJobs.size() <= keepCount) return 0;
+
+        // Sort oldest first; keep oldest keepCount, deactivate the rest
+        List<Job> toDeactivate = activeJobs.stream()
+                .sorted(java.util.Comparator.comparing(Job::getCreatedAt))
+                .skip(keepCount)
+                .toList();
+
+        for (Job job : toDeactivate) {
+            job.setVisibilityStatus(JobVisibilityStatus.INACTIVE);
+            jobRepository.save(job);
+            removeFromIndexIfEnabled(job.getId());
+        }
+        return toDeactivate.size();
+    }
 }

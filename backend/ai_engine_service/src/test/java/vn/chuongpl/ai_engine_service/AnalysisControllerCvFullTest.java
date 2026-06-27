@@ -19,6 +19,7 @@ import vn.chuongpl.ai_engine_service.features.analysis.AnalysisService;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,7 +49,7 @@ class AnalysisControllerCvFullTest {
                 List.of(),
                 List.of("Java", "PHP")
         );
-        when(analysisService.analyzeCv(any(CvFullAnalysisRequest.class), any()))
+        when(analysisService.analyzeCv(any(CvFullAnalysisRequest.class), any(), anyBoolean()))
                 .thenReturn(response);
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(analysisController).build();

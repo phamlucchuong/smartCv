@@ -35,6 +35,13 @@ export interface RecruiterResponse {
   rejectionNote?: string;
   quotaJobPost?: number;
   quotaCvViews?: number;
+  activePackageId?: string;
+  packageActivatedAt?: string;
+  packageExpiresAt?: string;
+  platformFeeDueAt?: string;
+  platformFeeLastPaidAt?: string;
+  platformFeeReminderSentAt?: string;
+  platformFeeLockedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

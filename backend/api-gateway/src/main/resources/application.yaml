@@ -47,6 +47,10 @@ spring:
           uri: ${AI_SERVICE_URI:http://localhost:8085}
           predicates:
             - Path=/ai/**
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URI:http://localhost:8086}
+          predicates:
+            - Path=/payment/**
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -108,6 +112,22 @@ app:
       path: /job/api/home/**
     - method: GET
       path: /job/api/jobs/*/related
+    - method: POST
+      path: /payment/api/webhook/payos
+    - method: POST
+      path: /payment/api/webhook/payos/
+    - method: GET
+      path: /payment/api/webhook/payos
+    - method: GET
+      path: /payment/api/webhook/payos/
+    - method: HEAD
+      path: /payment/api/webhook/payos
+    - method: HEAD
+      path: /payment/api/webhook/payos/
+    - method: OPTIONS
+      path: /payment/api/webhook/payos
+    - method: OPTIONS
+      path: /payment/api/webhook/payos/
 
 logging:
   level:

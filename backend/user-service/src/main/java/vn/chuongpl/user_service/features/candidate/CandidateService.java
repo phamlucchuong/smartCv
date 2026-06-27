@@ -15,6 +15,8 @@ import vn.chuongpl.user_service.exception.AppException;
 import vn.chuongpl.user_service.features.candidate.settings.CandidateSettings;
 import vn.chuongpl.user_service.features.candidate.settings.NotificationPreferences;
 import vn.chuongpl.user_service.features.candidate.settings.PrivacySettings;
+import vn.chuongpl.user_service.features.servicepackage.ServicePackage;
+import vn.chuongpl.user_service.features.servicepackage.ServicePackageRepository;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 import vn.chuongpl.user_service.features.candidate.dto.CvInfoResponse;
@@ -23,6 +25,7 @@ import vn.chuongpl.user_service.integration.job.JobSummary;
 import vn.chuongpl.user_service.integration.notification.CvAnalysisDonePublisher;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -39,6 +42,7 @@ import java.util.stream.Collectors;
 public class CandidateService {
     CandidateRepository candidateRepository;
     UserRepository userRepository;
+    ServicePackageRepository servicePackageRepository;
     CandidateMapper candidateMapper;
     JobClient jobClient;
     S3Service s3Service;
@@ -52,13 +56,22 @@ public class CandidateService {
         candidate.setCreatedAt(LocalDateTime.now());
         candidate.setUpdatedAt(LocalDateTime.now());
         candidate.setDeleted(false);
+        candidate.setMonthlyAiCreditsUsed(0);
+        candidate.setMonthlyAiCreditsMonth(currentMonthKey());
 
         return candidateMapper.toCandidateResponse(candidateRepository.save(candidate), user);
     }
 
     public void createBasicProfile(String userId) {
         if (candidateRepository.findByUserIdAndDeletedFalse(userId).isPresent()) return;
-        Candidate candidate = Candidate.builder().userId(userId).createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).deleted(false).build();
+        Candidate candidate = Candidate.builder()
+                .userId(userId)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .deleted(false)
+                .monthlyAiCreditsUsed(0)
+                .monthlyAiCreditsMonth(currentMonthKey())
+                .build();
         candidateRepository.save(candidate);
     }
 
@@ -72,6 +85,7 @@ public class CandidateService {
 
     public CandidateResponse getByUserId(String userId) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        candidate = normalizeExpiredPackage(candidate);
         User user = userRepository.findById(userId).orElse(null);
         return candidateMapper.toCandidateResponse(candidate, user);
     }
@@ -272,6 +286,24 @@ public class CandidateService {
         candidateRepository.save(candidate);
     }
 
+    public void consumeMonthlyAiCredit(String userId) {
+        Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
+        candidate = normalizeExpiredPackage(candidate);
+
+        ServicePackage servicePackage = resolveActivePackage(candidate.getActivePackageId());
+        candidate.setMonthlyAiCreditsMonth(refreshCreditMonth(candidate));
+
+        Integer limit = servicePackage.getAiCredits();
+        if (limit != null && limit != -1 && candidate.getMonthlyAiCreditsUsed() >= limit) {
+            throw new AppException(ErrorCode.INSUFFICIENT_AI_QUOTA);
+        }
+
+        candidate.setMonthlyAiCreditsUsed(candidate.getMonthlyAiCreditsUsed() + 1);
+        candidate.setUpdatedAt(LocalDateTime.now());
+        candidateRepository.save(candidate);
+    }
+
     // ── Settings ──────────────────────────────────────────────────────────────
 
     public CandidateSettings getSettings(String userId) {
@@ -330,6 +362,44 @@ public class CandidateService {
             settings.setPreferences(new vn.chuongpl.user_service.features.candidate.settings.PreferencesSettings());
         }
         return settings;
+    }
+
+    private ServicePackage resolveActivePackage(String activePackageId) {
+        String packageId = activePackageId == null || activePackageId.isBlank() ? "free" : activePackageId;
+        return servicePackageRepository.findById(packageId)
+                .orElseGet(() -> servicePackageRepository.findById("free")
+                        .orElseThrow(() -> new AppException(ErrorCode.SERVICE_PACKAGE_NOT_FOUND)));
+    }
+
+    private String refreshCreditMonth(Candidate candidate) {
+        String currentMonth = currentMonthKey();
+        if (!currentMonth.equals(candidate.getMonthlyAiCreditsMonth())) {
+            candidate.setMonthlyAiCreditsUsed(0);
+            candidate.setMonthlyAiCreditsMonth(currentMonth);
+        }
+        return candidate.getMonthlyAiCreditsMonth();
+    }
+
+    private String currentMonthKey() {
+        return YearMonth.now().toString();
+    }
+
+    private Candidate normalizeExpiredPackage(Candidate candidate) {
+        if (candidate.getPackageExpiresAt() == null) {
+            return candidate;
+        }
+        if (candidate.getPackageExpiresAt().isAfter(LocalDateTime.now())) {
+            return candidate;
+        }
+        if ("free".equalsIgnoreCase(candidate.getActivePackageId())) {
+            return candidate;
+        }
+
+        candidate.setActivePackageId("free");
+        candidate.setPackageActivatedAt(null);
+        candidate.setPackageExpiresAt(null);
+        candidate.setUpdatedAt(LocalDateTime.now());
+        return candidateRepository.save(candidate);
     }
 
     public void deleteAccount(String userId) {
@@ -435,5 +505,21 @@ public class CandidateService {
         if (status == CvAnalysisStatus.DONE && filenameHolder[0] != null) {
             cvAnalysisDonePublisher.publish(candidate.getUserId(), cvId, filenameHolder[0]);
         }
+    }
+
+    public void downgradeToFree(String userId) {
+        candidateRepository.findByUserIdAndDeletedFalse(userId).ifPresent(candidate -> {
+            if ("free".equalsIgnoreCase(candidate.getActivePackageId())) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            candidate.setActivePackageId("free");
+            candidate.setPackageActivatedAt(null);
+            candidate.setPackageExpiresAt(null);
+            candidate.setPackageDowngradedAt(now);
+            candidate.setPostExpiryCleanupAt(null);
+            candidate.setUpdatedAt(now);
+            candidateRepository.save(candidate);
+        });
     }
 }

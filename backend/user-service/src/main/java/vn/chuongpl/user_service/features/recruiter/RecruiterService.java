@@ -26,10 +26,13 @@ import vn.chuongpl.user_service.enums.ErrorCode;
 import vn.chuongpl.user_service.enums.RecruiterStatus;
 import vn.chuongpl.user_service.exception.AppException;
 import vn.chuongpl.user_service.features.candidate.S3Service;
+import vn.chuongpl.user_service.features.servicepackage.ServicePackage;
+import vn.chuongpl.user_service.features.servicepackage.ServicePackageRepository;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -42,6 +45,7 @@ public class RecruiterService {
 
     RecruiterRepository recruiterRepository;
     UserRepository userRepository;
+    ServicePackageRepository servicePackageRepository;
     RecruiterMapper recruiterMapper;
     S3Service s3Service;
     MongoTemplate mongoTemplate;
@@ -53,11 +57,17 @@ public class RecruiterService {
 
         Recruiter recruiter = recruiterMapper.toRecruiter(request);
         if (request.getQuotaJobPost() == null) {
-            recruiter.setQuotaJobPost(FREE_TIER_JOB_POST_QUOTA);
+            recruiter.setQuotaJobPost(resolveFreeJobQuota());
         }
+        if (request.getQuotaCvViews() == null) {
+            recruiter.setQuotaCvViews(resolveFreeCvQuota());
+        }
+        recruiter.setMonthlyAiCreditsUsed(0);
+        recruiter.setMonthlyAiCreditsMonth(currentMonthKey());
         recruiter.setCreatedAt(LocalDateTime.now());
         recruiter.setUpdatedAt(LocalDateTime.now());
         recruiter.setDeleted(false);
+        initializePlatformFeeSchedule(recruiter, recruiter.getCreatedAt());
 
         RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
@@ -83,11 +93,15 @@ public class RecruiterService {
                 .userId(userId)
                 .companyName(companyName)
                 .status(RecruiterStatus.DRAFT)
-                .quotaJobPost(FREE_TIER_JOB_POST_QUOTA)
+                .quotaJobPost(resolveFreeJobQuota())
+                .quotaCvViews(resolveFreeCvQuota())
+                .monthlyAiCreditsUsed(0)
+                .monthlyAiCreditsMonth(currentMonthKey())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .deleted(false)
                 .build();
+        initializePlatformFeeSchedule(recruiter, recruiter.getCreatedAt());
         recruiterRepository.save(recruiter);
     }
 
@@ -101,6 +115,7 @@ public class RecruiterService {
 
     public RecruiterPublicResponse getByUserId(String userId) {
         Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter = normalizeExpiredPackage(recruiter);
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         RecruiterPublicResponse response = recruiterMapper.toRecruiterPublicResponse(recruiter, user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
@@ -109,6 +124,7 @@ public class RecruiterService {
 
     public RecruiterResponse getByUserIdFull(String userId) {
         Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter = normalizeExpiredPackage(recruiter);
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiter, user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
@@ -323,12 +339,20 @@ public class RecruiterService {
     public RecruiterProfileResponse getProfile(String userId) {
         Recruiter r = recruiterRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        r = normalizeExpiredPackage(r);
         return RecruiterProfileResponse.builder()
                 .recruiterId(r.getId())
                 .userId(r.getUserId())
                 .status(r.getStatus())
                 .quotaJobPost(r.getQuotaJobPost())
                 .quotaCvViews(r.getQuotaCvViews())
+                .activePackageId(r.getActivePackageId())
+                .packageExpiresAt(r.getPackageExpiresAt())
+                .platformFeeDueAt(r.getPlatformFeeDueAt())
+                .platformFeeLastPaidAt(r.getPlatformFeeLastPaidAt())
+                .platformFeeReminderSentAt(r.getPlatformFeeReminderSentAt())
+                .platformFeeOverdueSentAt(r.getPlatformFeeOverdueSentAt())
+                .platformFeeLockedAt(r.getPlatformFeeLockedAt())
                 .build();
     }
 
@@ -346,7 +370,82 @@ public class RecruiterService {
         return RecruiterProfileResponse.builder()
                 .recruiterId(saved.getId()).userId(saved.getUserId())
                 .status(saved.getStatus()).quotaJobPost(saved.getQuotaJobPost()).quotaCvViews(saved.getQuotaCvViews())
+                .activePackageId(saved.getActivePackageId())
+                .packageExpiresAt(saved.getPackageExpiresAt())
+                .platformFeeDueAt(saved.getPlatformFeeDueAt())
+                .platformFeeLastPaidAt(saved.getPlatformFeeLastPaidAt())
+                .platformFeeReminderSentAt(saved.getPlatformFeeReminderSentAt())
+                .platformFeeOverdueSentAt(saved.getPlatformFeeOverdueSentAt())
+                .platformFeeLockedAt(saved.getPlatformFeeLockedAt())
                 .build();
+    }
+
+    public RecruiterResponse updatePlatformFeePayment(String userId, LocalDateTime paidAt) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        LocalDateTime effectivePaidAt = paidAt != null ? paidAt : LocalDateTime.now();
+        recruiter.setPlatformFeeLastPaidAt(effectivePaidAt);
+        recruiter.setPlatformFeeDueAt(effectivePaidAt.plusMonths(1));
+        recruiter.setPlatformFeeReminderSentAt(null);
+        recruiter.setPlatformFeeOverdueSentAt(null);
+        recruiter.setPlatformFeeLockedAt(null);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (user.isLocked()) {
+            user.setLocked(false);
+            user.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(user);
+        }
+        return getByUserIdFull(userId);
+    }
+
+    public void markPlatformFeeReminderSent(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter.setPlatformFeeReminderSentAt(LocalDateTime.now());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+    }
+
+    public void markPlatformFeeOverdueSent(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter.setPlatformFeeOverdueSentAt(LocalDateTime.now());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+    }
+
+    public void lockForUnpaidPlatformFee(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter.setPlatformFeeLockedAt(LocalDateTime.now());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.setLocked(true);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    public void consumeMonthlyAiCredit(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter = normalizeExpiredPackage(recruiter);
+
+        ServicePackage servicePackage = resolveActivePackage(recruiter.getActivePackageId());
+        refreshCreditMonth(recruiter);
+
+        Integer limit = servicePackage.getAiCredits();
+        if (limit != null && limit != -1 && recruiter.getMonthlyAiCreditsUsed() >= limit) {
+            throw new AppException(ErrorCode.INSUFFICIENT_AI_QUOTA);
+        }
+
+        recruiter.setMonthlyAiCreditsUsed(recruiter.getMonthlyAiCreditsUsed() + 1);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
     }
 
     public void consumeJobQuota(String userId) {
@@ -391,6 +490,85 @@ public class RecruiterService {
 
     private boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    private ServicePackage resolveActivePackage(String activePackageId) {
+        String packageId = activePackageId == null || activePackageId.isBlank() ? "free" : activePackageId;
+        return servicePackageRepository.findById(packageId)
+                .orElseGet(() -> servicePackageRepository.findById("free")
+                        .orElseThrow(() -> new AppException(ErrorCode.SERVICE_PACKAGE_NOT_FOUND)));
+    }
+
+    private void refreshCreditMonth(Recruiter recruiter) {
+        String currentMonth = currentMonthKey();
+        if (!currentMonth.equals(recruiter.getMonthlyAiCreditsMonth())) {
+            recruiter.setMonthlyAiCreditsUsed(0);
+            recruiter.setMonthlyAiCreditsMonth(currentMonth);
+        }
+    }
+
+    private String currentMonthKey() {
+        return YearMonth.now().toString();
+    }
+
+    private void initializePlatformFeeSchedule(Recruiter recruiter, LocalDateTime baseTime) {
+        LocalDateTime createdAt = baseTime != null ? baseTime : LocalDateTime.now();
+        recruiter.setPlatformFeeDueAt(createdAt.plusMonths(1));
+        recruiter.setPlatformFeeLastPaidAt(null);
+        recruiter.setPlatformFeeReminderSentAt(null);
+        recruiter.setPlatformFeeLockedAt(null);
+    }
+
+    public void downgradeToFree(String userId) {
+        recruiterRepository.findByUserIdAndDeletedFalse(userId).ifPresent(recruiter -> {
+            if ("free".equalsIgnoreCase(recruiter.getActivePackageId())) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            recruiter.setActivePackageId("free");
+            recruiter.setPackageActivatedAt(null);
+            recruiter.setPackageExpiresAt(null);
+            recruiter.setQuotaJobPost(resolveFreeJobQuota());
+            recruiter.setQuotaCvViews(resolveFreeCvQuota());
+            recruiter.setPackageDowngradedAt(now);
+            recruiter.setPostExpiryCleanupAt(null);
+            recruiter.setUpdatedAt(now);
+            recruiterRepository.save(recruiter);
+        });
+    }
+
+    private Recruiter normalizeExpiredPackage(Recruiter recruiter) {
+        if (recruiter.getPackageExpiresAt() == null) {
+            return recruiter;
+        }
+        if (recruiter.getPackageExpiresAt().isAfter(LocalDateTime.now())) {
+            return recruiter;
+        }
+        if ("free".equalsIgnoreCase(recruiter.getActivePackageId())) {
+            return recruiter;
+        }
+
+        recruiter.setActivePackageId("free");
+        recruiter.setPackageActivatedAt(null);
+        recruiter.setPackageExpiresAt(null);
+        recruiter.setQuotaJobPost(resolveFreeJobQuota());
+        recruiter.setQuotaCvViews(resolveFreeCvQuota());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        return recruiterRepository.save(recruiter);
+    }
+
+    private int resolveFreeJobQuota() {
+        return servicePackageRepository.findById("free")
+                .map(ServicePackage::getJobLimit)
+                .filter(limit -> limit != null)
+                .orElse(FREE_TIER_JOB_POST_QUOTA);
+    }
+
+    private int resolveFreeCvQuota() {
+        return servicePackageRepository.findById("free")
+                .map(ServicePackage::getCvLimit)
+                .filter(limit -> limit != null)
+                .orElse(0);
     }
 
     private String getFreshLicenseUrl(String storedUrl) {

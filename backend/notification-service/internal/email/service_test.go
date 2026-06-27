@@ -31,6 +31,22 @@ func (s *stubEmailProvider) SendJobModeration(_ context.Context, _, _, _, _, _ s
 	return nil
 }
 
+func (s *stubEmailProvider) SendRecruiterBillingNotice(_ context.Context, _, _, _, _ string) error {
+	return nil
+}
+
+func (s *stubEmailProvider) SendAdminRecruiterLockNotice(_ context.Context, _, _, _, _ string) error {
+	return nil
+}
+
+func (s *stubEmailProvider) SendPackageExpiredNotice(_ context.Context, _, _, _ string) error {
+	return nil
+}
+
+func (s *stubEmailProvider) SendPackageExpiryWarning(_ context.Context, _, _, _ string) error {
+	return nil
+}
+
 func TestSendOTPReturnsProviderNotConfiguredWhenProviderIsNil(t *testing.T) {
 	svc := NewService(nil)
 
