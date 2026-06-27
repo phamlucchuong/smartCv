@@ -11,6 +11,7 @@ import { useRecruiterStore } from "@/store/useRecruiterStore";
 import { useTranslation } from "@smart-cv/i18n";
 import {
   RecruiterApi,
+  type RecruiterResponse,
   useCreatePaymentOrder,
   useNotificationsList,
   useMarkNotificationRead,
@@ -48,6 +49,7 @@ export function DashboardLayout({ role, nav, userName }: Props) {
   const setTheme = useRecruiterStore((s) => s.setTheme);
   const language: "EN" | "VI" = i18n.language?.toUpperCase() === "VI" ? "VI" : "EN";
   const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [currentTime] = useState(() => Date.now());
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     overview: true,
     hiring: true,
@@ -56,7 +58,7 @@ export function DashboardLayout({ role, nav, userName }: Props) {
   });
 
   const { data: recruiterMe } = RecruiterApi.useGetMe1();
-  const recruiter = recruiterMe?.data as any;
+  const recruiter = recruiterMe?.data as RecruiterResponse | undefined;
   const { data: notifData } = useNotificationsList({ page: 1, pageSize: 30 });
   const markReadMutation = useMarkNotificationRead();
   const markAllReadMutation = useMarkAllNotificationsRead();
@@ -84,7 +86,7 @@ export function DashboardLayout({ role, nav, userName }: Props) {
   const unreadCount = notifData?.data?.unreadCount ?? 0;
   const feeDueAt = recruiter?.platformFeeDueAt ? new Date(recruiter.platformFeeDueAt) : null;
   const feeLockedAt = recruiter?.platformFeeLockedAt ? new Date(recruiter.platformFeeLockedAt) : null;
-  const feeIsOverdue = feeDueAt ? feeDueAt.getTime() <= Date.now() : false;
+  const feeIsOverdue = feeDueAt ? feeDueAt.getTime() <= currentTime : false;
   const feeIsLocked = Boolean(feeLockedAt);
 
   useEffect(() => {

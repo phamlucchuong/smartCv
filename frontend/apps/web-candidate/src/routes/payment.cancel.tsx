@@ -26,7 +26,7 @@ function PaymentCancelPage() {
     if (orderCode) {
       cancelByCode.mutate(Number(orderCode))
     }
-  }, [isAuthenticated])
+  }, [cancelByCode, isAuthenticated, params])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">

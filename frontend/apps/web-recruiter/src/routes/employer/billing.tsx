@@ -6,10 +6,13 @@ import { CheckCircle2, CreditCard, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   useGetServicePackages,
+  type ServicePackageResponse,
   useGetPaymentOrders,
+  type OrderResponse,
   useCreatePaymentOrder,
   useCancelPaymentOrder,
   RecruiterApi,
+  type RecruiterResponse,
   getGetPaymentOrdersQueryKey,
 } from "@smart-cv/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,15 +25,16 @@ export const Route = createFileRoute("/employer/billing")({
 function RecruiterBillingPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = React.useState(0);
+  const [currentTime] = React.useState(() => Date.now());
   const size = 5;
 
   const { data: apiResponse } = RecruiterApi.useGetMe1();
-  const recruiter = apiResponse?.data;
+  const recruiter = apiResponse?.data as RecruiterResponse | undefined;
 
   const { data: packagesData, isLoading: packagesLoading } = useGetServicePackages();
   const packages = packagesData?.data ?? [];
   const displayPackages = packages.filter((p) => p.id !== "fee");
-  const platformFeePackage: any = packages.find((p) => p.id === "fee") || {
+  const platformFeePackage: ServicePackageResponse = packages.find((p) => p.id === "fee") || {
     id: "fee",
     name: "Phí sàn",
     price: 10000,
@@ -40,7 +44,7 @@ function RecruiterBillingPage() {
 
   // Fetch all payment orders (up to 1000) for client-side filtering/cascade options
   const { data: ordersData, isLoading: ordersLoading } = useGetPaymentOrders(0, 1000);
-  const allOrders = ordersData?.data?.content ?? [];
+  const allOrders = React.useMemo(() => ordersData?.data?.content ?? [], [ordersData?.data?.content]);
 
   // Filter States
   const [selectedMonth, setSelectedMonth] = React.useState('');
@@ -49,9 +53,23 @@ function RecruiterBillingPage() {
   const [freePackageDialogOpen, setFreePackageDialogOpen] = React.useState(false);
   const [pendingPackageId, setPendingPackageId] = React.useState<string | null>(null);
 
-  const matchesMonth = (o: any, m: string) => !m || (o.createdAt && o.createdAt.startsWith(m));
-  const matchesStatus = (o: any, s: string) => !s || o.status === s;
-  const matchesType = (o: any, t: string) => !t || (o.paymentType || 'Gói sử dụng') === t;
+  const matchesMonth = (o: OrderResponse, m: string) => !m || o.createdAt.startsWith(m);
+  const matchesStatus = (o: OrderResponse, s: string) => !s || o.status === s;
+  const matchesType = (o: OrderResponse, t: string) => !t || (o.paymentType || 'Gói sử dụng') === t;
+
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "response" in error &&
+      typeof (error as { response?: unknown }).response === "object" &&
+      (error as { response?: { data?: unknown } }).response?.data &&
+      typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message === "string"
+    ) {
+      return (error as { response?: { data?: { message?: string } } }).response?.data?.message ?? fallback;
+    }
+    return fallback;
+  };
 
   // Extract available options dynamically based on all *other* selected filters (Cascading Filters)
   const availableStatuses = React.useMemo(() => {
@@ -88,7 +106,7 @@ function RecruiterBillingPage() {
   const cancelOrderMutation = useCancelPaymentOrder();
   const feeDueAt = recruiter?.platformFeeDueAt ? new Date(recruiter.platformFeeDueAt) : null;
   const feeLockedAt = recruiter?.platformFeeLockedAt ? new Date(recruiter.platformFeeLockedAt) : null;
-  const feeIsOverdue = feeDueAt ? feeDueAt.getTime() <= Date.now() : false;
+  const feeIsOverdue = feeDueAt ? feeDueAt.getTime() <= currentTime : false;
   const feeIsLocked = Boolean(feeLockedAt);
 
   const handleBuyPackage = (packageId: string) => {
@@ -109,8 +127,8 @@ function RecruiterBillingPage() {
               toast.error("Không thể tạo liên kết thanh toán phí sàn.");
             }
           },
-          onError: (err: any) => {
-            toast.error(err?.response?.data?.message ?? "Tạo đơn hàng phí sàn thất bại");
+          onError: (err: unknown) => {
+            toast.error(getErrorMessage(err, "Tạo đơn hàng phí sàn thất bại"));
           },
         }
       );
@@ -136,8 +154,8 @@ function RecruiterBillingPage() {
             toast.error("Không thể tạo liên kết thanh toán.");
           }
         },
-        onError: (err: any) => {
-          toast.error(err?.response?.data?.message ?? "Tạo đơn hàng thất bại");
+        onError: (err: unknown) => {
+          toast.error(getErrorMessage(err, "Tạo đơn hàng thất bại"));
         },
       }
     );
@@ -162,10 +180,10 @@ function RecruiterBillingPage() {
           }
           toast.success("Đã chuyển sang gói Free.");
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
           setFreePackageDialogOpen(false);
           setPendingPackageId(null);
-          toast.error(err?.response?.data?.message ?? "Không thể chuyển sang gói Free");
+          toast.error(getErrorMessage(err, "Không thể chuyển sang gói Free"));
         },
       }
     );
@@ -177,13 +195,13 @@ function RecruiterBillingPage() {
         toast.success("Đã hủy đơn hàng thành công");
         queryClient.invalidateQueries({ queryKey: getGetPaymentOrdersQueryKey(0, 1000) });
       },
-      onError: (err: any) => {
-        toast.error(err?.response?.data?.message ?? "Không thể hủy đơn hàng");
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Không thể hủy đơn hàng"));
       },
     });
   };
 
-  const activePackage: any = packages.find((p) => p.id === recruiter?.activePackageId) || {
+  const activePackage: ServicePackageResponse = packages.find((p) => p.id === recruiter?.activePackageId) || {
     name: "Free",
     features: ["3 tin/tháng", "AI Screening cơ bản"],
   };

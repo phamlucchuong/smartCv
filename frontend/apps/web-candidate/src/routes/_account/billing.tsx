@@ -5,7 +5,9 @@ import { CheckCircle2, ArrowRight, CreditCard, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useGetServicePackages,
+  type ServicePackageResponse,
   useGetPaymentOrders,
+  type OrderResponse,
   useCreatePaymentOrder,
   useCancelPaymentOrder,
   useGetMe2,
@@ -40,7 +42,7 @@ function BillingPage() {
   const { data: ordersData, isLoading: ordersLoading } = useGetPaymentOrders(0, 1000, {
     query: { enabled: isAuthenticated },
   })
-  const allOrders = ordersData?.data?.content ?? []
+  const allOrders = React.useMemo(() => ordersData?.data?.content ?? [], [ordersData?.data?.content])
 
   // Filter States
   const [selectedMonth, setSelectedMonth] = React.useState('')
@@ -48,8 +50,22 @@ function BillingPage() {
   const [freePackageDialogOpen, setFreePackageDialogOpen] = React.useState(false)
   const [pendingPackageId, setPendingPackageId] = React.useState<string | null>(null)
 
-  const matchesMonth = (o: any, m: string) => !m || (o.createdAt && o.createdAt.startsWith(m))
-  const matchesStatus = (o: any, s: string) => !s || o.status === s
+  const matchesMonth = (o: OrderResponse, m: string) => !m || o.createdAt.startsWith(m)
+  const matchesStatus = (o: OrderResponse, s: string) => !s || o.status === s
+
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      typeof (error as { response?: unknown }).response === 'object' &&
+      (error as { response?: { data?: unknown } }).response?.data &&
+      typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
+    ) {
+      return (error as { response?: { data?: { message?: string } } }).response?.data?.message ?? fallback
+    }
+    return fallback
+  }
 
   // Extract available options dynamically based on all *other* selected filters (Cascading Filters)
   const availableStatuses = React.useMemo(() => {
@@ -101,8 +117,8 @@ function BillingPage() {
             toast.error(lang === 'VI' ? 'Không thể tạo liên kết thanh toán.' : 'Failed to generate payment link.')
           }
         },
-        onError: (err: any) => {
-          toast.error(err?.response?.data?.message ?? 'Failed to buy package')
+        onError: (err: unknown) => {
+          toast.error(getErrorMessage(err, 'Failed to buy package'))
         },
       }
     )
@@ -127,10 +143,10 @@ function BillingPage() {
           }
           toast.success(lang === 'VI' ? 'Đã chuyển sang gói Free.' : 'Switched to the Free plan.')
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
           setFreePackageDialogOpen(false)
           setPendingPackageId(null)
-          toast.error(err?.response?.data?.message ?? 'Failed to switch to Free plan')
+          toast.error(getErrorMessage(err, 'Failed to switch to Free plan'))
         },
       }
     )
@@ -142,13 +158,13 @@ function BillingPage() {
         toast.success(lang === 'VI' ? 'Đã hủy đơn hàng thành công' : 'Order cancelled successfully')
         queryClient.invalidateQueries({ queryKey: getGetPaymentOrdersQueryKey(0, 1000) })
       },
-      onError: (err: any) => {
-        toast.error(err?.response?.data?.message ?? 'Failed to cancel order')
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, 'Failed to cancel order'))
       },
     })
   }
 
-  const activePackage: any = packages.find((p) => p.id === candidate?.activePackageId) || {
+  const activePackage: ServicePackageResponse = packages.find((p) => p.id === candidate?.activePackageId) || {
     name: 'Free',
     features: ['Hỗ trợ cơ bản', 'Phân tích CV cơ bản'],
   }
@@ -232,7 +248,7 @@ function BillingPage() {
               <p className="text-sm text-muted-foreground mt-1">{lang === 'VI' ? 'Bạn chưa kích hoạt gói trả phí' : 'You have not activated a paid plan'}</p>
             )}
             {
-              activePackage?.isPremium && (
+              activePackage?.id !== 'free' && (
                 <div className="mt-6 flex gap-3">
                   <a href="#available-packages">
                     <Button className="gap-2">

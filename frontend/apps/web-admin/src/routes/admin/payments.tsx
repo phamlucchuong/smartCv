@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import { useGetAdminPaymentOrders } from '@smart-cv/api'
+import type { OrderResponse } from '@smart-cv/api'
 import * as React from 'react'
 import { Button } from '@smart-cv/ui'
 import { RefreshCw } from 'lucide-react'
@@ -18,7 +19,7 @@ function PaymentsPage() {
 
   // Fetch all payment orders (up to 5000) for client-side filtering/cascade options
   const { data: paymentsData, isLoading } = useGetAdminPaymentOrders(0, 5000)
-  const allOrders = paymentsData?.data?.content ?? []
+  const allOrders = React.useMemo(() => paymentsData?.data?.content ?? [], [paymentsData?.data?.content])
 
   // Filter States
   const [selectedMonth, setSelectedMonth] = React.useState('')
@@ -56,10 +57,10 @@ function PaymentsPage() {
   }
 
   // Filter matching helpers
-  const matchesMonth = (o: any, m: string) => !m || (o.createdAt && o.createdAt.startsWith(m))
-  const matchesRole = (o: any, r: string) => !r || o.userRole === r
-  const matchesStatus = (o: any, s: string) => !s || o.status === s
-  const matchesType = (o: any, t: string) => !t || (o.paymentType || 'Gói sử dụng') === t
+  const matchesMonth = (o: OrderResponse, m: string) => !m || o.createdAt.startsWith(m)
+  const matchesRole = (o: OrderResponse, r: string) => !r || o.userRole === r
+  const matchesStatus = (o: OrderResponse, s: string) => !s || o.status === s
+  const matchesType = (o: OrderResponse, t: string) => !t || (o.paymentType || 'Gói sử dụng') === t
 
   // Extract available options dynamically based on all *other* selected filters (Cascading Filters)
   const availableRoles = React.useMemo(() => {

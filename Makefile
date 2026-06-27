@@ -5,31 +5,25 @@ BACKEND := backend
 # ── Backend: Tests ────────────────────────────────────────────────────────────
 
 test-user:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/user-service && $(MVN) test
 
 test-gateway:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/api-gateway && $(MVN) test
 
 test-job:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/job_service && $(MVN) test
 
 test-application:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/application_service && $(MVN) test
 
 test-payment:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/payment-service && $(MVN) test
 
 test-ai:
-	set -a; [ -f $(BACKEND)/.env ] && . $(BACKEND)/.env; set +a; \
 	cd $(BACKEND)/ai_engine_service && $(MVN) test
 
 test-noti:
-	cd $(BACKEND)/notification-service && go test ./... -v
+	cd $(BACKEND)/notification-service && GOCACHE=/tmp/smartcv-go-build go test ./... -v
 
 test-backend: test-user test-gateway test-job test-application test-payment test-ai test-noti
 

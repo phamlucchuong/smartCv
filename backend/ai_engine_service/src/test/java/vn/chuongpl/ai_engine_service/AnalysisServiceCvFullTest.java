@@ -193,7 +193,7 @@ class AnalysisServiceCvFullTest {
         doNothing().when(userClient).updateCvAnalysis(anyString(), anyString(), anyString());
 
         CvFullAnalysisResponse result = analysisService.analyzeCv(
-                new CvFullAnalysisRequest(CV_ID, null), USER_ID);
+                new CvFullAnalysisRequest(CV_ID, null), USER_ID, true);
 
         assertThat(result.matchScore()).isEqualTo(78);
         assertThat(result.matchedSkills()).containsExactly("Back-end development", "Golang");
