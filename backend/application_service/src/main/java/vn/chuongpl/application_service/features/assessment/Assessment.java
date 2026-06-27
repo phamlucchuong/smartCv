@@ -29,6 +29,9 @@ public class Assessment {
     @Field("recruiter_id")
     String recruiterId;
 
+    @Field("candidate_id")
+    String candidateId;
+
     String title;
     String description;
 

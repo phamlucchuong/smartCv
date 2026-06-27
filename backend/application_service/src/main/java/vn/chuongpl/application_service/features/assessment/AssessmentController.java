@@ -50,7 +50,7 @@ public class AssessmentController {
     }
 
     @PutMapping("/api/assessments/{id}")
-    @PreAuthorize("hasRole('RECRUITER')")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
     public ApiResponse<AssessmentResponse> updateAssessment(
             @PathVariable String id,
             @RequestBody AssessmentCreateRequest request,
@@ -61,7 +61,7 @@ public class AssessmentController {
     }
 
     @DeleteMapping("/api/assessments/{id}")
-    @PreAuthorize("hasRole('RECRUITER')")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
     public ApiResponse<Void> deleteAssessment(
             @PathVariable String id,
             @AuthenticationPrincipal String userId) {
@@ -77,6 +77,27 @@ public class AssessmentController {
             @AuthenticationPrincipal String userId) {
         assessmentService.assignToCandidate(id, body.get("candidateId"), userId);
         return ApiResponse.<Void>builder().message("Assessment assigned").build();
+    }
+
+    // ── Candidate self-test endpoints ─────────────────────────────────────────
+
+    @PostMapping("/api/assessments/self")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<AssessmentResponse> createSelfAssessment(
+            @RequestBody AssessmentCreateRequest request,
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<AssessmentResponse>builder()
+                .data(assessmentService.createSelfAssessment(request, userId))
+                .build();
+    }
+
+    @GetMapping("/api/assessments/self")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ApiResponse<List<AssessmentResponse>> getMySelfAssessments(
+            @AuthenticationPrincipal String userId) {
+        return ApiResponse.<List<AssessmentResponse>>builder()
+                .data(assessmentService.getMySelfAssessments(userId))
+                .build();
     }
 
     // ── Candidate endpoints ────────────────────────────────────────────────────
@@ -179,7 +200,7 @@ public class AssessmentController {
     }
 
     @DeleteMapping("/api/attempts/{attemptId}")
-    @PreAuthorize("hasRole('RECRUITER')")
+    @PreAuthorize("hasRole('RECRUITER') or hasRole('CANDIDATE')")
     public ApiResponse<Void> deleteAttempt(
             @PathVariable String attemptId,
             @AuthenticationPrincipal String userId) {

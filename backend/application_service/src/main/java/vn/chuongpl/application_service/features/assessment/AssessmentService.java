@@ -52,6 +52,25 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
+    public AssessmentResponse createSelfAssessment(AssessmentCreateRequest req, String candidateUserId) {
+        Assessment assessment = Assessment.builder()
+                .candidateId(candidateUserId)
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .questions(req.getQuestions() != null ? req.getQuestions() : List.of())
+                .timeLimitMinutes(req.getTimeLimitMinutes())
+                .status(AssessmentStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .build();
+        return toResponse(assessmentRepository.save(assessment));
+    }
+
+    public List<AssessmentResponse> getMySelfAssessments(String candidateUserId) {
+        return assessmentRepository.findByCandidateId(candidateUserId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public List<AssessmentResponse> getRecruiterAssessments(String userId, List<String> roles) {
         List<AssessmentResponse> assessments;
         if (!roles.contains("ROLE_ADMIN")) {
@@ -68,9 +87,17 @@ public class AssessmentService {
     }
 
     public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String userId) {
-        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
-        if (!recruiterId.equals(assessment.getRecruiterId())) {
+        if (assessment.getRecruiterId() != null) {
+            String recruiterId = resolveRecruiterId(userId);
+            if (!recruiterId.equals(assessment.getRecruiterId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if (assessment.getCandidateId() != null) {
+            if (!userId.equals(assessment.getCandidateId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
         assessment.setTitle(req.getTitle());
@@ -83,9 +110,17 @@ public class AssessmentService {
     }
 
     public void deleteAssessment(String id, String userId) {
-        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(id);
-        if (!recruiterId.equals(assessment.getRecruiterId())) {
+        if (assessment.getRecruiterId() != null) {
+            String recruiterId = resolveRecruiterId(userId);
+            if (!recruiterId.equals(assessment.getRecruiterId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if (assessment.getCandidateId() != null) {
+            if (!userId.equals(assessment.getCandidateId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
         assessmentRepository.delete(assessment);
@@ -114,14 +149,23 @@ public class AssessmentService {
         }
         if (assessment.getStatus() == AssessmentStatus.DRAFT) {
             assessment.setStatus(AssessmentStatus.ACTIVE);
-            assessmentRepository.save(assessment);
+        } else if (assessment.getStatus() == AssessmentStatus.ACTIVE) {
+            assessment.setStatus(AssessmentStatus.DRAFT);
         }
+        assessmentRepository.save(assessment);
         return toResponse(assessment);
     }
 
     public void deleteAttempt(String attemptId, String userId) {
-        String recruiterId = resolveRecruiterId(userId);
         AssessmentAttempt attempt = findAttemptById(attemptId);
+        // If candidate owns the attempt, let them delete it
+        if (userId.equals(attempt.getCandidateId())) {
+            attemptRepository.delete(attempt);
+            return;
+        }
+
+        // Otherwise check if recruiter owns the assessment of this attempt
+        String recruiterId = resolveRecruiterId(userId);
         Assessment assessment = findAssessmentById(attempt.getAssessmentId());
         if (!recruiterId.equals(assessment.getRecruiterId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -149,6 +193,14 @@ public class AssessmentService {
 
     public List<AttemptStateResponse> getMyAssessments(String candidateId) {
         return attemptRepository.findByCandidateId(candidateId).stream()
+                .filter(attempt -> {
+                    try {
+                        Assessment assessment = findAssessmentById(attempt.getAssessmentId());
+                        return assessment.getStatus() == AssessmentStatus.ACTIVE;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
                 .map(this::toAttemptStateResponse)
                 .toList();
     }

@@ -220,15 +220,18 @@ class AssessmentServiceTest {
     }
 
     @Test
-    void publishAssessment_shouldBeIdempotentWhenAlreadyActive() {
+    void publishAssessment_shouldDemoteActiveToDraft() {
         when(userClient.resolveRecruiterId("u1")).thenReturn("r1");
         Assessment assessment = Assessment.builder()
                 .id("a1").recruiterId("r1").status(AssessmentStatus.ACTIVE).build();
         when(assessmentRepository.findById("a1")).thenReturn(Optional.of(assessment));
+        when(assessmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        assessmentService.publishAssessment("a1", "u1");
+        AssessmentResponse response = assessmentService.publishAssessment("a1", "u1");
 
-        verify(assessmentRepository, never()).save(any());
+        assertEquals(AssessmentStatus.DRAFT, assessment.getStatus());
+        assertEquals(AssessmentStatus.DRAFT, response.getStatus());
+        verify(assessmentRepository).save(assessment);
     }
 
     @Test
