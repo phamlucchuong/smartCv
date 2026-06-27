@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import vn.chuongpl.ai_engine_service.config.AiProviderProperties;
 import vn.chuongpl.ai_engine_service.enums.ErrorCode;
 import vn.chuongpl.ai_engine_service.exception.AppException;
 import vn.chuongpl.ai_engine_service.features.admin.AiProviderConfig;
@@ -24,11 +25,14 @@ class AiModelGatewayRouterTest {
     @Mock AiModelGatewayFactory factory;
     @Mock AiModelGateway mockGateway;
 
+    // Unconfigured properties (no env vars) — used by tests that expect no auto-seed
+    AiProviderProperties emptyProps = new AiProviderProperties();
+
     AiModelGatewayRouter router;
 
     @BeforeEach
     void setUp() {
-        router = new AiModelGatewayRouter(repository, factory);
+        router = new AiModelGatewayRouter(repository, factory, emptyProps);
     }
 
     @Test
@@ -44,12 +48,36 @@ class AiModelGatewayRouterTest {
     }
 
     @Test
-    void init_with_no_active_config_leaves_gateway_null() {
+    void init_with_no_active_config_and_no_env_keys_leaves_gateway_null() {
         when(repository.findByActiveTrue()).thenReturn(Optional.empty());
 
         router.init();
 
         assertThat(router.getActiveProvider()).isEqualTo("none");
+    }
+
+    @Test
+    void init_with_env_key_seeds_and_activates_provider() {
+        AiProviderProperties props = new AiProviderProperties();
+        props.getGroq().setApiKey("gsk_testkey");
+        props.getGroq().setModel("llama-3.3-70b-versatile");
+        props.getGroq().setBaseUrl("https://api.groq.com/openai/v1");
+        var seededConfig = AiProviderConfig.builder()
+                .provider(AiProvider.GROQ)
+                .apiKey("gsk_testkey")
+                .active(true)
+                .build();
+        when(repository.findByActiveTrue()).thenReturn(Optional.empty());
+        when(repository.findByProvider(AiProvider.GROQ)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenReturn(seededConfig);
+        when(factory.create(any())).thenReturn(mockGateway);
+        when(mockGateway.provider()).thenReturn(AiProvider.GROQ);
+
+        AiModelGatewayRouter seedRouter = new AiModelGatewayRouter(repository, factory, props);
+        seedRouter.init();
+
+        assertThat(seedRouter.getActiveProvider()).isEqualTo("groq");
+        verify(repository).save(any());
     }
 
     @Test

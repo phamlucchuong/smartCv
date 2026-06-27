@@ -23,9 +23,11 @@ public class AiAdminService {
                 .orElse(AiProviderConfig.builder().provider(provider).build());
 
         if (request.getApiKey() != null) config.setApiKey(request.getApiKey());
+        if (request.getOauthToken() != null) config.setOauthToken(request.getOauthToken());
         config.setModel(request.getModel());
         config.setBaseUrl(request.getBaseUrl());
         config.setDeploymentName(request.getDeploymentName());
+        config.setApiVersion(request.getApiVersion());
         config.setUpdatedAt(LocalDateTime.now());
         return toResponse(repository.save(config));
     }
@@ -73,8 +75,10 @@ public class AiAdminService {
                 .model(c.getModel())
                 .baseUrl(c.getBaseUrl())
                 .deploymentName(c.getDeploymentName())
+                .oauthToken(c.getOauthToken())
+                .apiVersion(c.getApiVersion())
                 .active(c.isActive())
-                .configured(c.getApiKey() != null && !c.getApiKey().isBlank())
+                .configured((c.getApiKey() != null && !c.getApiKey().isBlank()) || (c.getOauthToken() != null && !c.getOauthToken().isBlank()))
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

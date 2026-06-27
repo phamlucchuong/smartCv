@@ -15,6 +15,7 @@ export interface RecruiterResponse {
   companyName?: string;
   companyWebsite?: string;
   companyAddress?: string;
+  companyCity?: string;
   companyDescription?: string;
   companyPhone?: string;
   companySize?: string;
@@ -31,8 +32,17 @@ export interface RecruiterResponse {
   contactEmail?: string;
   contactPhone?: string;
   status?: RecruiterResponseStatus;
+  rejectionNote?: string;
   quotaJobPost?: number;
   quotaCvViews?: number;
+  activePackageId?: string;
+  packageActivatedAt?: string;
+  packageExpiresAt?: string;
+  platformFeeDueAt?: string;
+  platformFeeLastPaidAt?: string;
+  platformFeeReminderSentAt?: string;
+  platformFeeOverdueSentAt?: string;
+  platformFeeLockedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

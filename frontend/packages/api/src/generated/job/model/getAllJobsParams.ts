@@ -8,4 +8,6 @@
 export type GetAllJobsParams = {
 page?: number;
 size?: number;
+moderationStatus?: string;
+keyword?: string;
 };

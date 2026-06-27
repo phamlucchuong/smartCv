@@ -9,6 +9,7 @@ export interface UserResponse {
   id?: string;
   fullName?: string;
   email?: string;
+  phone?: string;
   roles?: string[];
   verified?: boolean;
   locked?: boolean;

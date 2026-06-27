@@ -55,7 +55,16 @@ public class CompanyService {
     }
 
     public CompanyResponse getById(String id) {
-        Recruiter recruiter = recruiterRepository.findByIdAndDeletedFalse(id)
+        Recruiter recruiter = recruiterRepository.findById(id)
+                .filter(r -> !r.isDeleted())
+                .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
+                .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
+        return CompanyResponse.from(recruiter);
+    }
+
+    public CompanyResponse getByRecruiterId(String recruiterId) {
+        Recruiter recruiter = recruiterRepository.findById(recruiterId)
+                .filter(r -> !r.isDeleted())
                 .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
         return CompanyResponse.from(recruiter);
@@ -63,7 +72,8 @@ public class CompanyService {
 
     public List<CompanyResponse> getByIds(List<String> ids) {
         return ids.stream()
-                .map(id -> recruiterRepository.findByIdAndDeletedFalse(id)
+                .map(id -> recruiterRepository.findById(id)
+                        .filter(r -> !r.isDeleted())
                         .filter(r -> r.getStatus() == RecruiterStatus.APPROVED)
                         .map(CompanyResponse::from)
                         .orElse(null))
@@ -72,11 +82,15 @@ public class CompanyService {
     }
 
     public List<JobSummary> getCompanyJobs(String companyId) {
-        return jobClient.getJobsByRecruiter(companyId);
+        return recruiterRepository.findById(companyId)
+                .filter(r -> !r.isDeleted())
+                .map(r -> jobClient.getJobsByRecruiter(r.getId()))
+                .orElse(List.of());
     }
 
     public List<CompanyResponse> getRelatedCompanies(String companyId) {
-        Recruiter current = recruiterRepository.findByIdAndDeletedFalse(companyId)
+        Recruiter current = recruiterRepository.findById(companyId)
+                .filter(r -> !r.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
         if (current.getIndustry() == null || current.getIndustry().isBlank()) {
             return List.of();

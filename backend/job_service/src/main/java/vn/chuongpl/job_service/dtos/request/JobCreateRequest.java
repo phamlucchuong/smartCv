@@ -1,7 +1,6 @@
 package vn.chuongpl.job_service.dtos.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.chuongpl.job_service.enums.ExperienceLevel;
@@ -17,15 +16,20 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class JobCreateRequest {
     @NotBlank String title;
-    @NotBlank String description;
-    @NotBlank String company;
-    @NotBlank String location;
+    String description;
+    String company;
+    String location;
     Double salaryMin;
     Double salaryMax;
-    @NotNull JobType jobType;
-    @NotNull ExperienceLevel experienceLevel;
+    JobType jobType;
+    ExperienceLevel experienceLevel;
     List<String> skills;
     List<String> requirements;
     List<String> benefits;
     LocalDate deadline;
+    Integer openings;
+    Integer qualifiedThreshold;
+    Integer rejectThreshold;
+    Boolean autoRejectEnabled;
+    String requiredTest;
 }

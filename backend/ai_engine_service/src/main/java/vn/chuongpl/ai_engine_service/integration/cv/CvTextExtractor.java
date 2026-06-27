@@ -1,5 +1,6 @@
 package vn.chuongpl.ai_engine_service.integration.cv;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -10,13 +11,15 @@ import org.springframework.web.client.RestTemplate;
 import vn.chuongpl.ai_engine_service.enums.ErrorCode;
 import vn.chuongpl.ai_engine_service.exception.AppException;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class CvTextExtractor {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     public String resolveCvText(String cvText, String cvUrl) {
         if (cvText != null && !cvText.isBlank()) {
@@ -27,7 +30,7 @@ public class CvTextExtractor {
         }
 
         try {
-            byte[] fileBytes = restTemplate.getForObject(cvUrl, byte[].class);
+            byte[] fileBytes = restTemplate.getForObject(URI.create(cvUrl), byte[].class);
             if (fileBytes == null || fileBytes.length == 0) {
                 throw new AppException(ErrorCode.CV_TEXT_REQUIRED);
             }

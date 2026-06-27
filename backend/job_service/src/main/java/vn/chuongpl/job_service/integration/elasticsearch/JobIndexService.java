@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import vn.chuongpl.job_service.dtos.PageResponse;
 import vn.chuongpl.job_service.dtos.request.JobSearchRequest;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
+import vn.chuongpl.job_service.enums.JobModerationStatus;
+import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.features.job.*;
 
 import java.util.ArrayList;
@@ -56,7 +58,8 @@ public class JobIndexService {
         Pageable pageable = PageRequest.of(page, size);
 
         List<Query> filters = new ArrayList<>();
-        filters.add(TermQuery.of(t -> t.field("status").value("ACTIVE"))._toQuery());
+        filters.add(TermQuery.of(t -> t.field("moderationStatus").value(JobModerationStatus.PUBLISHED.name()))._toQuery());
+        filters.add(TermQuery.of(t -> t.field("visibilityStatus").value(JobVisibilityStatus.ACTIVE.name()))._toQuery());
 
         if (request.getLocation() != null && !request.getLocation().isBlank()) {
             filters.add(TermQuery.of(t -> t.field("location").value(request.getLocation()))._toQuery());

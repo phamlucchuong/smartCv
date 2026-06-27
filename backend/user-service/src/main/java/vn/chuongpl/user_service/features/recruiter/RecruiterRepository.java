@@ -17,6 +17,8 @@ public interface RecruiterRepository extends MongoRepository<Recruiter, String> 
 
     Page<Recruiter> findAllByDeletedFalse(Pageable pageable);
 
+    Page<Recruiter> findAllByStatusAndDeletedFalse(RecruiterStatus status, Pageable pageable);
+
     List<Recruiter> findTop5ByIndustryAndIdNotAndStatusAndDeletedFalse(
             String industry, String id, RecruiterStatus status);
 }
