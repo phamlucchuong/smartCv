@@ -20,6 +20,7 @@ const smtpTimeout = 10 * time.Second
 type EmailService interface {
 	SendOTP(to, code string, ttlMinutes int) error
 	SendApplicationResult(to, jobTitle, status, rejectionReason string) error
+	SendRecruiterBillingNotice(to, companyName, status, dueAt string) error
 }
 
 // Service implements EmailService via SMTP.
@@ -100,6 +101,64 @@ func (s *Service) SendJobModeration(ctx context.Context, to, jobTitle, company, 
 		subject = fmt.Sprintf("Tin tuyển dụng chưa được phê duyệt: %s", jobTitle)
 	}
 	htmlBody, plainBody := renderJobModerationEmail(jobTitle, company, status, note)
+	return s.sendMultipart(to, subject, htmlBody, plainBody)
+}
+
+func (s *Service) SendRecruiterBillingNotice(ctx context.Context, to, companyName, status, dueAt string) error {
+	if s == nil {
+		return nil
+	}
+	if containsCRLF(to) {
+		return fmt.Errorf("invalid recipient address")
+	}
+	var subject string
+	switch status {
+	case "APPROACHING":
+		subject = fmt.Sprintf("[SmartCV] Phí sàn sắp đến hạn: %s", companyName)
+	case "OVERDUE":
+		subject = fmt.Sprintf("[SmartCV] Phí sàn đã đến hạn thanh toán: %s", companyName)
+	case "LOCKED":
+		subject = fmt.Sprintf("[SmartCV] Tài khoản nhà tuyển dụng bị khóa: %s", companyName)
+	default:
+		subject = fmt.Sprintf("[SmartCV] Thông báo phí sàn: %s", companyName)
+	}
+	htmlBody, plainBody := renderRecruiterBillingNoticeEmail(companyName, status, dueAt)
+	return s.sendMultipart(to, subject, htmlBody, plainBody)
+}
+
+func (s *Service) SendAdminRecruiterLockNotice(ctx context.Context, adminEmail, companyName, recruiterEmail, dueAt string) error {
+	if s == nil {
+		return nil
+	}
+	if containsCRLF(adminEmail) {
+		return fmt.Errorf("invalid recipient address")
+	}
+	subject := fmt.Sprintf("[SmartCV Admin] Nhà tuyển dụng bị khóa do chưa thanh toán phí sàn: %s", companyName)
+	htmlBody, plainBody := renderAdminRecruiterLockEmail(companyName, recruiterEmail, dueAt)
+	return s.sendMultipart(adminEmail, subject, htmlBody, plainBody)
+}
+
+func (s *Service) SendPackageExpiredNotice(ctx context.Context, to, packageID, expiredAt string) error {
+	if s == nil {
+		return nil
+	}
+	if containsCRLF(to) {
+		return fmt.Errorf("invalid recipient address")
+	}
+	subject := "[SmartCV] Gói dịch vụ của bạn đã hết hạn"
+	htmlBody, plainBody := renderPackageExpiredEmail(packageID, expiredAt)
+	return s.sendMultipart(to, subject, htmlBody, plainBody)
+}
+
+func (s *Service) SendPackageExpiryWarning(ctx context.Context, to, packageID, expiresAt string) error {
+	if s == nil {
+		return nil
+	}
+	if containsCRLF(to) {
+		return fmt.Errorf("invalid recipient address")
+	}
+	subject := "[SmartCV] Gói dịch vụ của bạn sắp hết hạn"
+	htmlBody, plainBody := renderPackageExpiryWarningEmail(packageID, expiresAt)
 	return s.sendMultipart(to, subject, htmlBody, plainBody)
 }
 

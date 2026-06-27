@@ -76,6 +76,33 @@ type RecruiterPendingEventMessage struct {
 	OccurredAt     string   `json:"occurredAt"`
 }
 
+type RecruiterBillingEventMessage struct {
+	RecruiterID    string `json:"recruiterId"`
+	RecruiterUserID string `json:"recruiterUserId"`
+	RecruiterEmail string `json:"recruiterEmail"`
+	CompanyName    string `json:"companyName"`
+	EventType      string `json:"eventType"`
+	DueAt          string `json:"dueAt"`
+	LockedAt       string `json:"lockedAt,omitempty"`
+	Amount         string `json:"amount"`
+}
+
+type PackageExpiredEventMessage struct {
+	UserID    string `json:"userId"`
+	UserEmail string `json:"userEmail"`
+	UserRole  string `json:"userRole"`
+	PackageID string `json:"packageId"`
+	ExpiredAt string `json:"expiredAt"`
+}
+
+type PackageExpiringSoonMessage struct {
+	UserID    string `json:"userId"`
+	UserEmail string `json:"userEmail"`
+	UserRole  string `json:"userRole"`
+	PackageID string `json:"packageId"`
+	ExpiresAt string `json:"expiresAt"`
+}
+
 type AssessmentEventMessage struct {
 	AttemptID       string  `json:"attemptId"`
 	AssessmentID    string  `json:"assessmentId"`
@@ -553,5 +580,131 @@ func (c *Consumer) ListenRecruiterPendingEvents() error {
 	}()
 
 	c.logger.Info("RabbitMQ consumer listening on recruiter.pending.queue")
+	return nil
+}
+
+func (c *Consumer) ListenRecruiterBillingEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("recruiter.notification.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("recruiter.billing.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = ch.QueueBind(queue.Name, "recruiter.billing", "recruiter.notification.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg RecruiterBillingEventMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal recruiter billing event", "error", err)
+				continue
+			}
+			c.logger.Info("received recruiter billing event", "recruiterId", msg.RecruiterID, "eventType", msg.EventType)
+			if err := c.notiSvc.HandleRecruiterBillingNotice(context.Background(), msg); err != nil {
+				c.logger.Error("failed to handle recruiter billing event", "recruiterId", msg.RecruiterID, "error", err)
+			}
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on recruiter.billing.queue")
+	return nil
+}
+
+func (c *Consumer) ListenPackageExpiredEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("recruiter.notification.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("package.expired.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = ch.QueueBind(queue.Name, "package.expired", "recruiter.notification.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg PackageExpiredEventMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal package expired event", "error", err)
+				continue
+			}
+			c.logger.Info("received package expired event", "userId", msg.UserID, "role", msg.UserRole)
+			if err := c.notiSvc.HandlePackageExpiredNotice(context.Background(), msg); err != nil {
+				c.logger.Error("failed to handle package expired event", "userId", msg.UserID, "error", err)
+			}
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on package.expired.queue")
+	return nil
+}
+
+func (c *Consumer) ListenPackageExpiringSoonEvents() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	if err = ch.ExchangeDeclare("recruiter.notification.exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	queue, err := ch.QueueDeclare("package.expiring.soon.queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = ch.QueueBind(queue.Name, "package.expiring.soon", "recruiter.notification.exchange", false, nil); err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			var msg PackageExpiringSoonMessage
+			if err := json.Unmarshal(d.Body, &msg); err != nil {
+				c.logger.Error("failed to unmarshal package expiring soon event", "error", err)
+				continue
+			}
+			c.logger.Info("received package expiring soon event", "userId", msg.UserID, "role", msg.UserRole)
+			if err := c.notiSvc.HandlePackageExpiringSoonNotice(context.Background(), msg); err != nil {
+				c.logger.Error("failed to handle package expiring soon event", "userId", msg.UserID, "error", err)
+			}
+		}
+	}()
+
+	c.logger.Info("RabbitMQ consumer listening on package.expiring.soon.queue")
 	return nil
 }

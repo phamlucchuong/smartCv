@@ -21,6 +21,7 @@ type Config struct {
 	SMTPPassword string `mapstructure:"SMTP_PASSWORD"`
 	SMTPFrom     string `mapstructure:"SMTP_FROM"`
 	SMTPName     string `mapstructure:"SMTP_NAME"`
+	AdminEmail   string `mapstructure:"ADMIN_EMAIL"`
 
 	// SMS configuration.
 	SMSProvider string `mapstructure:"SMS_PROVIDER"`
@@ -61,6 +62,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("SMTP_PORT", "587")
 	viper.SetDefault("SMTP_FROM", "Smart CV <noreply@smartcv.com>")
 	viper.SetDefault("SMTP_NAME", "Smart CV")
+	viper.SetDefault("ADMIN_EMAIL", "")
 	viper.SetDefault("SMS_PROVIDER", "")
 	viper.SetDefault("AWS_REGION", "ap-southeast-1")
 	viper.SetDefault("AWS_SNS_SMS_TYPE", "Transactional")

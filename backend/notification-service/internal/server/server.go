@@ -99,6 +99,7 @@ func New(cfg *config.Config, log *slog.Logger, gormDB *gorm.DB, rdb *redis.Clien
 		otpSvc,
 		emailSvc,
 		smsSvc,
+		cfg.AdminEmail,
 	)
 
 	s.notiHandler = notification.NewHandler(s.notiSvc, log)
@@ -240,8 +241,26 @@ func (s *Server) Start(ctx context.Context) error {
 		}()
 
 		go func() {
+			if err := s.consumer.ListenRecruiterBillingEvents(); err != nil {
+				s.log.Error("failed to start recruiter billing event consumer", slog.Any("error", err))
+			}
+		}()
+
+		go func() {
 			if err := s.consumer.ListenAssessmentEvents(); err != nil {
 				s.log.Error("failed to start assessment event consumer", slog.Any("error", err))
+			}
+		}()
+
+		go func() {
+			if err := s.consumer.ListenPackageExpiredEvents(); err != nil {
+				s.log.Error("failed to start package expired event consumer", slog.Any("error", err))
+			}
+		}()
+
+		go func() {
+			if err := s.consumer.ListenPackageExpiringSoonEvents(); err != nil {
+				s.log.Error("failed to start package expiring soon event consumer", slog.Any("error", err))
 			}
 		}()
 	}
