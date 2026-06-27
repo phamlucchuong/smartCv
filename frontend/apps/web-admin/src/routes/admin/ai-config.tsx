@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@smart-cv/ui'
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
+import { customInstance } from '@smart-cv/api'
 import {
   Brain,
   Key,
@@ -54,40 +56,13 @@ const initialModels: AIModel[] = [
   { id: 'claude-agent-sdk', name: 'Claude Agent SDK', oauthToken: 'oauth-token-••••••••••••••••x92a', provider: 'Claude Agent SDK' },
 ]
 
-// Mock data sets for different time ranges
-const mockUsageData = {
-  day: [
-    { date: '08:00', promptTokens: 12000, completionTokens: 4000, cost: 0.18 },
-    { date: '10:00', promptTokens: 25000, completionTokens: 9000, cost: 0.38 },
-    { date: '12:00', promptTokens: 45000, completionTokens: 15000, cost: 0.68 },
-    { date: '14:00', promptTokens: 38000, completionTokens: 12000, cost: 0.56 },
-    { date: '16:00', promptTokens: 60000, completionTokens: 22000, cost: 0.92 },
-    { date: '18:00', promptTokens: 30000, completionTokens: 11000, cost: 0.46 },
-    { date: '20:00', promptTokens: 15000, completionTokens: 5000, cost: 0.22 },
-  ],
-  week: [
-    { date: '13/06', promptTokens: 142000, completionTokens: 48000, cost: 2.15 },
-    { date: '14/06', promptTokens: 185000, completionTokens: 62000, cost: 2.80 },
-    { date: '15/06', promptTokens: 210000, completionTokens: 78000, cost: 3.25 },
-    { date: '16/06', promptTokens: 165000, completionTokens: 55000, cost: 2.48 },
-    { date: '17/06', promptTokens: 295000, completionTokens: 110000, cost: 4.60 },
-    { date: '18/06', promptTokens: 320000, completionTokens: 125000, cost: 5.02 },
-    { date: '19/06', promptTokens: 280000, completionTokens: 98000, cost: 4.22 },
-  ],
-  month: [
-    { date: 'Tuần 1', promptTokens: 850000, completionTokens: 290000, cost: 12.80 },
-    { date: 'Tuần 2', promptTokens: 920000, completionTokens: 310000, cost: 13.90 },
-    { date: 'Tuần 3', promptTokens: 1050000, completionTokens: 380000, cost: 16.20 },
-    { date: 'Tuần 4', promptTokens: 1200000, completionTokens: 420000, cost: 18.15 },
-  ],
-  year: [
-    { date: 'T1', promptTokens: 3200000, completionTokens: 1100000, cost: 48.20 },
-    { date: 'T2', promptTokens: 3500000, completionTokens: 1250000, cost: 53.50 },
-    { date: 'T3', promptTokens: 4100000, completionTokens: 1480000, cost: 62.70 },
-    { date: 'T4', promptTokens: 3900000, completionTokens: 1390000, cost: 59.80 },
-    { date: 'T5', promptTokens: 4500000, completionTokens: 1600000, cost: 68.90 },
-    { date: 'T6', promptTokens: 4800000, completionTokens: 1750000, cost: 73.60 },
-  ],
+const fetchAiUsageReport = async (timeframe: string) => {
+  const res = await customInstance<any>({
+    url: '/ai/api/ai/admin/usage-report',
+    method: 'GET',
+    params: { timeframe },
+  })
+  return res.data ?? []
 }
 
 type TimeRange = 'day' | 'week' | 'month' | 'year'
@@ -96,6 +71,12 @@ function AIConfigPage() {
   const [models, setModels] = useState<AIModel[]>(initialModels)
   const [selectedModelId, setSelectedModelId] = useState<string>('gpt-4o-mini')
   const [timeRange, setTimeRange] = useState<TimeRange>('week')
+
+  const { data: usageData = [] } = useQuery({
+    queryKey: ['admin-ai-usage', timeRange],
+    queryFn: () => fetchAiUsageReport(timeRange),
+    staleTime: 30 * 1000,
+  })
   
   // Form state for new model
   const [newModelName, setNewModelName] = useState('')
@@ -200,15 +181,13 @@ function AIConfigPage() {
   const activeModel = models.find((m) => m.id === selectedModelId) || models[0]
 
   // Get active dataset based on selected time range
-  const currentChartData = useMemo(() => {
-    return mockUsageData[timeRange]
-  }, [timeRange])
+  const currentChartData = usageData
 
   // Calculate summary stats dynamically from active dataset
-  const totalPromptTokens = useMemo(() => currentChartData.reduce((sum, item) => sum + item.promptTokens, 0), [currentChartData])
-  const totalCompletionTokens = useMemo(() => currentChartData.reduce((sum, item) => sum + item.completionTokens, 0), [currentChartData])
+  const totalPromptTokens = useMemo(() => currentChartData.reduce((sum: number, item: any) => sum + item.promptTokens, 0), [currentChartData])
+  const totalCompletionTokens = useMemo(() => currentChartData.reduce((sum: number, item: any) => sum + item.completionTokens, 0), [currentChartData])
   const totalTokens = totalPromptTokens + totalCompletionTokens
-  const totalCost = useMemo(() => currentChartData.reduce((sum, item) => sum + item.cost, 0), [currentChartData])
+  const totalCost = useMemo(() => currentChartData.reduce((sum: number, item: any) => sum + item.cost, 0), [currentChartData])
 
   return (
     <div className="space-y-6 w-full pb-10">

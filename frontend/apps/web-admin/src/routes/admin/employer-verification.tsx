@@ -11,13 +11,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  JOB_CATEGORY_LABELS,
 } from '@smart-cv/ui'
 import { StatusBadge } from '@/components/ui-kit/StatusBadge'
 import { useTranslation } from '@smart-cv/i18n'
 import { RecruiterApi } from '@smart-cv/api'
 import type { RecruiterResponse } from '@smart-cv/api'
 import { toast } from 'sonner'
-import { ExternalLink, Search, Eye, MoreHorizontal } from 'lucide-react'
+import { ExternalLink, Search, MoreHorizontal } from 'lucide-react'
 
 type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -92,11 +93,10 @@ function EmployerVerificationPage() {
             <button
               key={s}
               onClick={() => { setPage(1); setStatusFilter(s) }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                statusFilter === s
-                  ? 'bg-background shadow text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${statusFilter === s
+                ? 'bg-background shadow text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+                }`}
             >
               {s}
             </button>
@@ -169,7 +169,6 @@ function EmployerVerificationPage() {
                           onClick={() => setSelectedRecruiter(r)}
                           className="cursor-pointer"
                         >
-                          <Eye className="mr-2 size-4" />
                           Xem hồ sơ
                         </DropdownMenuItem>
                         {r.status === 'PENDING' && r.id && (
@@ -264,6 +263,7 @@ function EmployerVerificationPage() {
                 <DetailField label="Số điện thoại" value={selectedRecruiter.contactPhone} />
                 <DetailField label="Quy mô công ty" value={selectedRecruiter.companySize} />
                 <DetailField label="Lĩnh vực hoạt động" value={selectedRecruiter.industry} />
+                <DetailField label="Danh mục ngành nghề" value={(selectedRecruiter as unknown as { category?: string }).category ? JOB_CATEGORY_LABELS[(selectedRecruiter as unknown as { category?: string }).category!] : undefined} />
                 <DetailField label="Người đại diện" value={selectedRecruiter.contactName ?? selectedRecruiter.fullName} />
                 <DetailField label="Website" value={selectedRecruiter.companyWebsite} isLink />
                 <DetailField label="Ngày đăng ký" value={selectedRecruiter.createdAt ? new Date(selectedRecruiter.createdAt).toLocaleDateString('vi-VN') : undefined} />
@@ -295,9 +295,9 @@ function EmployerVerificationPage() {
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setSelectedRecruiter(null)}>
+            {/* <Button variant="outline" onClick={() => setSelectedRecruiter(null)}>
               Đóng
-            </Button>
+            </Button> */}
             {selectedRecruiter?.status === 'PENDING' && (
               <>
                 <Button
