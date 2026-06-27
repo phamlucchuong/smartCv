@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -112,6 +114,39 @@ public class UserServiceClient {
             log.warn("Failed to fetch company data for userId={}: {}", userId, e.getMessage());
         }
         return null;
+    }
+
+    public List<CompanyData> getCompaniesByCategory(String category, int limit) {
+        String url = userServiceUrl + "/user/api/internal/recruiters/by-category?category=" + category + "&limit=" + limit;
+        try {
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("X-Gateway-Secret", internalSecret);
+            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url, org.springframework.http.HttpMethod.GET, entity, Map.class);
+            if (response.getBody() != null) {
+                Object data = response.getBody().get("data");
+                if (data instanceof List<?> list) {
+                    return list.stream()
+                            .filter(item -> item instanceof Map)
+                            .map(item -> {
+                                Map<?, ?> m = (Map<?, ?>) item;
+                                return new CompanyData(
+                                        m.get("id") != null ? m.get("id").toString() : null,
+                                        m.get("name") != null ? m.get("name").toString() : null,
+                                        m.get("logoUrl") != null ? m.get("logoUrl").toString() : null,
+                                        m.get("coverImageUrl") != null ? m.get("coverImageUrl").toString() : null,
+                                        m.get("industry") != null ? m.get("industry").toString() : null,
+                                        m.get("location") != null ? m.get("location").toString() : null
+                                );
+                            })
+                            .toList();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch companies by category={}: {}", category, e.getMessage());
+        }
+        return Collections.emptyList();
     }
 
     public String getCompanyId(String userId) {

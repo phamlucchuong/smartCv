@@ -31,7 +31,9 @@ import vn.chuongpl.job_service.integration.userservice.UserServiceClient;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -305,16 +307,55 @@ public class JobService {
     public List<JobResponse> getRelatedJobs(String id) {
         expireOverduePublishedJobs();
         Job job = findJob(id);
+
+        // Category-first: find up to 5 jobs in the same category
+        List<Job> byCat = java.util.Collections.emptyList();
+        if (job.getCategory() != null) {
+            byCat = jobRepository.findTop5ByCategoryAndModerationStatusAndVisibilityStatusAndIdNotAndDeletedFalse(
+                    job.getCategory(),
+                    JobModerationStatus.PUBLISHED,
+                    JobVisibilityStatus.ACTIVE,
+                    id);
+        }
+        if (byCat.size() >= 5) {
+            return byCat.stream().map(jobMapper::toJobResponse).toList();
+        }
+
+        // Skills fallback: fill remaining slots with skill-matched jobs
         List<String> skills = job.getSkills() != null ? job.getSkills() : List.of();
-        if (skills.isEmpty()) return List.of();
-        return jobRepository
-                .findTop5ByModerationStatusAndVisibilityStatusAndSkillsInAndIdNotAndDeletedFalse(
-                        JobModerationStatus.PUBLISHED,
-                        JobVisibilityStatus.ACTIVE,
-                        skills,
-                        id
-                )
-                .stream().map(jobMapper::toJobResponse).toList();
+        if (skills.isEmpty() && byCat.isEmpty()) return List.of();
+
+        Set<String> seen = new HashSet<>();
+        List<Job> result = new ArrayList<>(byCat);
+        byCat.forEach(j -> seen.add(j.getId()));
+
+        if (!skills.isEmpty() && result.size() < 5) {
+            jobRepository.findTop5ByModerationStatusAndVisibilityStatusAndSkillsInAndIdNotAndDeletedFalse(
+                            JobModerationStatus.PUBLISHED,
+                            JobVisibilityStatus.ACTIVE,
+                            skills,
+                            id)
+                    .stream()
+                    .filter(j -> !seen.contains(j.getId()))
+                    .limit(5 - result.size())
+                    .forEach(result::add);
+        }
+
+        return result.stream().map(jobMapper::toJobResponse).toList();
+    }
+
+    public List<UserServiceClient.CompanyData> getRelatedCompanies(String jobId) {
+        Job job = findJob(jobId);
+        if (job.getCategory() == null) return java.util.Collections.emptyList();
+        return userServiceClient.getCompaniesByCategory(job.getCategory().name(), 5);
+    }
+
+    public int reindexAllJobs() {
+        JobIndexService indexService = jobIndexServiceProvider.getIfAvailable();
+        if (indexService == null) return 0;
+        List<Job> allJobs = jobRepository.findByDeletedFalse(Pageable.unpaged()).getContent();
+        allJobs.forEach(indexService::indexJob);
+        return allJobs.size();
     }
 
     public List<JobResponse> getJobsByIds(List<String> ids) {
