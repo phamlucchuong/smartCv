@@ -31,7 +31,8 @@ public class AssessmentService {
 
     private String resolveRecruiterId(String userId) {
         String recruiterId = userClient.resolveRecruiterId(userId);
-        if (recruiterId == null) throw new AppException(ErrorCode.UNAUTHORIZED);
+        if (recruiterId == null)
+            throw new AppException(ErrorCode.UNAUTHORIZED);
         return recruiterId;
     }
 
@@ -51,11 +52,19 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
-    public List<AssessmentResponse> getRecruiterAssessments(String userId) {
-        String recruiterId = resolveRecruiterId(userId);
-        return assessmentRepository.findByRecruiterId(recruiterId).stream()
-                .map(this::toResponse)
-                .toList();
+    public List<AssessmentResponse> getRecruiterAssessments(String userId, List<String> roles) {
+        List<AssessmentResponse> assessments;
+        if (!roles.contains("ROLE_ADMIN")) {
+            String recruiterId = resolveRecruiterId(userId);
+            assessments = assessmentRepository.findByRecruiterId(recruiterId).stream()
+                    .map(this::toResponse)
+                    .toList();
+        } else {
+            assessments = assessmentRepository.findAll().stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return assessments;
     }
 
     public AssessmentResponse updateAssessment(String id, AssessmentCreateRequest req, String userId) {
@@ -138,7 +147,6 @@ public class AssessmentService {
                 .toList();
     }
 
-
     public List<AttemptStateResponse> getMyAssessments(String candidateId) {
         return attemptRepository.findByCandidateId(candidateId).stream()
                 .map(this::toAttemptStateResponse)
@@ -157,8 +165,10 @@ public class AssessmentService {
     public String startAttempt(String assessmentId, String candidateId) {
         findAssessmentById(assessmentId);
         attemptRepository.findByCandidateIdAndAssessmentIdAndStatus(
-                        candidateId, assessmentId, AttemptStatus.IN_PROGRESS)
-                .ifPresent(a -> { throw new AppException(ErrorCode.ATTEMPT_ALREADY_IN_PROGRESS); });
+                candidateId, assessmentId, AttemptStatus.IN_PROGRESS)
+                .ifPresent(a -> {
+                    throw new AppException(ErrorCode.ATTEMPT_ALREADY_IN_PROGRESS);
+                });
 
         AssessmentAttempt attempt = AssessmentAttempt.builder()
                 .assessmentId(assessmentId)

@@ -21,6 +21,7 @@ import { Route as AdminPackagesRouteImport } from './routes/admin/packages'
 import { Route as AdminJobModerationRouteImport } from './routes/admin/job-moderation'
 import { Route as AdminEmployerVerificationRouteImport } from './routes/admin/employer-verification'
 import { Route as AdminAuditLogsRouteImport } from './routes/admin/audit-logs'
+import { Route as AdminAssessmentsRouteImport } from './routes/admin.assessments'
 import { Route as AdminAiConfigRouteImport } from './routes/admin/ai-config'
 
 const SigninRoute = SigninRouteImport.update({
@@ -84,6 +85,11 @@ const AdminAuditLogsRoute = AdminAuditLogsRouteImport.update({
   path: '/audit-logs',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAssessmentsRoute = AdminAssessmentsRouteImport.update({
+  id: '/assessments',
+  path: '/assessments',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminAiConfigRoute = AdminAiConfigRouteImport.update({
   id: '/ai-config',
   path: '/ai-config',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/admin/ai-config': typeof AdminAiConfigRoute
+  '/admin/assessments': typeof AdminAssessmentsRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/employer-verification': typeof AdminEmployerVerificationRoute
   '/admin/job-moderation': typeof AdminJobModerationRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/admin/ai-config': typeof AdminAiConfigRoute
+  '/admin/assessments': typeof AdminAssessmentsRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/employer-verification': typeof AdminEmployerVerificationRoute
   '/admin/job-moderation': typeof AdminJobModerationRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/admin/ai-config': typeof AdminAiConfigRoute
+  '/admin/assessments': typeof AdminAssessmentsRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/employer-verification': typeof AdminEmployerVerificationRoute
   '/admin/job-moderation': typeof AdminJobModerationRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/signin'
     | '/admin/ai-config'
+    | '/admin/assessments'
     | '/admin/audit-logs'
     | '/admin/employer-verification'
     | '/admin/job-moderation'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/signin'
     | '/admin/ai-config'
+    | '/admin/assessments'
     | '/admin/audit-logs'
     | '/admin/employer-verification'
     | '/admin/job-moderation'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/signin'
     | '/admin/ai-config'
+    | '/admin/assessments'
     | '/admin/audit-logs'
     | '/admin/employer-verification'
     | '/admin/job-moderation'
@@ -274,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditLogsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/assessments': {
+      id: '/admin/assessments'
+      path: '/assessments'
+      fullPath: '/admin/assessments'
+      preLoaderRoute: typeof AdminAssessmentsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/ai-config': {
       id: '/admin/ai-config'
       path: '/ai-config'
@@ -286,6 +305,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminAiConfigRoute: typeof AdminAiConfigRoute
+  AdminAssessmentsRoute: typeof AdminAssessmentsRoute
   AdminAuditLogsRoute: typeof AdminAuditLogsRoute
   AdminEmployerVerificationRoute: typeof AdminEmployerVerificationRoute
   AdminJobModerationRoute: typeof AdminJobModerationRoute
@@ -299,6 +319,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAiConfigRoute: AdminAiConfigRoute,
+  AdminAssessmentsRoute: AdminAssessmentsRoute,
   AdminAuditLogsRoute: AdminAuditLogsRoute,
   AdminEmployerVerificationRoute: AdminEmployerVerificationRoute,
   AdminJobModerationRoute: AdminJobModerationRoute,

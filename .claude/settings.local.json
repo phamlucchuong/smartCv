@@ -100,7 +100,8 @@
       "Bash(rtk ./mvnw compile -q)",
       "Bash(rtk ./mvnw test)",
       "Bash(rtk ./mvnw test -q)",
-      "Bash(rtk ./mvnw test -Dtest=ServicePackageServiceTest,ServicePackageControllerTest)"
+      "Bash(rtk ./mvnw test -Dtest=ServicePackageServiceTest,ServicePackageControllerTest)",
+      "Bash(xargs ls -lh)"
     ]
   }
 }

@@ -206,7 +206,7 @@ function IndexComponent() {
                 <div
                   className="flex h-20 w-20 items-center justify-center rounded-full text-lg font-bold text-success"
                   style={{
-                    background: `conic-gradient(from 180deg, var(--success) 0deg ${aiMatchScore * 3.6}deg, color-mix(in oklch, var(--success) 14%, white) ${aiMatchScore * 3.6}deg 360deg)`,
+                    background: `conic-gradient(from 0deg, var(--success) 0deg ${aiMatchScore * 3.6}deg, color-mix(in oklch, var(--success) 14%, white) ${aiMatchScore * 3.6}deg 360deg)`,
                   }}
                 >
                   <div className="flex h-[calc(100%-12px)] w-[calc(100%-12px)] items-center justify-center rounded-full bg-card">

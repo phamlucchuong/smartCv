@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Input } from '@smart-cv/ui';
+import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from '@smart-cv/ui';
+import { toast } from 'sonner';
 
-import { Clock, ClipboardCheck, ChevronDown, ChevronLeft } from 'lucide-react'
+import { Clock, ClipboardCheck, ChevronDown, ChevronLeft, History, Plus, Sparkles } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import {
   useGetMyAssessments,
@@ -15,6 +16,7 @@ import {
   useGetResult,
   ApplicationModels,
   useSubmitAttemptWithFlag,
+  useCreateAssessment,
 } from '@smart-cv/api'
 import { useAuthStore } from '../../store/useAuthStore'
 
@@ -62,7 +64,7 @@ type AssessmentStatusFilter = 'all' | 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED
 
 const statusStyle: Record<string, string> = {
   NOT_STARTED: 'bg-muted text-muted-foreground border border-border',
-  IN_PROGRESS: 'bg-[var(--ai-soft)] text-[var(--ai)] border border-[var(--ai)]/20',
+  IN_PROGRESS: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
   SUBMITTED: 'bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/20',
   EXPIRED: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20',
 }
@@ -70,7 +72,7 @@ const statusStyle: Record<string, string> = {
 function getStatusLabel(t: (k: string) => string, key: string) {
   switch (key) {
     case 'NOT_STARTED': return t('assessments_status_not_started')
-    case 'IN_PROGRESS': return t('assessments_status_in_progress')
+    case 'IN_PROGRESS': return 'Đã hủy'
     case 'SUBMITTED': return t('assessments_status_submitted')
     case 'EXPIRED': return t('assessments_status_expired')
     default: return key
@@ -81,10 +83,251 @@ function getFilterLabel(t: (k: string) => string, key: AssessmentStatusFilter) {
   switch (key) {
     case 'all': return t('assessments_filter_all')
     case 'NOT_STARTED': return t('assessments_filter_not_started')
-    case 'IN_PROGRESS': return t('assessments_filter_in_progress')
+    case 'IN_PROGRESS': return 'Đã hủy'
     case 'SUBMITTED': return t('assessments_filter_submitted')
     case 'EXPIRED': return t('assessments_filter_expired')
   }
+}
+
+const generateMockQuestions = (jobName: string, difficulty: string, level: string, num: number) => {
+  const name = jobName.toLowerCase()
+  let bank: Array<{ text: string; options: string[]; correctOptionIndex: number }> = []
+
+  if (name.includes('java')) {
+    bank = [
+      {
+        text: 'Sự khác biệt chính giữa interface và abstract class trong Java là gì?',
+        options: [
+          'Interface chỉ chứa method không có body, abstract class có thể có cả hai',
+          'Interface hỗ trợ đa kế thừa, abstract class thì không',
+          'Cả hai câu trên đều đúng',
+          'Cả hai câu trên đều sai',
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        text: 'Sự khác biệt giữa HashMap và ConcurrentHashMap trong Java là gì?',
+        options: [
+          'ConcurrentHashMap thread-safe tốt hơn HashMap nhờ chia nhóm lock (segment lock)',
+          'HashMap nhanh hơn nhưng không an toàn trong môi trường đa luồng',
+          'ConcurrentHashMap không cho phép khóa null làm key hoặc value',
+          'Tất cả các phương án trên đều đúng',
+        ],
+        correctOptionIndex: 3,
+      },
+      {
+        text: 'Lớp String trong Java là Immutable (không thể thay đổi). Lợi ích chính của việc này là gì?',
+        options: [
+          'Tối ưu hóa bộ nhớ thông qua String Pool',
+          'An toàn luồng (Thread-safety) mà không cần đồng bộ hóa',
+          'Tăng tính bảo mật khi dùng String làm tham số kết nối DB hoặc Network',
+          'Tất cả các phương án trên đều đúng',
+        ],
+        correctOptionIndex: 3,
+      },
+      {
+        text: 'Từ khóa transient trong Java dùng để làm gì?',
+        options: [
+          'Ngăn chặn một trường (field) không bị tuần tự hóa (serialized)',
+          'Đánh dấu một phương thức chạy bất đồng bộ',
+          'Đảm bảo biến được đọc trực tiếp từ bộ nhớ RAM thay vì cache của Thread',
+          'Không có câu nào đúng',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Phương thức finalize() trong Java được gọi khi nào?',
+        options: [
+          'Ngay trước khi đối tượng bị thu hồi bởi Garbage Collector',
+          'Khi chương trình kết thúc thực thi',
+          'Khi kết thúc khối lệnh try-catch-finally',
+          'Không còn được khuyến nghị sử dụng từ Java 9 trở đi',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Sự khác biệt giữa Exception và Error trong Java là gì?',
+        options: [
+          'Exception có thể bắt và xử lý được, Error biểu thị lỗi nghiêm trọng của hệ thống không nên bắt',
+          'Exception là RuntimeException, Error là CompileException',
+          'Cả hai đều kế thừa trực tiếp từ Object',
+          'Không có sự khác biệt',
+        ],
+        correctOptionIndex: 0,
+      }
+    ]
+  } else if (name.includes('react') || name.includes('frontend') || name.includes('javascript') || name.includes('js')) {
+    bank = [
+      {
+        text: 'React Virtual DOM hoạt động theo nguyên lý nào để tăng hiệu năng?',
+        options: [
+          'So sánh sự khác biệt (diffing) giữa Virtual DOM mới và cũ, sau đó chỉ cập nhật những thay đổi thực tế lên Real DOM',
+          'Xóa toàn bộ Real DOM và render lại từ đầu',
+          'Chuyển đổi code React thành WebAssembly để chạy nhanh hơn',
+          'Không cập nhật DOM trực tiếp mà chạy qua một luồng background worker',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Hook useEffect và useLayoutEffect trong React khác nhau ở điểm nào?',
+        options: [
+          'useLayoutEffect chạy đồng bộ ngay sau khi DOM đột biến nhưng trước khi trình duyệt vẽ (paint) lên màn hình',
+          'useEffect chạy bất đồng bộ sau khi màn hình đã được vẽ',
+          'Cả hai câu trên đều đúng',
+          'Cả hai Hook hoàn toàn giống nhau',
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        text: 'Trong Javascript, sự khác biệt giữa "==" và "===" là gì?',
+        options: [
+          '"==" so sánh giá trị sau khi ép kiểu, "===" so sánh cả giá trị và kiểu dữ liệu không ép kiểu',
+          '"==" so sánh địa chỉ bộ nhớ, "===" so sánh nội dung đối tượng',
+          '"===" chỉ dùng cho kiểu dữ liệu String',
+          'Không có câu nào đúng',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'React.memo và useMemo khác nhau như thế nào?',
+        options: [
+          'React.memo là HOC để memoize component tránh re-render, useMemo là Hook để memoize giá trị tính toán bên trong component',
+          'React.memo là Hook, useMemo là HOC',
+          'Cả hai đều dùng để lưu trữ cache dữ liệu API',
+          'Không có sự khác biệt',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Closure trong Javascript là gì?',
+        options: [
+          'Một hàm có khả năng ghi nhớ và truy cập các biến từ phạm vi bên ngoài của nó, ngay cả sau khi hàm bên ngoài đã thực thi xong',
+          'Một phương thức để đóng kết nối database',
+          'Một tính năng bảo mật ngăn chặn truy cập mã nguồn',
+          'Không có câu nào đúng',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Lợi ích chính của SSR (Server-Side Rendering) trong Next.js là gì?',
+        options: [
+          'Tối ưu hóa SEO tốt hơn và thời gian tải trang đầu tiên (FCP) nhanh hơn',
+          'Giảm tải hoàn toàn việc tính toán cho phía server',
+          'Không cần viết API backend',
+          'Chạy offline không cần kết nối mạng',
+        ],
+        correctOptionIndex: 0,
+      }
+    ]
+  } else if (name.includes('python')) {
+    bank = [
+      {
+        text: 'Trong Python, sự khác biệt chính giữa List và Tuple là gì?',
+        options: [
+          'List có thể thay đổi (mutable), Tuple không thể thay đổi (immutable)',
+          'List nhanh hơn Tuple',
+          'Tuple sử dụng nhiều bộ nhớ hơn List',
+          'Không có câu nào đúng',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'GIL (Global Interpreter Lock) trong CPython hoạt động như thế nào?',
+        options: [
+          'Chỉ cho phép một luồng (thread) thực thi mã Python tại một thời điểm, làm hạn chế hiệu năng đa luồng trên CPU nhiều nhân',
+          'Đồng bộ hóa tất cả các truy vấn Database',
+          'Khóa bộ nhớ RAM để tăng tốc độ chạy vòng lặp',
+          'Không có câu nào đúng',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Decorator trong Python dùng để làm gì?',
+        options: [
+          'Thay đổi hoặc mở rộng hành vi của một hàm hoặc lớp mà không cần sửa đổi trực tiếp mã nguồn của nó',
+          'Trang trí giao diện đồ họa cho ứng dụng',
+          'Tự động định dạng code theo chuẩn PEP 8',
+          'Tất cả các phương án trên',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Sự khác biệt giữa method __init__ và __new__ trong Python là gì?',
+        options: [
+          '__new__ chịu trách nhiệm tạo ra thực thể (instance) mới, __init__ chịu trách nhiệm khởi tạo các thuộc tính cho thực thể đó',
+          '__init__ chạy trước __new__',
+          '__new__ chỉ dùng cho các class kế thừa từ dict',
+          'Không có sự khác biệt',
+        ],
+        correctOptionIndex: 0,
+      }
+    ]
+  } else {
+    // General tech / Database / DevOps
+    bank = [
+      {
+        text: 'Sự khác biệt cơ bản nhất giữa hệ quản trị cơ sở dữ liệu SQL và NoSQL là gì?',
+        options: [
+          'SQL lưu dưới dạng bảng có cấu trúc chặt chẽ, NoSQL lưu trữ phi cấu trúc (key-value, document, graph)',
+          'SQL luôn nhanh hơn NoSQL trong mọi trường hợp',
+          'NoSQL không hỗ trợ giao dịch (transactions)',
+          'Không có câu nào đúng',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Docker Container và Docker Image khác nhau như thế nào?',
+        options: [
+          'Docker Image là một bản đóng gói tĩnh (chỉ đọc), Docker Container là một thực thể chạy động được tạo ra từ Image',
+          'Docker Image chạy nhanh hơn Docker Container',
+          'Docker Container là file cấu hình, Docker Image là file thực thi',
+          'Cả hai hoàn toàn giống nhau',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Nguyên lý thiết kế RESTful API là gì?',
+        options: [
+          'Sử dụng các phương thức HTTP (GET, POST, PUT, DELETE) rõ ràng tương ứng với các thao tác dữ liệu',
+          'Không trạng thái (Stateless)',
+          'Giao tiếp dựa trên tài nguyên (Resources) qua URI',
+          'Tất cả các phương án trên đều đúng',
+        ],
+        correctOptionIndex: 3,
+      },
+      {
+        text: 'CI/CD (Continuous Integration / Continuous Deployment) mang lại giá trị cốt lõi nào?',
+        options: [
+          'Tự động hóa quy trình kiểm thử, build và triển khai phần mềm liên tục, giảm thiểu lỗi thủ công',
+          'Tăng tốc độ xử lý của server chạy production',
+          'Thay thế lập trình viên viết code',
+          'Tự động sinh tài liệu thiết kế hệ thống',
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        text: 'Trong Database, việc tạo Index (chỉ mục) mang lại tác dụng và đánh đổi gì?',
+        options: [
+          'Tăng tốc độ đọc dữ liệu (SELECT) nhưng làm chậm tốc độ ghi/sửa (INSERT, UPDATE, DELETE) và tốn không gian bộ nhớ',
+          'Tăng tốc độ ghi dữ liệu và giảm dung lượng database',
+          'Chỉ có tác dụng với các bảng chứa khóa ngoại',
+          'Không có sự đánh đổi nào',
+        ],
+        correctOptionIndex: 0,
+      }
+    ]
+  }
+
+  const shuffled = [...bank].sort(() => 0.5 - Math.random())
+  const selected = shuffled.slice(0, Math.min(num, shuffled.length))
+
+  return selected.map((q, idx) => ({
+    id: `q_ai_${idx}_${Date.now()}`,
+    text: q.text,
+    type: 'MCQ',
+    options: q.options,
+    correctOptionIndex: q.correctOptionIndex,
+  }))
 }
 
 function isAnswered(q: Question, answers: Record<string, LocalAnswer>): boolean {
@@ -95,33 +338,51 @@ function isAnswered(q: Question, answers: Record<string, LocalAnswer>): boolean 
 
 // Fetches assessment title for a single attempt card
 function AssessmentCard({
-  a,
+  assessmentId,
+  attempts,
+  latestAttempt,
   onTake,
   onTitleLoaded,
   onRetake,
   isRetaking,
-  hasActiveAttempt,
+  onViewHistory,
 }: {
-  a: AttemptStateResponse
+  assessmentId: string
+  attempts: AttemptStateResponse[]
+  latestAttempt: AttemptStateResponse
   onTake: (assessmentId: string, attemptId: string) => void
   onTitleLoaded: (assessmentId: string, title: string) => void
   onRetake?: (assessmentId: string) => void
   isRetaking?: boolean
-  hasActiveAttempt?: boolean
+  onViewHistory: (assessmentId: string, title: string) => void
 }) {
   const { t } = useTranslation()
-  const { data: assessmentData } = useGetAssessment(a.assessmentId ?? '', {
-    query: { enabled: !!a.assessmentId },
+  const { data: assessmentData } = useGetAssessment(assessmentId, {
+    query: { enabled: !!assessmentId },
   })
-  const title = assessmentData?.data?.title ?? a.assessmentId ?? ''
-  const itemStatus = String(a.status ?? 'NOT_STARTED')
+  const title = assessmentData?.data?.title ?? assessmentId
+  const itemStatus = String(latestAttempt.status ?? 'NOT_STARTED')
 
   // Report the loaded title to the parent for search filtering
   React.useEffect(() => {
-    if (assessmentData?.data?.title && a.assessmentId) {
-      onTitleLoaded(a.assessmentId, assessmentData.data.title)
+    if (assessmentData?.data?.title && assessmentId) {
+      onTitleLoaded(assessmentId, assessmentData.data.title)
     }
-  }, [assessmentData?.data?.title, a.assessmentId, onTitleLoaded])
+  }, [assessmentData?.data?.title, assessmentId, onTitleLoaded])
+
+  // Determine active attempt (IN_PROGRESS) or NOT_STARTED
+  const activeAttempt = attempts.find((att) => att.status === 'IN_PROGRESS')
+  const notStartedAttempt = attempts.find((att) => att.status === 'NOT_STARTED')
+
+  const isCancelled = React.useMemo(() => {
+    if (!latestAttempt.attemptId) return false
+    try {
+      const cancelled = JSON.parse(localStorage.getItem('cancelledAttempts') || '[]')
+      return Array.isArray(cancelled) && cancelled.includes(latestAttempt.attemptId)
+    } catch {
+      return false
+    }
+  }, [latestAttempt.attemptId])
 
   return (
     <div className="card-surface p-5 flex flex-col gap-4">
@@ -130,69 +391,75 @@ function AssessmentCard({
           <ClipboardCheck className="h-5 w-5" />
         </div>
         <div className="flex items-center gap-2">
-          {itemStatus === 'SUBMITTED' && (
-            <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${
-              a.result === 'PENDING'
-                ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
-                : a.result === 'PASS'
-                  ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-600 border border-red-500/20'
-            }`}>
-              {a.result === 'PENDING' ? 'Chờ chấm' : a.score != null ? `${a.score.toFixed(0)}%` : '—'}
+          <button
+            type="button"
+            onClick={() => onViewHistory(assessmentId, title)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer mr-1"
+            title="Lịch sử làm bài"
+          >
+            <History className="h-4 w-4" />
+            <span className="font-medium">{attempts.length}</span>
+          </button>
+          {isCancelled ? (
+            <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold bg-red-500/10 text-red-600 border border-red-500/20">
+              Hủy giữa chừng
             </span>
+          ) : (
+            <>
+              {itemStatus === 'SUBMITTED' && (
+                <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${
+                  latestAttempt.result === 'PENDING'
+                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                    : latestAttempt.result === 'PASS'
+                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                }`}>
+                  {latestAttempt.result === 'PENDING' ? 'Chờ chấm' : latestAttempt.score != null ? `${latestAttempt.score.toFixed(0)}%` : '—'}
+                </span>
+              )}
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                {getStatusLabel(t, itemStatus)}
+              </span>
+            </>
           )}
-          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']}`}>
-            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-            {getStatusLabel(t, itemStatus)}
-          </span>
         </div>
       </div>
 
       <div>
         <p className="font-semibold text-foreground">{title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{a.startedAt ? formatDate(a.startedAt) : ''}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Lần làm cuối: {latestAttempt.startedAt ? formatDate(latestAttempt.startedAt) : '—'}
+        </p>
       </div>
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3.5 w-3.5" />
-          {a.startedAt ? new Date(a.startedAt).toLocaleTimeString() : '—'}
+          {latestAttempt.startedAt ? new Date(latestAttempt.startedAt).toLocaleTimeString() : '—'}
         </span>
       </div>
 
-      {itemStatus === 'SUBMITTED' ? (
-        !hasActiveAttempt ? (
+      <div className="flex items-center gap-2 mt-2">
+        {attempts.length === 0 || notStartedAttempt ? (
+          <Button
+            className="w-full cursor-pointer"
+            onClick={() => onTake(assessmentId, notStartedAttempt?.attemptId ?? '')}
+          >
+            Bắt đầu làm bài
+          </Button>
+        ) : (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onRetake?.(a.assessmentId ?? '')}
+            onClick={() => onRetake?.(assessmentId)}
             disabled={isRetaking}
             className="w-full cursor-pointer"
           >
             Làm lại
           </Button>
-        ) : null
-      ) : itemStatus === 'EXPIRED' ? (
-        !hasActiveAttempt ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onRetake?.(a.assessmentId ?? '')}
-            disabled={isRetaking}
-            className="w-full cursor-pointer"
-          >
-            Làm lại
-          </Button>
-        ) : null
-      ) : (
-        <Button
-          className="w-full"
-          disabled={itemStatus !== 'NOT_STARTED' && itemStatus !== 'IN_PROGRESS'}
-          onClick={() => onTake(a.assessmentId ?? '', a.attemptId ?? '')}
-        >
-          {itemStatus === 'IN_PROGRESS' ? t('assessments_continue') : t('assessments_start')}
-        </Button>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -206,23 +473,139 @@ function AssessmentsPage() {
 
   const queryClient = useQueryClient()
   const [taking, setTaking] = React.useState<{ assessmentId: string; attemptId: string } | null>(null)
+  const [historyAssessment, setHistoryAssessment] = React.useState<{ assessmentId: string; title: string } | null>(null)
+
+  const [isFormOpen, setIsFormOpen] = React.useState(false)
+  const [title, setTitle] = React.useState('')
+  const [description, setDescription] = React.useState('')
+  const [timeLimitMinutes, setTimeLimitMinutes] = React.useState(30)
+  const [questions, setQuestions] = React.useState<Question[]>([
+    {
+      id: 'q_1',
+      text: 'Ví dụ: Sự khác biệt chính giữa interface và abstract class trong Java là gì?',
+      type: 'MCQ',
+      options: [
+        'Interface chỉ chứa method không có body, abstract class có thể có cả hai',
+        'Interface hỗ trợ đa kế thừa, abstract class thì không',
+        'Cả hai câu trên đều đúng',
+        'Cả hai câu trên đều sai',
+      ],
+      correctOptionIndex: 2,
+    }
+  ])
+
+  const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false)
+  const [aiJobName, setAiJobName] = React.useState('')
+  const [aiDifficulty, setAiDifficulty] = React.useState('Medium')
+  const [aiLevel, setAiLevel] = React.useState('Junior')
+  const [aiNumQuestions, setAiNumQuestions] = React.useState(5)
+  const [isAiGenerating, setIsAiGenerating] = React.useState(false)
+
+  const handleAiConfirm = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!aiJobName.trim()) {
+      toast.error('Vui lòng nhập tên công việc')
+      return
+    }
+    setIsAiGenerating(true)
+    setTimeout(() => {
+      const generated = generateMockQuestions(aiJobName, aiDifficulty, aiLevel, aiNumQuestions)
+      setQuestions(generated)
+      setTitle(`Bài test ${aiJobName} - Trình độ ${aiLevel}`)
+      setDescription(`Bài test tự động tạo bằng AI cho vị trí ${aiJobName} (${aiLevel}) với độ khó ${aiDifficulty}.`)
+      setIsAiGenerating(false)
+      setIsAiDialogOpen(false)
+      toast.success('Đã tạo câu hỏi bằng AI thành công!')
+    }, 1200)
+  }
+
+  const createMutation = useCreateAssessment({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Tạo bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        setIsFormOpen(false)
+        setTitle('')
+        setDescription('')
+        setTimeLimitMinutes(30)
+        setQuestions([
+          {
+            id: 'q_1',
+            text: 'Ví dụ: Sự khác biệt chính giữa interface và abstract class trong Java là gì?',
+            type: 'MCQ',
+            options: [
+              'Interface chỉ chứa method không có body, abstract class có thể có cả hai',
+              'Interface hỗ trợ đa kế thừa, abstract class thì không',
+              'Cả hai câu trên đều đúng',
+              'Cả hai câu trên đều sai',
+            ],
+            correctOptionIndex: 2,
+          }
+        ])
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Tạo bài kiểm tra thất bại.")
+      },
+    },
+  })
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) {
+      toast.error("Vui lòng nhập tên bài test")
+      return
+    }
+    createMutation.mutate({
+      data: {
+        title,
+        description,
+        timeLimitMinutes,
+        questions,
+      }
+    })
+  }
 
   const startAttemptMutation = useStartAttempt()
+  const submitMutation = useSubmitAttempt()
   const hasAutoStarted = React.useRef(false)
 
   const handleRetake = (assessmentId: string) => {
-    startAttemptMutation.mutate(
-      { id: assessmentId },
-      {
-        onSuccess: (res: { data?: { attemptId?: string } }) => {
-          const attemptId = res?.data?.attemptId ?? ''
-          if (attemptId) {
-            setTaking({ assessmentId, attemptId })
-            queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
-          }
+    // Find if there is any active IN_PROGRESS attempt for this assessment
+    const group = grouped.find((g) => g.assessmentId === assessmentId)
+    const activeAttempt = group?.attempts.find((a) => a.status === 'IN_PROGRESS')
+
+    const proceedToStart = () => {
+      startAttemptMutation.mutate(
+        { id: assessmentId },
+        {
+          onSuccess: (res: { data?: { attemptId?: string } }) => {
+            const attemptId = res?.data?.attemptId ?? ''
+            if (attemptId) {
+              setTaking({ assessmentId, attemptId })
+              queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+            }
+          },
         },
-      },
-    )
+      )
+    }
+
+    if (activeAttempt?.attemptId) {
+      // Submit the active attempt first to finalize it
+      submitMutation.mutate(
+        { attemptId: activeAttempt.attemptId },
+        {
+          onSuccess: () => {
+            proceedToStart()
+          },
+          onError: () => {
+            // Even if submit fails (e.g. already submitted), try starting
+            proceedToStart()
+          }
+        }
+      )
+    } else {
+      proceedToStart()
+    }
   }
 
   React.useEffect(() => {
@@ -274,6 +657,31 @@ function AssessmentsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const grouped = React.useMemo(() => {
+    const groups: Record<string, AttemptStateResponse[]> = {}
+    assessments.forEach((a) => {
+      if (!a.assessmentId) return
+      if (!groups[a.assessmentId]) {
+        groups[a.assessmentId] = []
+      }
+      groups[a.assessmentId].push(a)
+    })
+
+    return Object.entries(groups).map(([assessmentId, groupAttempts]) => {
+      // Sort attempts: latest first
+      const sorted = [...groupAttempts].sort((x, y) => {
+        const dx = x.startedAt ? new Date(x.startedAt).getTime() : 0
+        const dy = y.startedAt ? new Date(y.startedAt).getTime() : 0
+        return dy - dx
+      })
+      return {
+        assessmentId,
+        attempts: sorted,
+        latestAttempt: sorted[0],
+      }
+    })
+  }, [assessments])
+
   if (taking) {
     return (
       <TakeAssessment
@@ -295,21 +703,26 @@ function AssessmentsPage() {
     { key: 'EXPIRED' },
   ]
 
-  const filtered = assessments.filter((item) => {
-    const itemStatus = String(item.status ?? 'NOT_STARTED')
+  const filteredGroups = grouped.filter((group) => {
+    const itemStatus = String(group.latestAttempt.status ?? 'NOT_STARTED')
     const byStatus = status === 'all' ? true : itemStatus === status
     const q = query.trim().toLowerCase()
     // Search by loaded title; fall back to assessmentId while title is still loading
-    const resolvedTitle = titleMap[item.assessmentId ?? ''] ?? item.assessmentId ?? ''
+    const resolvedTitle = titleMap[group.assessmentId] ?? group.assessmentId
     const byQuery = q === '' ? true : resolvedTitle.toLowerCase().includes(q)
     return byStatus && byQuery
   })
 
   return (
     <div className="space-y-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{t('assessments_page_title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('assessments_page_subtitle')}</p>
+      <header className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('assessments_page_title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('assessments_page_subtitle')}</p>
+        </div>
+        <Button onClick={() => setIsFormOpen(true)} className="gap-2 cursor-pointer">
+          <Plus className="h-4 w-4" /> Tạo bài test
+        </Button>
       </header>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -345,27 +758,312 @@ function AssessmentsPage() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <div className="card-surface p-8 text-center text-sm text-muted-foreground">{t('account_no_results')}</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((a) => {
-            const hasActiveAttempt = assessments.some(
-              (item) => item.assessmentId === a.assessmentId && item.status === 'IN_PROGRESS'
-            )
+          {filteredGroups.map((group) => {
             return (
               <AssessmentCard
-                key={a.attemptId}
-                a={a}
+                key={group.assessmentId}
+                assessmentId={group.assessmentId}
+                attempts={group.attempts}
+                latestAttempt={group.latestAttempt}
                 onTake={(assessmentId, attemptId) => setTaking({ assessmentId, attemptId })}
                 onTitleLoaded={registerTitle}
                 onRetake={handleRetake}
-                isRetaking={startAttemptMutation.isPending}
-                hasActiveAttempt={hasActiveAttempt}
+                isRetaking={startAttemptMutation.isPending || submitMutation.isPending}
+                onViewHistory={(assessmentId, title) => setHistoryAssessment({ assessmentId, title })}
               />
             )
           })}
         </div>
+      )}
+
+      {historyAssessment && (
+        <Dialog open={!!historyAssessment} onOpenChange={(open) => !open && setHistoryAssessment(null)}>
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-primary" />
+                Lịch sử làm bài: {historyAssessment.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 space-y-4">
+              {(grouped.find(g => g.assessmentId === historyAssessment.assessmentId)?.attempts ?? []).map((attempt, index, arr) => {
+                const itemStatus = String(attempt.status ?? 'NOT_STARTED')
+                const isAttemptCancelled = (() => {
+                  if (!attempt.attemptId) return false
+                  try {
+                    const cancelled = JSON.parse(localStorage.getItem('cancelledAttempts') || '[]')
+                    return Array.isArray(cancelled) && cancelled.includes(attempt.attemptId)
+                  } catch {
+                    return false
+                  }
+                })()
+                return (
+                  <div key={attempt.attemptId} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <span>Lần làm {arr.length - index}</span>
+                        {isAttemptCancelled ? (
+                          <span className="inline-flex items-center rounded px-1.5 py-0.2 text-[10px] font-semibold bg-red-500/10 text-red-600 border border-red-500/20">
+                            Hủy giữa chừng
+                          </span>
+                        ) : (
+                          itemStatus === 'SUBMITTED' && (
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.2 text-[10px] font-semibold ${
+                              attempt.result === 'PENDING'
+                                ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                                : attempt.result === 'PASS'
+                                  ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                                  : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                            }`}>
+                              {attempt.result === 'PENDING' ? 'Chờ chấm' : attempt.score != null ? `${attempt.score.toFixed(0)}%` : '—'}
+                            </span>
+                          )
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-3">
+                        <span>Ngày: {attempt.startedAt ? formatDate(attempt.startedAt) : '—'}</span>
+                        <span>Giờ: {attempt.startedAt ? new Date(attempt.startedAt).toLocaleTimeString() : '—'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        isAttemptCancelled
+                          ? 'bg-red-500/10 text-red-600 border border-red-500/20'
+                          : statusStyle[itemStatus] ?? statusStyle['NOT_STARTED']
+                      }`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                        {isAttemptCancelled ? 'Hủy giữa chừng' : getStatusLabel(t, itemStatus)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isFormOpen && (
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto flex flex-col p-6 rounded-lg border border-border shadow-lg">
+            <DialogHeader className="flex flex-row justify-between items-center pr-6">
+              <div>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-primary" />
+                  Tạo bài kiểm tra mới
+                </DialogTitle>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAiDialogOpen(true)}
+                className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Tạo bằng AI
+              </Button>
+            </DialogHeader>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4 my-2 flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-semibold text-foreground">Tên bài kiểm tra *</label>
+                  <Input
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ví dụ: Kiểm tra kiến thức Java Core"
+                  />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-semibold text-foreground">Thời gian (phút) *</label>
+                  <Input
+                    type="number"
+                    required
+                    min={1}
+                    value={timeLimitMinutes}
+                    onChange={(e) => setTimeLimitMinutes(parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-semibold text-foreground">Mô tả ngắn</label>
+                  <Input
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Mô tả mục đích bài kiểm tra..."
+                  />
+                </div>
+              </div>
+
+              {/* Questions */}
+              <div className="space-y-3 pt-3 border-t border-border">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-bold">Danh sách câu hỏi ({questions.length})</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuestions([...questions, {
+                      id: `q_${Date.now()}`,
+                      text: '',
+                      type: 'MCQ',
+                      options: ['Lựa chọn 1', 'Lựa chọn 2'],
+                      correctOptionIndex: 0
+                    }])}
+                    className="h-8 text-xs cursor-pointer"
+                  >
+                    + Thêm câu hỏi
+                  </Button>
+                </div>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {questions.map((q, qIndex) => (
+                    <div key={q.id || qIndex} className="p-3 border border-border rounded-lg bg-muted/20 space-y-3 relative">
+                      <button
+                        type="button"
+                        onClick={() => setQuestions(questions.filter((_, idx) => idx !== qIndex))}
+                        className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 cursor-pointer text-xs"
+                      >
+                        Xóa
+                      </button>
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-bold text-primary">Câu {qIndex + 1}</span>
+                        <Input
+                          required
+                          value={q.text || ''}
+                          onChange={(e) => {
+                            const updated = [...questions]
+                            updated[qIndex] = { ...q, text: e.target.value }
+                            setQuestions(updated)
+                          }}
+                          placeholder="Nội dung câu hỏi..."
+                        />
+                      </div>
+                      <div className="space-y-2 pl-3 border-l-2 border-primary/20">
+                        <span className="text-[11px] font-semibold text-muted-foreground">Đáp án trắc nghiệm</span>
+                        <div className="grid gap-2">
+                          {q.options?.map((opt, oIdx) => (
+                            <div key={oIdx} className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`q-${qIndex}-correct`}
+                                checked={q.correctOptionIndex === oIdx}
+                                onChange={() => {
+                                  const updated = [...questions]
+                                  updated[qIndex] = { ...q, correctOptionIndex: oIdx }
+                                  setQuestions(updated)
+                                }}
+                                className="cursor-pointer"
+                              />
+                              <Input
+                                required
+                                value={opt}
+                                onChange={(e) => {
+                                  const updated = [...questions]
+                                  const opts = [...(q.options || [])]
+                                  opts[oIdx] = e.target.value
+                                  updated[qIndex] = { ...q, options: opts }
+                                  setQuestions(updated)
+                                }}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Đang tạo...' : 'Tạo bài test'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isAiDialogOpen && (
+        <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+          <DialogContent className="sm:max-w-[450px]">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Tạo bài kiểm tra tự động bằng AI
+              </DialogTitle>
+            </DialogHeader>
+
+            <form onSubmit={handleAiConfirm} className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">Tên công việc / Chủ đề *</label>
+                <Input
+                  required
+                  value={aiJobName}
+                  onChange={(e) => setAiJobName(e.target.value)}
+                  placeholder="Ví dụ: React Developer, Java core..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Trình độ</label>
+                  <select
+                    value={aiLevel}
+                    onChange={(e) => setAiLevel(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                  >
+                    <option value="Intern">Intern</option>
+                    <option value="Junior">Junior</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Lead">Lead</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Độ khó</label>
+                  <select
+                    value={aiDifficulty}
+                    onChange={(e) => setAiDifficulty(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none"
+                  >
+                    <option value="Dễ">Dễ</option>
+                    <option value="Trung bình">Trung bình</option>
+                    <option value="Khó">Khó</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">Số câu hỏi</label>
+                <Input
+                  type="number"
+                  required
+                  min={1}
+                  max={20}
+                  value={aiNumQuestions}
+                  onChange={(e) => setAiNumQuestions(parseInt(e.target.value) || 5)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
+                <Button type="button" variant="outline" onClick={() => setIsAiDialogOpen(false)} disabled={isAiGenerating}>
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={isAiGenerating}>
+                  {isAiGenerating ? 'Đang tạo bằng AI...' : 'Xác nhận tạo'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
@@ -438,6 +1136,37 @@ function TakeAssessmentContent({
   const [currentQIndex, setCurrentQIndex] = React.useState(0)
   const [showResult, setShowResult] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [confirmExitOpen, setConfirmExitOpen] = React.useState(false)
+  const [isCancellingMidway, setIsCancellingMidway] = React.useState(false)
+
+  const handleCancelMidway = () => {
+    setIsCancellingMidway(true)
+    try {
+      const cancelled = JSON.parse(localStorage.getItem('cancelledAttempts') || '[]')
+      if (Array.isArray(cancelled) && !cancelled.includes(attemptId)) {
+        cancelled.push(attemptId)
+        localStorage.setItem('cancelledAttempts', JSON.stringify(cancelled))
+      }
+    } catch {
+      // ignore storage errors
+    }
+    submitMutation.mutate(
+      { attemptId },
+      {
+        onSuccess: () => {
+          setIsCancellingMidway(false)
+          setConfirmExitOpen(false)
+          onClose()
+        },
+        onError: () => {
+          setIsCancellingMidway(false)
+          setConfirmExitOpen(false)
+          onClose()
+        },
+      }
+    )
+  }
+
   // Initialize timer from assessment data directly (no useEffect needed)
   const [timeLeft, setTimeLeft] = React.useState((assessment.timeLimitMinutes ?? 30) * 60)
 
@@ -538,8 +1267,8 @@ function TakeAssessmentContent({
       {/* Header */}
       <div className="card-surface flex items-center justify-between p-4">
         <button
-          onClick={onClose}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          onClick={() => setConfirmExitOpen(true)}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground cursor-pointer"
         >
           <ChevronLeft className="h-4 w-4" />
           {t('btn_exit')}
@@ -672,6 +1401,26 @@ function TakeAssessmentContent({
           </div>
         </div>
       </div>
+      {confirmExitOpen && (
+        <Dialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Xác nhận thoát bài làm</DialogTitle>
+            </DialogHeader>
+            <div className="mt-2 text-sm text-muted-foreground">
+              Bạn có chắc chắn muốn thoát? Bài làm của bạn sẽ được nộp tự động và tính là **Hủy giữa chừng**.
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmExitOpen(false)} disabled={isCancellingMidway}>
+                Hủy
+              </Button>
+              <Button variant="destructive" onClick={handleCancelMidway} disabled={isCancellingMidway}>
+                {isCancellingMidway ? 'Đang thoát...' : 'Thoát & Hủy'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
