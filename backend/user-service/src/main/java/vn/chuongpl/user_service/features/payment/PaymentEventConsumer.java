@@ -10,6 +10,7 @@ import vn.chuongpl.user_service.features.candidate.Candidate;
 import vn.chuongpl.user_service.features.candidate.CandidateRepository;
 import vn.chuongpl.user_service.features.recruiter.Recruiter;
 import vn.chuongpl.user_service.features.recruiter.RecruiterRepository;
+import vn.chuongpl.user_service.features.recruiter.RecruiterService;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +22,7 @@ public class PaymentEventConsumer {
 
     RecruiterRepository recruiterRepository;
     CandidateRepository candidateRepository;
+    RecruiterService recruiterService;
 
     @RabbitListener(queues = RabbitMQConfig.PAYMENT_COMPLETED_QUEUE)
     public void handlePaymentCompleted(PaymentCompletedEvent event) {
@@ -41,6 +43,11 @@ public class PaymentEventConsumer {
     }
 
     private void activateForRecruiter(PaymentCompletedEvent event) {
+        if ("fee".equalsIgnoreCase(event.getPackageId())) {
+            recruiterService.updatePlatformFeePayment(event.getUserId(), event.getPaidAt());
+            log.info("[Payment] Platform fee payment recorded for recruiter userId={}", event.getUserId());
+            return;
+        }
         recruiterRepository.findByUserIdAndDeletedFalse(event.getUserId())
                 .ifPresentOrElse(recruiter -> {
                     if (event.getOrderId().equals(recruiter.getLastPaymentOrderId())) {
@@ -58,6 +65,9 @@ public class PaymentEventConsumer {
     }
 
     private void activateForCandidate(PaymentCompletedEvent event) {
+        if ("fee".equalsIgnoreCase(event.getPackageId())) {
+            return;
+        }
         candidateRepository.findByUserIdAndDeletedFalse(event.getUserId())
                 .ifPresentOrElse(candidate -> {
                     if (event.getOrderId().equals(candidate.getLastPaymentOrderId())) {

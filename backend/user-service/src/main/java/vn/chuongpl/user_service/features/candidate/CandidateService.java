@@ -506,4 +506,20 @@ public class CandidateService {
             cvAnalysisDonePublisher.publish(candidate.getUserId(), cvId, filenameHolder[0]);
         }
     }
+
+    public void downgradeToFree(String userId) {
+        candidateRepository.findByUserIdAndDeletedFalse(userId).ifPresent(candidate -> {
+            if ("free".equalsIgnoreCase(candidate.getActivePackageId())) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            candidate.setActivePackageId("free");
+            candidate.setPackageActivatedAt(null);
+            candidate.setPackageExpiresAt(null);
+            candidate.setPackageDowngradedAt(now);
+            candidate.setPostExpiryCleanupAt(null);
+            candidate.setUpdatedAt(now);
+            candidateRepository.save(candidate);
+        });
+    }
 }

@@ -10,6 +10,7 @@ import vn.chuongpl.user_service.features.candidate.Candidate;
 import vn.chuongpl.user_service.features.candidate.CandidateRepository;
 import vn.chuongpl.user_service.features.recruiter.Recruiter;
 import vn.chuongpl.user_service.features.recruiter.RecruiterRepository;
+import vn.chuongpl.user_service.features.recruiter.RecruiterService;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -23,12 +24,13 @@ class PaymentEventConsumerTest {
 
     @Mock RecruiterRepository recruiterRepository;
     @Mock CandidateRepository candidateRepository;
+    @Mock RecruiterService recruiterService;
 
     PaymentEventConsumer consumer;
 
     @BeforeEach
     void setUp() {
-        consumer = new PaymentEventConsumer(recruiterRepository, candidateRepository);
+        consumer = new PaymentEventConsumer(recruiterRepository, candidateRepository, recruiterService);
     }
 
     @Test
@@ -141,6 +143,21 @@ class PaymentEventConsumerTest {
         // must throw so Spring AMQP routes to DLQ
         org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
                 () -> consumer.handlePaymentCompleted(event));
+    }
+
+    @Test
+    void handlePaymentCompleted_feePackage_delegatesToRecruiterService() {
+        PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+                .userId("u7").userRole("RECRUITER")
+                .packageId("fee").packageName("Platform Fee")
+                .packageJobLimit(0).packageCvLimit(0)
+                .paidAt(LocalDateTime.of(2026, 6, 27, 10, 0))
+                .orderId("ord-fee-1").build();
+
+        consumer.handlePaymentCompleted(event);
+
+        verify(recruiterService).updatePlatformFeePayment("u7", LocalDateTime.of(2026, 6, 27, 10, 0));
+        verify(recruiterRepository, never()).save(any());
     }
 
     @Test

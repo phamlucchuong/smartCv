@@ -59,6 +59,11 @@ public class RecruiterResponse {
     String activePackageId;
     LocalDateTime packageActivatedAt;
     LocalDateTime packageExpiresAt;
+    LocalDateTime platformFeeDueAt;
+    LocalDateTime platformFeeLastPaidAt;
+    LocalDateTime platformFeeReminderSentAt;
+    LocalDateTime platformFeeOverdueSentAt;
+    LocalDateTime platformFeeLockedAt;
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     LocalDateTime createdAt;

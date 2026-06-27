@@ -21,6 +21,7 @@ import vn.chuongpl.user_service.features.recruiter.Recruiter;
 import vn.chuongpl.user_service.features.recruiter.RecruiterMapper;
 import vn.chuongpl.user_service.features.recruiter.RecruiterRepository;
 import vn.chuongpl.user_service.features.recruiter.RecruiterService;
+import vn.chuongpl.user_service.features.servicepackage.ServicePackageRepository;
 import vn.chuongpl.user_service.features.user.User;
 import vn.chuongpl.user_service.features.user.UserRepository;
 
@@ -39,6 +40,7 @@ class RecruiterServiceTest {
     @Mock UserRepository userRepository;
     @Mock RecruiterMapper recruiterMapper;
     @Mock RabbitTemplate rabbitTemplate;
+    @Mock ServicePackageRepository servicePackageRepository;
 
     @InjectMocks
     RecruiterService recruiterService;

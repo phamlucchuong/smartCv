@@ -67,6 +67,7 @@ public class RecruiterService {
         recruiter.setCreatedAt(LocalDateTime.now());
         recruiter.setUpdatedAt(LocalDateTime.now());
         recruiter.setDeleted(false);
+        initializePlatformFeeSchedule(recruiter, recruiter.getCreatedAt());
 
         RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
         response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
@@ -100,6 +101,7 @@ public class RecruiterService {
                 .updatedAt(LocalDateTime.now())
                 .deleted(false)
                 .build();
+        initializePlatformFeeSchedule(recruiter, recruiter.getCreatedAt());
         recruiterRepository.save(recruiter);
     }
 
@@ -346,6 +348,11 @@ public class RecruiterService {
                 .quotaCvViews(r.getQuotaCvViews())
                 .activePackageId(r.getActivePackageId())
                 .packageExpiresAt(r.getPackageExpiresAt())
+                .platformFeeDueAt(r.getPlatformFeeDueAt())
+                .platformFeeLastPaidAt(r.getPlatformFeeLastPaidAt())
+                .platformFeeReminderSentAt(r.getPlatformFeeReminderSentAt())
+                .platformFeeOverdueSentAt(r.getPlatformFeeOverdueSentAt())
+                .platformFeeLockedAt(r.getPlatformFeeLockedAt())
                 .build();
     }
 
@@ -365,7 +372,62 @@ public class RecruiterService {
                 .status(saved.getStatus()).quotaJobPost(saved.getQuotaJobPost()).quotaCvViews(saved.getQuotaCvViews())
                 .activePackageId(saved.getActivePackageId())
                 .packageExpiresAt(saved.getPackageExpiresAt())
+                .platformFeeDueAt(saved.getPlatformFeeDueAt())
+                .platformFeeLastPaidAt(saved.getPlatformFeeLastPaidAt())
+                .platformFeeReminderSentAt(saved.getPlatformFeeReminderSentAt())
+                .platformFeeOverdueSentAt(saved.getPlatformFeeOverdueSentAt())
+                .platformFeeLockedAt(saved.getPlatformFeeLockedAt())
                 .build();
+    }
+
+    public RecruiterResponse updatePlatformFeePayment(String userId, LocalDateTime paidAt) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        LocalDateTime effectivePaidAt = paidAt != null ? paidAt : LocalDateTime.now();
+        recruiter.setPlatformFeeLastPaidAt(effectivePaidAt);
+        recruiter.setPlatformFeeDueAt(effectivePaidAt.plusMonths(1));
+        recruiter.setPlatformFeeReminderSentAt(null);
+        recruiter.setPlatformFeeOverdueSentAt(null);
+        recruiter.setPlatformFeeLockedAt(null);
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (user.isLocked()) {
+            user.setLocked(false);
+            user.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(user);
+        }
+        return getByUserIdFull(userId);
+    }
+
+    public void markPlatformFeeReminderSent(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter.setPlatformFeeReminderSentAt(LocalDateTime.now());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+    }
+
+    public void markPlatformFeeOverdueSent(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter.setPlatformFeeOverdueSentAt(LocalDateTime.now());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+    }
+
+    public void lockForUnpaidPlatformFee(String userId) {
+        Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
+        recruiter.setPlatformFeeLockedAt(LocalDateTime.now());
+        recruiter.setUpdatedAt(LocalDateTime.now());
+        recruiterRepository.save(recruiter);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.setLocked(true);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     public void consumeMonthlyAiCredit(String userId) {
@@ -447,6 +509,32 @@ public class RecruiterService {
 
     private String currentMonthKey() {
         return YearMonth.now().toString();
+    }
+
+    private void initializePlatformFeeSchedule(Recruiter recruiter, LocalDateTime baseTime) {
+        LocalDateTime createdAt = baseTime != null ? baseTime : LocalDateTime.now();
+        recruiter.setPlatformFeeDueAt(createdAt.plusMonths(1));
+        recruiter.setPlatformFeeLastPaidAt(null);
+        recruiter.setPlatformFeeReminderSentAt(null);
+        recruiter.setPlatformFeeLockedAt(null);
+    }
+
+    public void downgradeToFree(String userId) {
+        recruiterRepository.findByUserIdAndDeletedFalse(userId).ifPresent(recruiter -> {
+            if ("free".equalsIgnoreCase(recruiter.getActivePackageId())) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            recruiter.setActivePackageId("free");
+            recruiter.setPackageActivatedAt(null);
+            recruiter.setPackageExpiresAt(null);
+            recruiter.setQuotaJobPost(resolveFreeJobQuota());
+            recruiter.setQuotaCvViews(resolveFreeCvQuota());
+            recruiter.setPackageDowngradedAt(now);
+            recruiter.setPostExpiryCleanupAt(null);
+            recruiter.setUpdatedAt(now);
+            recruiterRepository.save(recruiter);
+        });
     }
 
     private Recruiter normalizeExpiredPackage(Recruiter recruiter) {

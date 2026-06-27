@@ -124,6 +124,30 @@ public class Recruiter {
     @Field(name = "last_payment_order_id")
     String lastPaymentOrderId;
 
+    @Field(name = "platform_fee_due_at")
+    LocalDateTime platformFeeDueAt;
+
+    @Field(name = "platform_fee_last_paid_at")
+    LocalDateTime platformFeeLastPaidAt;
+
+    @Field(name = "platform_fee_reminder_sent_at")
+    LocalDateTime platformFeeReminderSentAt;
+
+    @Field(name = "platform_fee_overdue_sent_at")
+    LocalDateTime platformFeeOverdueSentAt;
+
+    @Field(name = "platform_fee_locked_at")
+    LocalDateTime platformFeeLockedAt;
+
+    @Field(name = "package_expiry_warning_sent_at")
+    LocalDateTime packageExpiryWarningSentAt;
+
+    @Field(name = "package_downgraded_at")
+    LocalDateTime packageDowngradedAt;
+
+    @Field(name = "post_expiry_cleanup_at")
+    LocalDateTime postExpiryCleanupAt;
+
     @Field(name = "monthly_ai_credits_used")
     @Builder.Default
     int monthlyAiCreditsUsed = 0;

@@ -73,6 +73,7 @@ public class PaymentOrderService {
         String userId = getCurrentUserId();
         String userRole = getCurrentUserRole();
         boolean freePackage = "free".equalsIgnoreCase(request.getPackageId());
+        boolean platformFeeOrder = "fee".equalsIgnoreCase(request.getPackageId());
 
         // Guard: check if user already has a valid premium package
         try {
@@ -117,7 +118,7 @@ public class PaymentOrderService {
                 }
             }
 
-            if (!freePackage && activePackageId != null && !activePackageId.isBlank() && !"free".equalsIgnoreCase(activePackageId)) {
+            if (!freePackage && !platformFeeOrder && activePackageId != null && !activePackageId.isBlank() && !"free".equalsIgnoreCase(activePackageId)) {
                 if (packageExpiresAt != null && packageExpiresAt.isAfter(LocalDateTime.now())) {
                     throw new AppException(ErrorCode.ACTIVE_PACKAGE_STILL_VALID);
                 }

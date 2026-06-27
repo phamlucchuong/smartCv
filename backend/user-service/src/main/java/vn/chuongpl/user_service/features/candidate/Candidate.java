@@ -113,6 +113,15 @@ public class Candidate {
     @Field(name = "last_payment_order_id")
     String lastPaymentOrderId;
 
+    @Field(name = "package_expiry_warning_sent_at")
+    LocalDateTime packageExpiryWarningSentAt;
+
+    @Field(name = "package_downgraded_at")
+    LocalDateTime packageDowngradedAt;
+
+    @Field(name = "post_expiry_cleanup_at")
+    LocalDateTime postExpiryCleanupAt;
+
     @Field(name = "monthly_ai_credits_used")
     @Builder.Default
     int monthlyAiCreditsUsed = 0;

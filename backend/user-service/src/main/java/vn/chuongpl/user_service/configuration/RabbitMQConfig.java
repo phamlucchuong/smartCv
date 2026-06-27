@@ -59,6 +59,12 @@ public class RabbitMQConfig {
     public static final String RECRUITER_REJECTED_KEY = "recruiter.rejected";
     public static final String RECRUITER_PENDING_QUEUE = "recruiter.pending.queue";
     public static final String RECRUITER_PENDING_KEY = "recruiter.pending";
+    public static final String RECRUITER_BILLING_KEY = "recruiter.billing";
+    public static final String RECRUITER_BILLING_QUEUE = "recruiter.billing.queue";
+    public static final String PACKAGE_EXPIRED_QUEUE = "package.expired.queue";
+    public static final String PACKAGE_EXPIRED_KEY = "package.expired";
+    public static final String PACKAGE_EXPIRING_SOON_QUEUE = "package.expiring.soon.queue";
+    public static final String PACKAGE_EXPIRING_SOON_KEY = "package.expiring.soon";
 
     @Bean
     public Queue jobSuggestionsQueue() {
@@ -108,6 +114,36 @@ public class RabbitMQConfig {
     @Bean
     public Binding recruiterPendingBinding() {
         return BindingBuilder.bind(recruiterPendingQueue()).to(recruiterExchange()).with(RECRUITER_PENDING_KEY);
+    }
+
+    @Bean
+    public Queue recruiterBillingQueue() {
+        return new Queue(RECRUITER_BILLING_QUEUE, true);
+    }
+
+    @Bean
+    public Binding recruiterBillingBinding() {
+        return BindingBuilder.bind(recruiterBillingQueue()).to(recruiterExchange()).with(RECRUITER_BILLING_KEY);
+    }
+
+    @Bean
+    public Queue packageExpiredQueue() {
+        return new Queue(PACKAGE_EXPIRED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding packageExpiredBinding() {
+        return BindingBuilder.bind(packageExpiredQueue()).to(recruiterExchange()).with(PACKAGE_EXPIRED_KEY);
+    }
+
+    @Bean
+    public Queue packageExpiringSoonQueue() {
+        return new Queue(PACKAGE_EXPIRING_SOON_QUEUE, true);
+    }
+
+    @Bean
+    public Binding packageExpiringSoonBinding() {
+        return BindingBuilder.bind(packageExpiringSoonQueue()).to(recruiterExchange()).with(PACKAGE_EXPIRING_SOON_KEY);
     }
 
     public static final String CV_ANALYSIS_EXCHANGE = "cv.analysis.exchange";

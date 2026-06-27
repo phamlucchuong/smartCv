@@ -19,4 +19,9 @@ public class RecruiterProfileResponse {
     int quotaCvViews;
     String activePackageId;
     LocalDateTime packageExpiresAt;
+    LocalDateTime platformFeeDueAt;
+    LocalDateTime platformFeeLastPaidAt;
+    LocalDateTime platformFeeReminderSentAt;
+    LocalDateTime platformFeeOverdueSentAt;
+    LocalDateTime platformFeeLockedAt;
 }
