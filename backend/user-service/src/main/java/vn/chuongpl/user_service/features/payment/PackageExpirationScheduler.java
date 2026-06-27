@@ -35,12 +35,12 @@ public class PackageExpirationScheduler {
     }
 
     private void expireCandidates(LocalDateTime now) {
-        Query query = Query.query(
-                Criteria.where("deleted").is(false)
-                        .and("package_expires_at").ne(null)
-                        .and("package_expires_at").lte(now)
-                        .and("active_package_id").ne("free")
-        );
+        Query query = Query.query(new Criteria().andOperator(
+                Criteria.where("deleted").is(false),
+                Criteria.where("package_expires_at").ne(null),
+                Criteria.where("package_expires_at").lte(now),
+                Criteria.where("active_package_id").ne("free")
+        ));
         Update update = new Update()
                 .set("active_package_id", "free")
                 .unset("package_activated_at")
@@ -54,12 +54,12 @@ public class PackageExpirationScheduler {
     }
 
     private void expireRecruiters(LocalDateTime now, ServicePackage freePackage) {
-        Query query = Query.query(
-                Criteria.where("deleted").is(false)
-                        .and("package_expires_at").ne(null)
-                        .and("package_expires_at").lte(now)
-                        .and("active_package_id").ne("free")
-        );
+        Query query = Query.query(new Criteria().andOperator(
+                Criteria.where("deleted").is(false),
+                Criteria.where("package_expires_at").ne(null),
+                Criteria.where("package_expires_at").lte(now),
+                Criteria.where("active_package_id").ne("free")
+        ));
         Update update = new Update()
                 .set("active_package_id", "free")
                 .unset("package_activated_at")
