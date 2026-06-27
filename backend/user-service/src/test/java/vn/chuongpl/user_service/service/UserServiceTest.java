@@ -174,7 +174,7 @@ class UserServiceTest {
                 .thenReturn(new PageImpl<>(List.of(user), expectedPage, 1));
         when(userMapper.toUserResponse(user)).thenReturn(response);
 
-        PageResponse<UserResponse> actual = userService.getAllUsers(0, 0, null, null);
+        PageResponse<UserResponse> actual = userService.getAllUsers(0, 0, null, null, null);
 
         assertEquals(1, actual.getPage());
         assertEquals(10, actual.getPageSize());
