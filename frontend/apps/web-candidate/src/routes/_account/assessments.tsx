@@ -43,6 +43,12 @@ type AssessmentResponse = ApplicationModels.AssessmentResponse
 type AttemptAnswer = ApplicationModels.AttemptAnswer
 type Question = ApplicationModels.Question
 type LocalAnswer = { selectedOptionIndex?: number; textAnswer?: string }
+type MutationError = { message?: string }
+type GroupedAssessment = {
+  assessmentId: string
+  attempts: AttemptStateResponse[]
+  latestAttempt: AttemptStateResponse
+}
 
 const MCQ = 'MCQ' as const
 
@@ -94,6 +100,16 @@ function getFilterLabel(t: (k: string) => string, key: AssessmentStatusFilter) {
     case 'SUBMITTED': return t('assessments_filter_submitted')
     case 'EXPIRED': return t('assessments_filter_expired')
   }
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const { message } = error as MutationError
+    if (typeof message === 'string' && message.trim() !== '') {
+      return message
+    }
+  }
+  return fallback
 }
 
 
@@ -284,10 +300,10 @@ function AssessmentsPage() {
   const { isAuthenticated } = useAuthStore()
   const { take: takeAssessmentId } = Route.useSearch()
   const { data, isLoading, isError } = useGetMyAssessments({ query: { enabled: isAuthenticated } })
-  const assessments = data?.data ?? []
+  const assessments = React.useMemo(() => data?.data ?? [], [data?.data])
 
   const { data: selfData, isLoading: isSelfLoading, isError: isSelfError } = useGetMySelfAssessments({ query: { enabled: isAuthenticated } })
-  const selfAssessments = selfData?.data ?? []
+  const selfAssessments = React.useMemo(() => selfData?.data ?? [], [selfData?.data])
 
   const combinedLoading = isLoading || isSelfLoading
   const combinedError = isError || isSelfError
@@ -414,8 +430,8 @@ function AssessmentsPage() {
         setTimeLimitMinutes(30)
         setQuestions([])
       },
-      onError: (err: any) => {
-        toast.error(err?.message || "Tạo bài kiểm tra thất bại.")
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Tạo bài kiểm tra thất bại."))
       },
     },
   })
@@ -432,8 +448,8 @@ function AssessmentsPage() {
         setTimeLimitMinutes(30)
         setQuestions([])
       },
-      onError: (err: any) => {
-        toast.error(err?.message || "Cập nhật bài kiểm tra thất bại.")
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Cập nhật bài kiểm tra thất bại."))
       }
     }
   })
@@ -515,8 +531,8 @@ function AssessmentsPage() {
               queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
             }
           },
-          onError: (err: any) => {
-            toast.error(err?.message || "Không thể bắt đầu làm bài.")
+          onError: (err: unknown) => {
+            toast.error(getErrorMessage(err, "Không thể bắt đầu làm bài."))
           }
         }
       )
@@ -530,8 +546,8 @@ function AssessmentsPage() {
         queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
         queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
       },
-      onError: (err: any) => {
-        toast.error(err?.message || "Xoá bài kiểm tra thất bại.")
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Xoá bài kiểm tra thất bại."))
       }
     }
   })
@@ -549,8 +565,8 @@ function AssessmentsPage() {
         queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
         queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
       },
-      onError: (err: any) => {
-        toast.error(err?.message || "Hủy lưu bài kiểm tra thất bại.")
+      onError: (err: unknown) => {
+        toast.error(getErrorMessage(err, "Hủy lưu bài kiểm tra thất bại."))
       }
     }
   })
@@ -614,7 +630,7 @@ function AssessmentsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const grouped = React.useMemo(() => {
+  const grouped: GroupedAssessment[] = (() => {
     const groups: Record<string, AttemptStateResponse[]> = {}
     assessments.forEach((a) => {
       if (!a.assessmentId) return
@@ -632,23 +648,23 @@ function AssessmentsPage() {
     })
 
     return Object.entries(groups).map(([assessmentId, groupAttempts]) => {
-      // Sort attempts: latest first
       const sorted = [...groupAttempts].sort((x, y) => {
         const dx = x.startedAt ? new Date(x.startedAt).getTime() : 0
         const dy = y.startedAt ? new Date(y.startedAt).getTime() : 0
         return dy - dx
       })
-      const latestAttempt = sorted.length > 0 ? sorted[0] : {
+      const latestAttempt: AttemptStateResponse = sorted[0] ?? {
         assessmentId,
-        status: 'NOT_STARTED' as any,
+        status: 'NOT_STARTED',
       }
+
       return {
         assessmentId,
         attempts: sorted,
         latestAttempt,
       }
     })
-  }, [assessments, selfAssessments])
+  })()
 
   if (taking) {
     return (
