@@ -6,6 +6,7 @@
  */
 
 export * from './apiResponseHomeStatsResponse';
+export * from './apiResponseInteger';
 export * from './apiResponseJobResponse';
 export * from './apiResponseListFaqItem';
 export * from './apiResponseListJobCategoryResponse';
@@ -16,6 +17,7 @@ export * from './apiResponseListTopCompanyResponse';
 export * from './apiResponsePageResponseJobResponse';
 export * from './apiResponseVoid';
 export * from './apiResponseVoidData';
+export * from './deactivateExcessActiveJobsParams';
 export * from './faqItem';
 export * from './getActiveJobsParams';
 export * from './getAllJobsParams';

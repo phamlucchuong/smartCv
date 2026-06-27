@@ -4,14 +4,7 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-
-export type ServicePackageResponseCategory = typeof ServicePackageResponseCategory[keyof typeof ServicePackageResponseCategory];
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ServicePackageResponseCategory = {
-  STANDARD: 'STANDARD',
-  PLATFORM_FEE: 'PLATFORM_FEE',
-} as const;
+import type { ServicePackageResponseCategory } from './servicePackageResponseCategory';
 
 export interface ServicePackageResponse {
   id?: string;

@@ -41,6 +41,7 @@ export interface RecruiterResponse {
   platformFeeDueAt?: string;
   platformFeeLastPaidAt?: string;
   platformFeeReminderSentAt?: string;
+  platformFeeOverdueSentAt?: string;
   platformFeeLockedAt?: string;
   createdAt?: string;
   updatedAt?: string;

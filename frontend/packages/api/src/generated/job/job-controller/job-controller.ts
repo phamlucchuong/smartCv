@@ -24,10 +24,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApiResponseInteger,
   ApiResponseJobResponse,
   ApiResponseListJobResponse,
   ApiResponsePageResponseJobResponse,
   ApiResponseVoid,
+  DeactivateExcessActiveJobsParams,
   GetActiveJobsParams,
   GetAllJobsParams,
   GetJobsByIdsParams,
@@ -386,6 +388,63 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getCreateJobMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const deactivateExcessActiveJobs = (
+    params: DeactivateExcessActiveJobsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseInteger>(
+      {url: `/api/jobs/internal/deactivate-excess`, method: 'POST',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+export const getDeactivateExcessActiveJobsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateExcessActiveJobs>>, TError,{params: DeactivateExcessActiveJobsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deactivateExcessActiveJobs>>, TError,{params: DeactivateExcessActiveJobsParams}, TContext> => {
+
+const mutationKey = ['deactivateExcessActiveJobs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateExcessActiveJobs>>, {params: DeactivateExcessActiveJobsParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  deactivateExcessActiveJobs(params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeactivateExcessActiveJobsMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateExcessActiveJobs>>>
+    
+    export type DeactivateExcessActiveJobsMutationError = unknown
+
+    export const useDeactivateExcessActiveJobs = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateExcessActiveJobs>>, TError,{params: DeactivateExcessActiveJobsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateExcessActiveJobs>>,
+        TError,
+        {params: DeactivateExcessActiveJobsParams},
+        TContext
+      > => {
+
+      const mutationOptions = getDeactivateExcessActiveJobsMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
