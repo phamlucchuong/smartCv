@@ -35,6 +35,12 @@ public interface JobRepository extends MongoRepository<Job, String> {
             java.util.List<String> skills,
             String id);
 
+    java.util.List<Job> findTop5ByCategoryAndModerationStatusAndVisibilityStatusAndIdNotAndDeletedFalse(
+            vn.chuongpl.job_service.enums.JobCategory category,
+            JobModerationStatus moderationStatus,
+            JobVisibilityStatus visibilityStatus,
+            String id);
+
     java.util.List<Job> findAllByIdInAndDeletedFalse(java.util.List<String> ids);
 
     java.util.List<Job> findTop20ByRecruiterIdAndModerationStatusAndVisibilityStatusAndDeletedFalse(
