@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from '@smart-cv/ui';
 import { toast } from 'sonner';
 
-import { Clock, ClipboardCheck, ChevronDown, ChevronLeft, History, Plus, Sparkles } from 'lucide-react'
+import { Clock, ClipboardCheck, ChevronDown, ChevronLeft, History, Plus, Sparkles, Trash2, Upload, Download, HelpCircle } from 'lucide-react'
 import { useTranslation } from '@smart-cv/i18n'
 import {
   useGetMyAssessments,
@@ -16,7 +16,12 @@ import {
   useGetResult,
   ApplicationModels,
   useSubmitAttemptWithFlag,
-  useCreateAssessment,
+  useCreateSelfAssessment,
+  useGetMySelfAssessments,
+  useDeleteAssessment,
+  useDeleteAttempt,
+  parseAssessmentFile,
+  downloadAssessmentTemplate,
 } from '@smart-cv/api'
 import { useAuthStore } from '../../store/useAuthStore'
 
@@ -72,7 +77,7 @@ const statusStyle: Record<string, string> = {
 function getStatusLabel(t: (k: string) => string, key: string) {
   switch (key) {
     case 'NOT_STARTED': return t('assessments_status_not_started')
-    case 'IN_PROGRESS': return 'Đã hủy'
+    case 'IN_PROGRESS': return t('assessments_status_in_progress')
     case 'SUBMITTED': return t('assessments_status_submitted')
     case 'EXPIRED': return t('assessments_status_expired')
     default: return key
@@ -83,13 +88,13 @@ function getFilterLabel(t: (k: string) => string, key: AssessmentStatusFilter) {
   switch (key) {
     case 'all': return t('assessments_filter_all')
     case 'NOT_STARTED': return t('assessments_filter_not_started')
-    case 'IN_PROGRESS': return 'Đã hủy'
+    case 'IN_PROGRESS': return t('assessments_status_in_progress')
     case 'SUBMITTED': return t('assessments_filter_submitted')
     case 'EXPIRED': return t('assessments_filter_expired')
   }
 }
 
-const generateMockQuestions = (jobName: string, difficulty: string, level: string, num: number) => {
+const generateMockQuestions = (jobName: string, _difficulty: string, _level: string, num: number) => {
   const name = jobName.toLowerCase()
   let bank: Array<{ text: string; options: string[]; correctOptionIndex: number }> = []
 
@@ -324,7 +329,7 @@ const generateMockQuestions = (jobName: string, difficulty: string, level: strin
   return selected.map((q, idx) => ({
     id: `q_ai_${idx}_${Date.now()}`,
     text: q.text,
-    type: 'MCQ',
+    type: MCQ,
     options: q.options,
     correctOptionIndex: q.correctOptionIndex,
   }))
@@ -346,6 +351,9 @@ function AssessmentCard({
   onRetake,
   isRetaking,
   onViewHistory,
+  isSelfCreated,
+  onDelete,
+  onUnsave,
 }: {
   assessmentId: string
   attempts: AttemptStateResponse[]
@@ -355,6 +363,9 @@ function AssessmentCard({
   onRetake?: (assessmentId: string) => void
   isRetaking?: boolean
   onViewHistory: (assessmentId: string, title: string) => void
+  isSelfCreated?: boolean
+  onDelete?: (assessmentId: string) => void
+  onUnsave?: (attempts: AttemptStateResponse[]) => void
 }) {
   const { t } = useTranslation()
   const { data: assessmentData } = useGetAssessment(assessmentId, {
@@ -371,8 +382,7 @@ function AssessmentCard({
   }, [assessmentData?.data?.title, assessmentId, onTitleLoaded])
 
   // Determine active attempt (IN_PROGRESS) or NOT_STARTED
-  const activeAttempt = attempts.find((att) => att.status === 'IN_PROGRESS')
-  const notStartedAttempt = attempts.find((att) => att.status === 'NOT_STARTED')
+  const notStartedAttempt = attempts.find((att) => (att.status as string) === 'NOT_STARTED')
 
   const isCancelled = React.useMemo(() => {
     if (!latestAttempt.attemptId) return false
@@ -385,7 +395,7 @@ function AssessmentCard({
   }, [latestAttempt.attemptId])
 
   return (
-    <div className="card-surface p-5 flex flex-col gap-4">
+    <div className="card-surface p-5 flex flex-col h-full gap-4">
       <div className="flex items-start justify-between">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--ai-soft)] text-[var(--ai)]">
           <ClipboardCheck className="h-5 w-5" />
@@ -440,10 +450,10 @@ function AssessmentCard({
         </span>
       </div>
 
-      <div className="flex items-center gap-2 mt-2">
+      <div className="flex items-center gap-2 mt-auto pt-2">
         {attempts.length === 0 || notStartedAttempt ? (
           <Button
-            className="w-full cursor-pointer"
+            className="flex-1 cursor-pointer"
             onClick={() => onTake(assessmentId, notStartedAttempt?.attemptId ?? '')}
           >
             Bắt đầu làm bài
@@ -454,10 +464,30 @@ function AssessmentCard({
             size="sm"
             onClick={() => onRetake?.(assessmentId)}
             disabled={isRetaking}
-            className="w-full cursor-pointer"
+            className="flex-1 cursor-pointer"
           >
             Làm lại
           </Button>
+        )}
+
+        {isSelfCreated ? (
+          <button
+            type="button"
+            onClick={() => onDelete?.(assessmentId)}
+            className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer p-2 border border-border rounded-md shrink-0 flex items-center justify-center h-9 w-9"
+            title="Xóa bài test"
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onUnsave?.(attempts)}
+            className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer p-2 border border-border rounded-md shrink-0 flex items-center justify-center h-9 w-9"
+            title="Hủy lưu bài test"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         )}
       </div>
     </div>
@@ -471,6 +501,12 @@ function AssessmentsPage() {
   const { data, isLoading, isError } = useGetMyAssessments({ query: { enabled: isAuthenticated } })
   const assessments = data?.data ?? []
 
+  const { data: selfData, isLoading: isSelfLoading, isError: isSelfError } = useGetMySelfAssessments({ query: { enabled: isAuthenticated } })
+  const selfAssessments = selfData?.data ?? []
+
+  const combinedLoading = isLoading || isSelfLoading
+  const combinedError = isError || isSelfError
+
   const queryClient = useQueryClient()
   const [taking, setTaking] = React.useState<{ assessmentId: string; attemptId: string } | null>(null)
   const [historyAssessment, setHistoryAssessment] = React.useState<{ assessmentId: string; title: string } | null>(null)
@@ -479,20 +515,7 @@ function AssessmentsPage() {
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [timeLimitMinutes, setTimeLimitMinutes] = React.useState(30)
-  const [questions, setQuestions] = React.useState<Question[]>([
-    {
-      id: 'q_1',
-      text: 'Ví dụ: Sự khác biệt chính giữa interface và abstract class trong Java là gì?',
-      type: 'MCQ',
-      options: [
-        'Interface chỉ chứa method không có body, abstract class có thể có cả hai',
-        'Interface hỗ trợ đa kế thừa, abstract class thì không',
-        'Cả hai câu trên đều đúng',
-        'Cả hai câu trên đều sai',
-      ],
-      correctOptionIndex: 2,
-    }
-  ])
+  const [questions, setQuestions] = React.useState<Question[]>([])
 
   const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false)
   const [aiJobName, setAiJobName] = React.useState('')
@@ -500,6 +523,38 @@ function AssessmentsPage() {
   const [aiLevel, setAiLevel] = React.useState('Junior')
   const [aiNumQuestions, setAiNumQuestions] = React.useState(5)
   const [isAiGenerating, setIsAiGenerating] = React.useState(false)
+
+  const importInputRef = React.useRef<HTMLInputElement>(null)
+  const [isImporting, setIsImporting] = React.useState(false)
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setIsImporting(true)
+    try {
+      const result = await parseAssessmentFile(file)
+      if (result.questions.length === 0) {
+        const reasons = result.skippedRows.map(r => `Dòng ${r.rowNumber}: ${r.reason}`).join(' | ')
+        toast.error(`Không tìm thấy câu hỏi hợp lệ.${reasons ? ' ' + reasons : ''}`)
+        return
+      }
+      toast.success(`Đã import ${result.questions.length} câu hỏi`)
+      if (result.skippedRows.length > 0) {
+        const detail = result.skippedRows.map(r => `Dòng ${r.rowNumber}: ${r.reason}`).join(' | ')
+        toast.warning(`Bỏ qua ${result.skippedRows.length} dòng không hợp lệ: ${detail}`)
+      }
+      setQuestions(result.questions)
+      setTitle('')
+      setDescription('')
+      setTimeLimitMinutes(30)
+      setIsFormOpen(true)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'File không đọc được. Vui lòng dùng file .xlsx hoặc .csv hợp lệ.')
+    } finally {
+      setIsImporting(false)
+    }
+  }
 
   const handleAiConfirm = (e: React.FormEvent) => {
     e.preventDefault()
@@ -519,29 +574,17 @@ function AssessmentsPage() {
     }, 1200)
   }
 
-  const createMutation = useCreateAssessment({
+  const createMutation = useCreateSelfAssessment({
     mutation: {
       onSuccess: () => {
         toast.success("Tạo bài kiểm tra thành công!")
         queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
         setIsFormOpen(false)
         setTitle('')
         setDescription('')
         setTimeLimitMinutes(30)
-        setQuestions([
-          {
-            id: 'q_1',
-            text: 'Ví dụ: Sự khác biệt chính giữa interface và abstract class trong Java là gì?',
-            type: 'MCQ',
-            options: [
-              'Interface chỉ chứa method không có body, abstract class có thể có cả hai',
-              'Interface hỗ trợ đa kế thừa, abstract class thì không',
-              'Cả hai câu trên đều đúng',
-              'Cả hai câu trên đều sai',
-            ],
-            correctOptionIndex: 2,
-          }
-        ])
+        setQuestions([])
       },
       onError: (err: any) => {
         toast.error(err?.message || "Tạo bài kiểm tra thất bại.")
@@ -608,8 +651,73 @@ function AssessmentsPage() {
     }
   }
 
+  const handleTake = (assessmentId: string, attemptId: string) => {
+    if (attemptId) {
+      setTaking({ assessmentId, attemptId })
+    } else {
+      startAttemptMutation.mutate(
+        { id: assessmentId },
+        {
+          onSuccess: (res: { data?: { attemptId?: string } }) => {
+            const newAttemptId = res?.data?.attemptId ?? ''
+            if (newAttemptId) {
+              setTaking({ assessmentId, attemptId: newAttemptId })
+              queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+              queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+            }
+          },
+          onError: (err: any) => {
+            toast.error(err?.message || "Không thể bắt đầu làm bài.")
+          }
+        }
+      )
+    }
+  }
+
+  const deleteMutation = useDeleteAssessment({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Xoá bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Xoá bài kiểm tra thất bại.")
+      }
+    }
+  })
+
+  const handleDelete = (assessmentId: string) => {
+    if (confirm("Bạn có chắc chắn muốn xoá bài kiểm tra này?")) {
+      deleteMutation.mutate({ id: assessmentId })
+    }
+  }
+
+  const deleteAttemptMutation = useDeleteAttempt({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Hủy lưu bài kiểm tra thành công!")
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Hủy lưu bài kiểm tra thất bại.")
+      }
+    }
+  })
+
+  const handleUnsave = (attempts: AttemptStateResponse[]) => {
+    if (confirm("Bạn có chắc chắn muốn hủy lưu bài kiểm tra này?")) {
+      attempts.forEach((att) => {
+        if (att.attemptId) {
+          deleteAttemptMutation.mutate({ attemptId: att.attemptId })
+        }
+      })
+    }
+  }
+
   React.useEffect(() => {
-    if (!takeAssessmentId || hasAutoStarted.current || isLoading) return
+    if (!takeAssessmentId || hasAutoStarted.current || combinedLoading) return
     const existing = assessments.find(
       (a) => a.assessmentId === takeAssessmentId && a.status === 'IN_PROGRESS',
     )
@@ -630,7 +738,7 @@ function AssessmentsPage() {
       },
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [takeAssessmentId, assessments, isLoading])
+  }, [takeAssessmentId, assessments, combinedLoading])
   const [query, setQuery] = React.useState('')
   const [status, setStatus] = React.useState<AssessmentStatusFilter>('all')
   const [statusMenuOpen, setStatusMenuOpen] = React.useState(false)
@@ -667,6 +775,13 @@ function AssessmentsPage() {
       groups[a.assessmentId].push(a)
     })
 
+    selfAssessments.forEach((sa) => {
+      if (!sa.id) return
+      if (!groups[sa.id]) {
+        groups[sa.id] = []
+      }
+    })
+
     return Object.entries(groups).map(([assessmentId, groupAttempts]) => {
       // Sort attempts: latest first
       const sorted = [...groupAttempts].sort((x, y) => {
@@ -674,13 +789,17 @@ function AssessmentsPage() {
         const dy = y.startedAt ? new Date(y.startedAt).getTime() : 0
         return dy - dx
       })
+      const latestAttempt = sorted.length > 0 ? sorted[0] : {
+        assessmentId,
+        status: 'NOT_STARTED' as any,
+      }
       return {
         assessmentId,
         attempts: sorted,
-        latestAttempt: sorted[0],
+        latestAttempt,
       }
     })
-  }, [assessments])
+  }, [assessments, selfAssessments])
 
   if (taking) {
     return (
@@ -692,8 +811,8 @@ function AssessmentsPage() {
     )
   }
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading assessments...</div>
-  if (isError) return <div className="p-8 text-center text-destructive">Failed to load assessments.</div>
+  if (combinedLoading) return <div className="p-8 text-center text-muted-foreground">Loading assessments...</div>
+  if (combinedError) return <div className="p-8 text-center text-destructive">Failed to load assessments.</div>
 
   const filterOptions: Array<{ key: AssessmentStatusFilter }> = [
     { key: 'all' },
@@ -720,9 +839,56 @@ function AssessmentsPage() {
           <h1 className="text-2xl font-bold text-foreground">{t('assessments_page_title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('assessments_page_subtitle')}</p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)} className="gap-2 cursor-pointer">
-          <Plus className="h-4 w-4" /> Tạo bài test
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,.csv"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button
+            variant="outline"
+            onClick={() => importInputRef.current?.click()}
+            disabled={isImporting}
+            className="gap-2 cursor-pointer"
+          >
+            <Upload className="h-4 w-4" />
+            {isImporting ? 'Đang đọc...' : 'Import Excel'}
+          </Button>
+          <div className="relative group">
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
+            <div className="absolute right-0 top-10 z-50 hidden group-hover:block w-72 rounded-lg border border-border bg-card p-3 shadow-lg text-xs">
+              <p className="font-semibold text-foreground mb-2">Format mỗi dòng Excel/CSV:</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• <strong className="text-foreground">Question</strong> — nội dung câu hỏi (bắt buộc)</li>
+                <li>• <strong className="text-foreground">Option A, Option B</strong> — bắt buộc với MCQ</li>
+                <li>• <strong className="text-foreground">Option C, Option D</strong> — tuỳ chọn</li>
+                <li>• <strong className="text-foreground">Correct</strong> — A, B, C hoặc D</li>
+                <li>• <strong className="text-foreground">Type</strong> — MCQ (mặc định) hoặc TEXT</li>
+              </ul>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => downloadAssessmentTemplate()}
+            title="Tải file mẫu"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <Button
+            onClick={() => { setTitle(''); setDescription(''); setTimeLimitMinutes(30); setQuestions([]); setIsFormOpen(true) }}
+            className="gap-2 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" /> Tạo bài test
+          </Button>
+        </div>
       </header>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -769,11 +935,14 @@ function AssessmentsPage() {
                 assessmentId={group.assessmentId}
                 attempts={group.attempts}
                 latestAttempt={group.latestAttempt}
-                onTake={(assessmentId, attemptId) => setTaking({ assessmentId, attemptId })}
+                onTake={handleTake}
                 onTitleLoaded={registerTitle}
                 onRetake={handleRetake}
                 isRetaking={startAttemptMutation.isPending || submitMutation.isPending}
                 onViewHistory={(assessmentId, title) => setHistoryAssessment({ assessmentId, title })}
+                isSelfCreated={selfAssessments.some((sa) => sa.id === group.assessmentId)}
+                onDelete={handleDelete}
+                onUnsave={handleUnsave}
               />
             )
           })}
@@ -1110,6 +1279,7 @@ function TakeAssessmentContent({
   onClose: () => void
 }) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const questions: Question[] = assessment.questions ?? []
 
   const saveAnswersMutation = useSaveAnswers()
@@ -1154,6 +1324,8 @@ function TakeAssessmentContent({
       { attemptId },
       {
         onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
           setIsCancellingMidway(false)
           setConfirmExitOpen(false)
           onClose()
@@ -1177,7 +1349,12 @@ function TakeAssessmentContent({
       if (isSubmitting) return
       setIsSubmitting(true)
       const callbacks = {
-        onSuccess: () => { setShowResult(true); fetchResult() },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/my'] })
+          queryClient.invalidateQueries({ queryKey: ['/api/assessments/self'] })
+          setShowResult(true)
+          fetchResult()
+        },
         onError: () => setIsSubmitting(false),
       }
       if (overtime) {
