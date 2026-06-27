@@ -38,6 +38,10 @@ export interface RecruiterResponse {
   activePackageId?: string;
   packageActivatedAt?: string;
   packageExpiresAt?: string;
+  platformFeeDueAt?: string;
+  platformFeeLastPaidAt?: string;
+  platformFeeReminderSentAt?: string;
+  platformFeeLockedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

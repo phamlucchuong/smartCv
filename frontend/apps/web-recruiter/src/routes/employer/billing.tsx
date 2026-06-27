@@ -29,6 +29,14 @@ function RecruiterBillingPage() {
 
   const { data: packagesData, isLoading: packagesLoading } = useGetServicePackages();
   const packages = packagesData?.data ?? [];
+  const displayPackages = packages.filter((p) => p.id !== "fee");
+  const platformFeePackage: any = packages.find((p) => p.id === "fee") || {
+    id: "fee",
+    name: "Phí sàn",
+    price: 10000,
+    durationDays: 30,
+    features: ["Miễn phí tháng đầu tiên", "Thanh toán định kỳ mỗi tháng"],
+  };
 
   // Fetch all payment orders (up to 1000) for client-side filtering/cascade options
   const { data: ordersData, isLoading: ordersLoading } = useGetPaymentOrders(0, 1000);
@@ -78,11 +86,34 @@ function RecruiterBillingPage() {
 
   const createOrderMutation = useCreatePaymentOrder();
   const cancelOrderMutation = useCancelPaymentOrder();
+  const feeDueAt = recruiter?.platformFeeDueAt ? new Date(recruiter.platformFeeDueAt) : null;
+  const feeLockedAt = recruiter?.platformFeeLockedAt ? new Date(recruiter.platformFeeLockedAt) : null;
+  const feeIsOverdue = feeDueAt ? feeDueAt.getTime() <= Date.now() : false;
+  const feeIsLocked = Boolean(feeLockedAt);
 
   const handleBuyPackage = (packageId: string) => {
     if (packageId === "free") {
       setPendingPackageId(packageId);
       setFreePackageDialogOpen(true);
+      return;
+    }
+
+    if (packageId === "fee") {
+      createOrderMutation.mutate(
+        { packageId },
+        {
+          onSuccess: (res) => {
+            if (res.data?.paymentUrl) {
+              window.location.href = res.data.paymentUrl;
+            } else {
+              toast.error("Không thể tạo liên kết thanh toán phí sàn.");
+            }
+          },
+          onError: (err: any) => {
+            toast.error(err?.response?.data?.message ?? "Tạo đơn hàng phí sàn thất bại");
+          },
+        }
+      );
       return;
     }
 
@@ -218,6 +249,28 @@ function RecruiterBillingPage() {
         </div>
       </div>
 
+      {(feeIsOverdue || feeIsLocked) && (
+        <button
+          type="button"
+          onClick={() => handleBuyPackage("fee")}
+          className={`w-full rounded-2xl border p-5 text-left transition-colors ${feeIsLocked ? "border-destructive/30 bg-destructive/10 hover:bg-destructive/15" : "border-warning/30 bg-warning/10 hover:bg-warning/15"}`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold text-base">
+                {feeIsLocked ? "Tài khoản đã bị khóa do chưa thanh toán phí sàn" : "Phí sàn đã đến hạn thanh toán"}
+              </div>
+              <div className="text-sm opacity-80 mt-1">
+                {feeDueAt ? `Hạn thanh toán: ${formatDate(feeDueAt.toISOString())}` : "Phí sàn 10.000đ/tháng"}
+              </div>
+            </div>
+            <Button disabled={createOrderMutation.isPending}>
+              Thanh toán ngay
+            </Button>
+          </div>
+        </button>
+      )}
+
       {/* Current Active Package Dashboard */}
       <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-brand-blue text-white shadow-lg grid md:grid-cols-2 gap-6 items-center">
         <div>
@@ -237,9 +290,8 @@ function RecruiterBillingPage() {
             </a>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Stat l="Quota Tin tuyển dụng" v={recruiter?.quotaJobPost !== undefined ? `${recruiter.quotaJobPost}` : "0"} />
-          <Stat l="Quota Lượt xem CV" v={recruiter?.quotaCvViews !== undefined ? `${recruiter.quotaCvViews}` : "0"} />
           <Stat l="Dịch vụ AI" v={recruiter?.activePackageId ? "Nâng cao" : "Cơ bản"} />
         </div>
       </div>
@@ -251,7 +303,7 @@ function RecruiterBillingPage() {
           <div className="text-center py-10 text-muted-foreground">Đang tải danh sách gói dịch vụ...</div>
         ) : (
           <div className="grid md:grid-cols-3 gap-4">
-            {packages.map((p) => {
+            {displayPackages.map((p) => {
               const isCurrent = recruiter?.activePackageId === p.id || (!recruiter?.activePackageId && p.id === "free");
               return (
                 <div key={p.id} className={`card-surface p-5 flex flex-col justify-between ${p.featured ? "ring-2 ring-primary relative" : "border border-border/80"}`}>
@@ -302,6 +354,44 @@ function RecruiterBillingPage() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Platform Fee Section */}
+      <div className="space-y-4">
+        <h2 className="font-semibold text-lg">Phí sàn</h2>
+        <div className="rounded-2xl border border-border/80 p-5 card-surface">
+          <div className="grid md:grid-cols-2 gap-4 items-center">
+            <div>
+              <div className="text-lg font-bold">{platformFeePackage.name}</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {feeLockedAt
+                  ? "Tài khoản đã bị khóa do quá hạn phí sàn."
+                  : feeIsOverdue
+                    ? "Phí sàn đã quá hạn, vui lòng thanh toán ngay để tránh bị khóa."
+                    : recruiter?.platformFeeLastPaidAt
+                      ? "Đã thanh toán phí sàn kỳ này."
+                      : "Miễn phí tháng đầu tiên kể từ lúc tạo doanh nghiệp."}
+              </div>
+              {feeDueAt && (
+                <div className="text-sm mt-2">
+                  Hạn tiếp theo: <strong>{formatDate(feeDueAt.toISOString())}</strong>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col md:items-end gap-3">
+              <div className="text-2xl font-black text-primary">10.000đ / tháng</div>
+              {(!feeIsOverdue && !feeIsLocked && recruiter?.platformFeeLastPaidAt) ? (
+                <Button disabled variant="outline" className="bg-success-soft text-success border-success/20 pointer-events-none">
+                  Đã thanh toán
+                </Button>
+              ) : (
+                <Button onClick={() => handleBuyPackage("fee")} disabled={createOrderMutation.isPending}>
+                  Thanh toán phí sàn
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Order Transaction History */}
