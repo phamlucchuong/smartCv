@@ -340,7 +340,13 @@ public class JobService {
         expireOverduePublishedJobs();
         boolean hasKeyword = request.getKeyword() != null && !request.getKeyword().isBlank();
         boolean hasLocation = request.getLocation() != null && !request.getLocation().isBlank();
-        if (!hasKeyword && !hasLocation) {
+        boolean hasFilters = request.getCategory() != null
+                || request.getJobType() != null
+                || request.getExperienceLevel() != null
+                || (request.getSkills() != null && !request.getSkills().isEmpty())
+                || request.getSalaryMin() != null
+                || request.getSalaryMax() != null;
+        if (!hasKeyword && !hasLocation && !hasFilters) {
             int page = request.getPage() > 0 ? request.getPage() : 1;
             int size = request.getSize() > 0 ? request.getSize() : defaultPageSize;
             Pageable pageable = buildPageable(page, size, "createdAt", "desc");
