@@ -67,9 +67,10 @@ public class JobController {
     public ApiResponse<PageResponse<JobResponse>> getAllJobs(@RequestParam(defaultValue = "1") int page,
                                                              @RequestParam(defaultValue = "10") int size,
                                                              @RequestParam(required = false) String moderationStatus,
-                                                             @RequestParam(required = false) String keyword) {
+                                                             @RequestParam(required = false) String keyword,
+                                                             @RequestParam(required = false) String category) {
         return ApiResponse.<PageResponse<JobResponse>>builder()
-                .data(jobService.getAllJobs(moderationStatus, keyword, page, size))
+                .data(jobService.getAllJobs(moderationStatus, keyword, category, page, size))
                 .build();
     }
 

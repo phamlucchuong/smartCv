@@ -22,6 +22,7 @@ import vn.chuongpl.job_service.dtos.request.JobSearchRequest;
 import vn.chuongpl.job_service.dtos.request.JobUpdateRequest;
 import vn.chuongpl.job_service.dtos.response.JobResponse;
 import vn.chuongpl.job_service.enums.ErrorCode;
+import vn.chuongpl.job_service.enums.JobCategory;
 import vn.chuongpl.job_service.enums.JobModerationStatus;
 import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 import vn.chuongpl.job_service.exception.AppException;
@@ -108,16 +109,18 @@ public class JobService {
         return toPageResponse(jobs);
     }
 
-    public PageResponse<JobResponse> getAllJobs(String moderationStatus, String keyword, int page, int size) {
+    public PageResponse<JobResponse> getAllJobs(String moderationStatus, String keyword, String category, int page, int size) {
         expireOverduePublishedJobs();
         Pageable pageable = buildPageable(page, size, "createdAt", "desc");
         boolean hasKeyword = keyword != null && !keyword.isBlank();
         boolean hasStatus = moderationStatus != null && !moderationStatus.isBlank();
-        if (!hasKeyword && !hasStatus) {
-            return toPageResponse(jobRepository.findByDeletedFalse(pageable));
-        }
+        boolean hasCategory = category != null && !category.isBlank();
+
         List<Criteria> parts = new ArrayList<>();
         parts.add(Criteria.where("deleted").is(false));
+        // Never show DRAFT jobs to admin — only show submitted (PENDING) or approved (PUBLISHED) jobs
+        parts.add(Criteria.where("moderation_status").ne(JobModerationStatus.DRAFT));
+
         if (hasStatus) {
             JobModerationStatus status;
             try {
@@ -126,6 +129,15 @@ public class JobService {
                 throw new AppException(ErrorCode.JOB_STATUS_INVALID);
             }
             parts.add(Criteria.where("moderation_status").is(status));
+        }
+        if (hasCategory) {
+            JobCategory cat;
+            try {
+                cat = JobCategory.valueOf(category.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new AppException(ErrorCode.JOB_STATUS_INVALID);
+            }
+            parts.add(Criteria.where("category").is(cat));
         }
         if (hasKeyword) {
             parts.add(new Criteria().orOperator(
