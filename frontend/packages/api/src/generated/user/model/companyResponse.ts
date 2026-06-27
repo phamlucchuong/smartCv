@@ -11,6 +11,7 @@ export interface CompanyResponse {
   logoUrl?: string;
   coverImageUrl?: string;
   industry?: string;
+  category?: string;
   size?: string;
   location?: string;
   website?: string;

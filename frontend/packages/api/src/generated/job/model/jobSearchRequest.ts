@@ -15,6 +15,7 @@ export interface JobSearchRequest {
   jobType?: JobSearchRequestJobType;
   experienceLevel?: JobSearchRequestExperienceLevel;
   skills?: string[];
+  category?: string;
   sortBy?: string;
   sortDir?: string;
   page?: number;

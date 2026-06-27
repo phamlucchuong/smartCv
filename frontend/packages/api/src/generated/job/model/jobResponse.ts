@@ -21,6 +21,7 @@ export interface JobResponse {
   jobType?: JobResponseJobType;
   experienceLevel?: JobResponseExperienceLevel;
   skills?: string[];
+  category?: string;
   requirements?: string[];
   benefits?: string[];
   moderationStatus?: JobResponseModerationStatus;

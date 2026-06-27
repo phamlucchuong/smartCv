@@ -45,6 +45,22 @@ import { customInstance } from '../../../axios-instance';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
+export interface RelatedCompanyData {
+  id?: string;
+  name?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  industry?: string;
+  location?: string;
+}
+
+export interface ApiResponseListRelatedCompanyData {
+  ok?: boolean;
+  code?: number;
+  message?: string;
+  data?: RelatedCompanyData[];
+}
+
 
 
 export const getJobById = (
@@ -1299,6 +1315,64 @@ export function useGetJobsByIds<TData = Awaited<ReturnType<typeof getJobsByIds>>
 
 
 
+
+export const getJobRelatedCompanies = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal
+) => {
+  return customInstance<ApiResponseListRelatedCompanyData>(
+    { url: `/api/jobs/${id}/related-companies`, method: 'GET', signal },
+    options
+  );
+};
+
+export const getGetJobRelatedCompaniesQueryKey = (id?: string) => {
+  return [`/api/jobs/${id}/related-companies`] as const;
+};
+
+export const getGetJobRelatedCompaniesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJobRelatedCompanies>>,
+  TError = unknown
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJobRelatedCompanies>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetJobRelatedCompaniesQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJobRelatedCompanies>>> = ({ signal }) =>
+    getJobRelatedCompanies(id, requestOptions, signal);
+  return { queryKey, queryFn, enabled: !!(id), ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getJobRelatedCompanies>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJobRelatedCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof getJobRelatedCompanies>>>;
+export type GetJobRelatedCompaniesQueryError = unknown;
+
+export function useGetJobRelatedCompanies<
+  TData = Awaited<ReturnType<typeof getJobRelatedCompanies>>,
+  TError = unknown
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJobRelatedCompanies>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJobRelatedCompaniesQueryOptions(id, options);
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
 
 export const getAllJobs = (
     params?: GetAllJobsParams,
