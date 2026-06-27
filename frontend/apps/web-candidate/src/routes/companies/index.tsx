@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
-import { Badge, Button } from '@smart-cv/ui'
+import { Badge, Button, JOB_CATEGORY_OPTIONS } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import { ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react'
 import { useGetAll3, useGetTopCompanies } from '@smart-cv/api'
@@ -15,12 +15,12 @@ const COMPANIES_PER_PAGE = 6
 function CompaniesPage() {
   const { t } = useTranslation()
   const [query, setQuery] = React.useState('')
-  const [industry, setIndustry] = React.useState('')
+  const [category, setCategory] = React.useState('')
   const [featuredOnly, setFeaturedOnly] = React.useState(false)
   const [location, setLocation] = React.useState('')
   const [page, setPage] = React.useState(1)
 
-  const { data, isLoading } = useGetAll3({ page: 1, size: 100 })
+  const { data, isLoading } = useGetAll3({ page: 1, size: 100, category: category || undefined })
   const rawItems = data?.data?.items
   const companies = React.useMemo(() => rawItems ?? [], [rawItems])
 
@@ -51,14 +51,10 @@ function CompaniesPage() {
   const filtered = companies.filter((c: UserModels.CompanyResponse) => {
     const q = query.trim().toLowerCase()
     const matchQuery = q === '' || (c.name ?? '').toLowerCase().includes(q) || (c.industry ?? '').toLowerCase().includes(q) || (c.location ?? '').toLowerCase().includes(q)
-    const matchIndustry = industry === '' || c.industry === industry
     const matchLocation = location === '' || matchCity(c.location ?? '', location)
     const matchFeatured = !featuredOnly || (c.name && topCompanyNames.has(c.name.trim().toLowerCase()))
-    return matchQuery && matchIndustry && matchLocation && matchFeatured
+    return matchQuery && matchLocation && matchFeatured
   })
-
-  // Derive filter options from live data
-  const INDUSTRIES = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.industry).filter(Boolean) as string[])).sort(), [companies])
   const LOCATIONS = ['Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng']
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / COMPANIES_PER_PAGE))
@@ -102,12 +98,12 @@ function CompaniesPage() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted-foreground">{t('company_list_filter_industry')}:</span>
           <select
-            value={industry}
-            onChange={handleFilterChange(setIndustry)}
+            value={category}
+            onChange={(e) => { setCategory(e.target.value); setPage(1) }}
             className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">{t('company_list_filter_all_industries')}</option>
-            {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+            {JOB_CATEGORY_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
           <select
             value={featuredOnly ? 'featured' : 'all'}

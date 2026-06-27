@@ -10,6 +10,7 @@ page?: number;
 size?: number;
 query?: string;
 industry?: string;
+category?: string;
 companySize?: string;
 location?: string;
 };
