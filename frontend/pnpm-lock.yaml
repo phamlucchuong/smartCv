@@ -336,6 +336,9 @@ importers:
       axios:
         specifier: ^1.7.9
         version: 1.16.1
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
     devDependencies:
       orval:
         specifier: ^7.5.0
