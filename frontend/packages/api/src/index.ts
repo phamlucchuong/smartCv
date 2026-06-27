@@ -53,6 +53,7 @@ export * from './generated/job/home-controller/home-controller';
 // Application service
 export * from './generated/application/application-controller/application-controller';
 export * from './generated/application/assessment-controller/assessment-controller';
+export * from './excel-import';
 
 // AI service
 export * from './generated/ai/analysis-controller/analysis-controller';
