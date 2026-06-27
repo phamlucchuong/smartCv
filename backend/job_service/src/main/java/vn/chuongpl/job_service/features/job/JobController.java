@@ -170,4 +170,15 @@ public class JobController {
         jobService.deleteJob(id, userId, isAdmin);
         return ApiResponse.<Void>builder().message("Delete job successfully").build();
     }
+
+    @PostMapping("/internal/deactivate-excess")
+    public ApiResponse<Integer> deactivateExcessActiveJobs(
+            @RequestParam String recruiterId,
+            @RequestParam int keepCount) {
+        int deactivated = jobService.deactivateExcessActiveJobs(recruiterId, keepCount);
+        return ApiResponse.<Integer>builder()
+                .data(deactivated)
+                .message("Deactivated " + deactivated + " excess job(s)")
+                .build();
+    }
 }

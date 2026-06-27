@@ -50,4 +50,10 @@ public interface JobRepository extends MongoRepository<Job, String> {
     );
 
     Page<Job> findByModerationStatusAndDeletedFalse(JobModerationStatus moderationStatus, Pageable pageable);
+
+    java.util.List<Job> findAllByRecruiterIdAndModerationStatusAndVisibilityStatusAndDeletedFalse(
+            String recruiterId,
+            JobModerationStatus moderationStatus,
+            JobVisibilityStatus visibilityStatus
+    );
 }
