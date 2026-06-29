@@ -165,6 +165,7 @@ function CandidateDetail() {
   const score = application.aiScore ?? 0;
   const aiStatus = application.aiStatus as string | undefined;
   const isPending = updateStatusMutation.isPending;
+  const previewCvUrl = candidate?.cvUrl ?? application.cvUrl;
 
   return (
     <>
@@ -249,12 +250,11 @@ function CandidateDetail() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="overview">Tổng quan</TabsTrigger>
           <TabsTrigger value="cv">CV</TabsTrigger>
           <TabsTrigger value="ai">Phân tích AI</TabsTrigger>
           <TabsTrigger value="test">Bài test</TabsTrigger>
-          <TabsTrigger value="interview">Phỏng vấn</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-5 grid lg:grid-cols-3 gap-4">
@@ -307,9 +307,9 @@ function CandidateDetail() {
         <TabsContent value="cv" className="mt-5 card-surface p-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">CV ứng viên</h3>
-            {application.cvUrl ? (
+            {previewCvUrl ? (
               <a
-                href={application.cvUrl}
+                href={previewCvUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -323,10 +323,10 @@ function CandidateDetail() {
               </Button>
             )}
           </div>
-          {application.cvUrl ? (
+          {previewCvUrl ? (
             <div className="w-full h-[700px] border border-border rounded-lg overflow-hidden bg-muted">
               <iframe
-                src={application.cvUrl}
+                src={previewCvUrl}
                 className="w-full h-full"
                 title="CV Preview"
               />

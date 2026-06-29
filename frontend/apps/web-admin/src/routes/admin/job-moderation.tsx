@@ -16,7 +16,7 @@ import { Search, MoreHorizontal } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/job-moderation')({ component: JobModerationPage })
 
-type ModerationFilter = 'PENDING' | 'PUBLISHED' | 'DRAFT' | ''
+type ModerationFilter = 'PENDING' | 'PUBLISHED' | ''
 
 type ApiError = { response?: { data?: { message?: string } } }
 
@@ -214,7 +214,8 @@ function JobDetailModal({
 function JobModerationPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [filter, setFilter] = useState<ModerationFilter>('PENDING')
+  const [filter, setFilter] = useState<ModerationFilter>('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
@@ -230,8 +231,9 @@ function JobModerationPage() {
   }, [keyword])
 
   const { data, isLoading, isError, refetch } = useGetAdminJobs({
-    moderationStatus: filter || undefined as 'DRAFT' | 'PENDING' | 'PUBLISHED' | undefined,
+    moderationStatus: filter || undefined,
     keyword: debouncedKeyword || undefined,
+    category: categoryFilter || undefined,
     page,
     size: 10,
   })
@@ -286,12 +288,33 @@ function JobModerationPage() {
         <select
           value={filter}
           onChange={(e) => { setPage(1); setFilter(e.target.value as ModerationFilter) }}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium"
         >
-          <option value="">{t('admin_filter_all_status')}</option>
+          <option value="">Tất cả (tình trạng)</option>
           <option value="PENDING">Chờ duyệt</option>
           <option value="PUBLISHED">Đã duyệt</option>
-          <option value="DRAFT">Nháp</option>
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => { setPage(1); setCategoryFilter(e.target.value) }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium"
+        >
+          <option value="">Tất cả ngành nghề</option>
+          <option value="IT_SOFTWARE">IT &amp; Software</option>
+          <option value="FINANCE_BANKING">Finance &amp; Banking</option>
+          <option value="MARKETING">Marketing &amp; Advertising</option>
+          <option value="HEALTHCARE">Healthcare &amp; Pharma</option>
+          <option value="EDUCATION">Education &amp; Training</option>
+          <option value="MANUFACTURING">Manufacturing &amp; Production</option>
+          <option value="RETAIL">Retail &amp; Consumer Goods</option>
+          <option value="REAL_ESTATE">Real Estate &amp; Construction</option>
+          <option value="TRANSPORTATION">Transportation &amp; Logistics</option>
+          <option value="MEDIA_ENTERTAINMENT">Media &amp; Entertainment</option>
+          <option value="LEGAL_CONSULTING">Legal &amp; Consulting</option>
+          <option value="HUMAN_RESOURCES">Human Resources</option>
+          <option value="AGRICULTURE">Agriculture</option>
+          <option value="ENERGY_ENVIRONMENT">Energy &amp; Environment</option>
+          <option value="HOSPITALITY_TOURISM">Hospitality &amp; Tourism</option>
         </select>
       </div>
 

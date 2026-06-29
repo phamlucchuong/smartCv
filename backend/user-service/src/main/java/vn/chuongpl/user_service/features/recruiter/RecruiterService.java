@@ -69,9 +69,7 @@ public class RecruiterService {
         recruiter.setDeleted(false);
         initializePlatformFeeSchedule(recruiter, recruiter.getCreatedAt());
 
-        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
-        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
-        return response;
+        return toRecruiterResponseWithUsage(recruiterRepository.save(recruiter), user);
     }
 
     public void createBasicProfile(String userId) {
@@ -126,9 +124,7 @@ public class RecruiterService {
         Recruiter recruiter = recruiterRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.RECRUITER_NOT_FOUND));
         recruiter = normalizeExpiredPackage(recruiter);
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiter, user);
-        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
-        return response;
+        return toRecruiterResponseWithUsage(recruiter, user);
     }
 
     public PageResponse<RecruiterResponse> getAll(int page, int size, RecruiterStatus status, String keyword) {
@@ -144,9 +140,7 @@ public class RecruiterService {
             return PageResponse.<RecruiterResponse>builder()
                     .items(recruiters.getContent().stream().map(recruiter -> {
                         User user = userRepository.findById(recruiter.getUserId()).orElse(null);
-                        RecruiterResponse res = recruiterMapper.toRecruiterResponse(recruiter, user);
-                        res.setBusinessLicenseUrl(getFreshLicenseUrl(res.getBusinessLicenseUrl()));
-                        return res;
+                        return toRecruiterResponseWithUsage(recruiter, user);
                     }).toList())
                     .total(recruiters.getTotalElements())
                     .page(pageCurrent + 1)
@@ -174,9 +168,7 @@ public class RecruiterService {
         return PageResponse.<RecruiterResponse>builder()
                 .items(items.stream().map(recruiter -> {
                     User user = userRepository.findById(recruiter.getUserId()).orElse(null);
-                    RecruiterResponse res = recruiterMapper.toRecruiterResponse(recruiter, user);
-                    res.setBusinessLicenseUrl(getFreshLicenseUrl(res.getBusinessLicenseUrl()));
-                    return res;
+                    return toRecruiterResponseWithUsage(recruiter, user);
                 }).toList())
                 .total(total)
                 .page(pageCurrent + 1)
@@ -206,9 +198,7 @@ public class RecruiterService {
         }
 
         recruiter.setUpdatedAt(LocalDateTime.now());
-        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
-        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
-        return response;
+        return toRecruiterResponseWithUsage(recruiterRepository.save(recruiter), user);
     }
 
     public RecruiterResponse updateStatus(String id, RecruiterStatusRequest request) {
@@ -225,8 +215,7 @@ public class RecruiterService {
         if (request.getQuotaCvViews() != null) recruiter.setQuotaCvViews(request.getQuotaCvViews());
         recruiter.setUpdatedAt(LocalDateTime.now());
 
-        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
-        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        RecruiterResponse response = toRecruiterResponseWithUsage(recruiterRepository.save(recruiter), user);
 
         String routingKey = request.getStatus() == RecruiterStatus.APPROVED
                 ? RabbitMQConfig.RECRUITER_APPROVED_KEY
@@ -263,8 +252,7 @@ public class RecruiterService {
         recruiter.setUpdatedAt(LocalDateTime.now());
 
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
-        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        RecruiterResponse response = toRecruiterResponseWithUsage(recruiterRepository.save(recruiter), user);
 
         List<String> adminIds = userRepository
                 .findByRoles_NameIn(List.of("ADMIN"), Pageable.unpaged())
@@ -295,9 +283,7 @@ public class RecruiterService {
         recruiter.setUpdatedAt(LocalDateTime.now());
 
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiterRepository.save(recruiter), user);
-        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
-        return response;
+        return toRecruiterResponseWithUsage(recruiterRepository.save(recruiter), user);
     }
 
     public String uploadLogo(String userId, MultipartFile file) {
@@ -348,6 +334,11 @@ public class RecruiterService {
                 .quotaCvViews(r.getQuotaCvViews())
                 .activePackageId(r.getActivePackageId())
                 .packageExpiresAt(r.getPackageExpiresAt())
+                .aiCreditsTotal(resolveAiCreditsTotal(r))
+                .aiCreditsUsed(resolveCurrentAiCreditsUsed(r.getMonthlyAiCreditsMonth(), r.getMonthlyAiCreditsUsed()))
+                .aiCreditsRemaining(resolveRemainingAiCredits(
+                        resolveAiCreditsTotal(r),
+                        resolveCurrentAiCreditsUsed(r.getMonthlyAiCreditsMonth(), r.getMonthlyAiCreditsUsed())))
                 .platformFeeDueAt(r.getPlatformFeeDueAt())
                 .platformFeeLastPaidAt(r.getPlatformFeeLastPaidAt())
                 .platformFeeReminderSentAt(r.getPlatformFeeReminderSentAt())
@@ -372,6 +363,11 @@ public class RecruiterService {
                 .status(saved.getStatus()).quotaJobPost(saved.getQuotaJobPost()).quotaCvViews(saved.getQuotaCvViews())
                 .activePackageId(saved.getActivePackageId())
                 .packageExpiresAt(saved.getPackageExpiresAt())
+                .aiCreditsTotal(resolveAiCreditsTotal(saved))
+                .aiCreditsUsed(resolveCurrentAiCreditsUsed(saved.getMonthlyAiCreditsMonth(), saved.getMonthlyAiCreditsUsed()))
+                .aiCreditsRemaining(resolveRemainingAiCredits(
+                        resolveAiCreditsTotal(saved),
+                        resolveCurrentAiCreditsUsed(saved.getMonthlyAiCreditsMonth(), saved.getMonthlyAiCreditsUsed())))
                 .platformFeeDueAt(saved.getPlatformFeeDueAt())
                 .platformFeeLastPaidAt(saved.getPlatformFeeLastPaidAt())
                 .platformFeeReminderSentAt(saved.getPlatformFeeReminderSentAt())
@@ -511,6 +507,27 @@ public class RecruiterService {
         return YearMonth.now().toString();
     }
 
+    private Integer resolveAiCreditsTotal(Recruiter recruiter) {
+        String packageId = recruiter.getActivePackageId() == null || recruiter.getActivePackageId().isBlank()
+                ? "free"
+                : recruiter.getActivePackageId();
+        return servicePackageRepository.findById(packageId)
+                .or(() -> servicePackageRepository.findById("free"))
+                .map(ServicePackage::getAiCredits)
+                .orElse(null);
+    }
+
+    private int resolveCurrentAiCreditsUsed(String usageMonth, int used) {
+        return currentMonthKey().equals(usageMonth) ? used : 0;
+    }
+
+    private Integer resolveRemainingAiCredits(Integer total, int used) {
+        if (total == null || total == -1) {
+            return total;
+        }
+        return Math.max(total - used, 0);
+    }
+
     private void initializePlatformFeeSchedule(Recruiter recruiter, LocalDateTime baseTime) {
         LocalDateTime createdAt = baseTime != null ? baseTime : LocalDateTime.now();
         recruiter.setPlatformFeeDueAt(createdAt.plusMonths(1));
@@ -530,6 +547,8 @@ public class RecruiterService {
             recruiter.setPackageExpiresAt(null);
             recruiter.setQuotaJobPost(resolveFreeJobQuota());
             recruiter.setQuotaCvViews(resolveFreeCvQuota());
+            recruiter.setMonthlyAiCreditsUsed(0);
+            recruiter.setMonthlyAiCreditsMonth(currentMonthKey());
             recruiter.setPackageDowngradedAt(now);
             recruiter.setPostExpiryCleanupAt(null);
             recruiter.setUpdatedAt(now);
@@ -553,6 +572,8 @@ public class RecruiterService {
         recruiter.setPackageExpiresAt(null);
         recruiter.setQuotaJobPost(resolveFreeJobQuota());
         recruiter.setQuotaCvViews(resolveFreeCvQuota());
+        recruiter.setMonthlyAiCreditsUsed(0);
+        recruiter.setMonthlyAiCreditsMonth(currentMonthKey());
         recruiter.setUpdatedAt(LocalDateTime.now());
         return recruiterRepository.save(recruiter);
     }
@@ -569,6 +590,17 @@ public class RecruiterService {
                 .map(ServicePackage::getCvLimit)
                 .filter(limit -> limit != null)
                 .orElse(0);
+    }
+
+    private RecruiterResponse toRecruiterResponseWithUsage(Recruiter recruiter, User user) {
+        RecruiterResponse response = recruiterMapper.toRecruiterResponse(recruiter, user);
+        response.setBusinessLicenseUrl(getFreshLicenseUrl(response.getBusinessLicenseUrl()));
+        Integer total = resolveAiCreditsTotal(recruiter);
+        int used = resolveCurrentAiCreditsUsed(recruiter.getMonthlyAiCreditsMonth(), recruiter.getMonthlyAiCreditsUsed());
+        response.setAiCreditsTotal(total);
+        response.setAiCreditsUsed(used);
+        response.setAiCreditsRemaining(resolveRemainingAiCredits(total, used));
+        return response;
     }
 
     private String getFreshLicenseUrl(String storedUrl) {

@@ -80,14 +80,14 @@ public class CandidateService {
         // Tolerate a missing user record (consistent with getAll); the candidate
         // profile is still viewable even if its user link is dangling.
         User user = userRepository.findById(candidate.getUserId()).orElse(null);
-        return candidateMapper.toCandidateResponse(candidate, user);
+        return toCandidateResponseWithFreshCv(candidate, user);
     }
 
     public CandidateResponse getByUserId(String userId) {
         Candidate candidate = candidateRepository.findByUserIdAndDeletedFalse(userId).orElseThrow(() -> new AppException(ErrorCode.CANDIDATE_NOT_FOUND));
         candidate = normalizeExpiredPackage(candidate);
         User user = userRepository.findById(userId).orElse(null);
-        return candidateMapper.toCandidateResponse(candidate, user);
+        return toCandidateResponseWithFreshCv(candidate, user);
     }
 
     public PageResponse<CandidateResponse> getAll(int page, int size) {
@@ -99,7 +99,7 @@ public class CandidateService {
         return PageResponse.<CandidateResponse>builder()
                 .items(candidates.getContent().stream().map(candidate -> {
                     User user = userRepository.findById(candidate.getUserId()).orElse(null);
-                    return candidateMapper.toCandidateResponse(candidate, user);
+                    return toCandidateResponseWithFreshCv(candidate, user);
                 }).toList())
                 .total(candidates.getTotalElements())
                 .page(pageCurrent + 1)
@@ -119,7 +119,7 @@ public class CandidateService {
         candidateMapper.updateCandidate(candidate, request);
         candidate.setUserId(fixedUserId);
         candidate.setUpdatedAt(LocalDateTime.now());
-        return candidateMapper.toCandidateResponse(candidateRepository.save(candidate), user);
+        return toCandidateResponseWithFreshCv(candidateRepository.save(candidate), user);
     }
 
     public CandidateResponse getMe(String userId) {
@@ -364,6 +364,29 @@ public class CandidateService {
         return settings;
     }
 
+    private CandidateResponse toCandidateResponseWithFreshCv(Candidate candidate, User user) {
+        CandidateResponse response = candidateMapper.toCandidateResponse(candidate, user);
+        response.setCvUrl(resolveFreshDefaultCvUrl(candidate));
+        populateAiCreditSummary(response, candidate);
+        return response;
+    }
+
+    private String resolveFreshDefaultCvUrl(Candidate candidate) {
+        if (candidate == null) {
+            return null;
+        }
+        CvItem defaultCv = candidate.getCvs() == null
+                ? null
+                : candidate.getCvs().stream().filter(CvItem::isDefault).findFirst().orElse(null);
+        if (defaultCv != null) {
+            if (defaultCv.getS3Key() != null && !defaultCv.getS3Key().isBlank()) {
+                return s3Service.generateFreshUrl(defaultCv.getS3Key());
+            }
+            return defaultCv.getUrl();
+        }
+        return candidate.getCvUrl();
+    }
+
     private ServicePackage resolveActivePackage(String activePackageId) {
         String packageId = activePackageId == null || activePackageId.isBlank() ? "free" : activePackageId;
         return servicePackageRepository.findById(packageId)
@@ -384,6 +407,34 @@ public class CandidateService {
         return YearMonth.now().toString();
     }
 
+    private void populateAiCreditSummary(CandidateResponse response, Candidate candidate) {
+        Integer total = resolveAiCreditsTotal(candidate.getActivePackageId());
+        int used = resolveCurrentAiCreditsUsed(candidate.getMonthlyAiCreditsMonth(), candidate.getMonthlyAiCreditsUsed());
+
+        response.setAiCreditsTotal(total);
+        response.setAiCreditsUsed(used);
+        response.setAiCreditsRemaining(resolveRemainingAiCredits(total, used));
+    }
+
+    private int resolveCurrentAiCreditsUsed(String usageMonth, int used) {
+        return currentMonthKey().equals(usageMonth) ? used : 0;
+    }
+
+    private Integer resolveRemainingAiCredits(Integer total, int used) {
+        if (total == null || total == -1) {
+            return total;
+        }
+        return Math.max(total - used, 0);
+    }
+
+    private Integer resolveAiCreditsTotal(String activePackageId) {
+        String packageId = activePackageId == null || activePackageId.isBlank() ? "free" : activePackageId;
+        return servicePackageRepository.findById(packageId)
+                .or(() -> servicePackageRepository.findById("free"))
+                .map(ServicePackage::getAiCredits)
+                .orElse(null);
+    }
+
     private Candidate normalizeExpiredPackage(Candidate candidate) {
         if (candidate.getPackageExpiresAt() == null) {
             return candidate;
@@ -398,6 +449,8 @@ public class CandidateService {
         candidate.setActivePackageId("free");
         candidate.setPackageActivatedAt(null);
         candidate.setPackageExpiresAt(null);
+        candidate.setMonthlyAiCreditsUsed(0);
+        candidate.setMonthlyAiCreditsMonth(currentMonthKey());
         candidate.setUpdatedAt(LocalDateTime.now());
         return candidateRepository.save(candidate);
     }
@@ -516,6 +569,8 @@ public class CandidateService {
             candidate.setActivePackageId("free");
             candidate.setPackageActivatedAt(null);
             candidate.setPackageExpiresAt(null);
+            candidate.setMonthlyAiCreditsUsed(0);
+            candidate.setMonthlyAiCreditsMonth(currentMonthKey());
             candidate.setPackageDowngradedAt(now);
             candidate.setPostExpiryCleanupAt(null);
             candidate.setUpdatedAt(now);

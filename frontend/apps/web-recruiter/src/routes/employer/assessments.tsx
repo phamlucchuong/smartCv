@@ -219,8 +219,20 @@ function AssessmentsManager() {
       toast.error("Vui lòng nhập tên công việc");
       return;
     }
+    const selectedJob = activeJobs.find((j) => j.id === jobId);
+    const jobDescription = selectedJob?.description ?? undefined;
+    const jobSkills = selectedJob?.skills?.join(", ") ?? undefined;
+    const jobRequirements = selectedJob?.requirements?.join("\n") ?? undefined;
     generateMutation.mutate(
-      { jobName: aiJobName, level: aiLevel, difficulty: aiDifficulty, numQuestions: Number(aiNumQuestions) || 5 },
+      {
+        jobName: aiJobName,
+        level: aiLevel,
+        difficulty: aiDifficulty,
+        numQuestions: Number(aiNumQuestions) || 5,
+        jobDescription,
+        jobSkills,
+        jobRequirements,
+      },
       {
         onSuccess: (response) => {
           const questions = response.data?.questions ?? [];

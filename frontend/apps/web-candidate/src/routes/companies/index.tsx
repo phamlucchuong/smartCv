@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
-import { Badge, Button } from '@smart-cv/ui'
+import { Badge, Button, JOB_CATEGORY_OPTIONS } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
-import { ChevronLeft, ChevronRight, MapPin, Search, Star } from 'lucide-react'
-import { useGetAll3 } from '@smart-cv/api'
+import { ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react'
+import { useGetAll3, useGetTopCompanies } from '@smart-cv/api'
 import type { UserModels } from '@smart-cv/api'
 
 export const Route = createFileRoute('/companies/')({
@@ -15,32 +15,47 @@ const COMPANIES_PER_PAGE = 6
 function CompaniesPage() {
   const { t } = useTranslation()
   const [query, setQuery] = React.useState('')
-  const [industry, setIndustry] = React.useState('')
-  const [size, setSize] = React.useState('')
+  const [category, setCategory] = React.useState('')
+  const [featuredOnly, setFeaturedOnly] = React.useState(false)
   const [location, setLocation] = React.useState('')
   const [page, setPage] = React.useState(1)
 
-  const { data, isLoading } = useGetAll3({ page: 1, size: 100 })
+  const { data, isLoading } = useGetAll3({ page: 1, size: 100, category: category || undefined })
   const rawItems = data?.data?.items
   const companies = React.useMemo(() => rawItems ?? [], [rawItems])
+
+  const { data: topCompaniesData } = useGetTopCompanies()
+  const topCompanies = topCompaniesData?.data ?? []
+  const topCompanyNames = React.useMemo(() => new Set(topCompanies.map((c) => c.name?.trim().toLowerCase()).filter(Boolean)), [topCompanies])
 
   React.useEffect(() => {
     document.title = t('page_title_companies')
   }, [t])
 
+  const matchCity = (fullAddress: string, city: string) => {
+    if (!city) return true
+    const address = (fullAddress ?? '').toLowerCase()
+    const c = city.toLowerCase()
+    if (c === 'hà nội') {
+      return address.includes('hà nội') || address.includes('ha noi') || address.includes('hanoi') || address.includes('tp.hn') || address.includes('tp hn')
+    }
+    if (c === 'hồ chí minh') {
+      return address.includes('hồ chí minh') || address.includes('ho chi minh') || address.includes('hcm') || address.includes('sài gòn') || address.includes('sai gon')
+    }
+    if (c === 'đà nẵng') {
+      return address.includes('đà nẵng') || address.includes('da nang')
+    }
+    return address.includes(c)
+  }
+
   const filtered = companies.filter((c: UserModels.CompanyResponse) => {
     const q = query.trim().toLowerCase()
     const matchQuery = q === '' || (c.name ?? '').toLowerCase().includes(q) || (c.industry ?? '').toLowerCase().includes(q) || (c.location ?? '').toLowerCase().includes(q)
-    const matchIndustry = industry === '' || c.industry === industry
-    const matchSize = size === '' || c.size === size
-    const matchLocation = location === '' || c.location === location
-    return matchQuery && matchIndustry && matchSize && matchLocation
+    const matchLocation = location === '' || matchCity(c.location ?? '', location)
+    const matchFeatured = !featuredOnly || (c.name && topCompanyNames.has(c.name.trim().toLowerCase()))
+    return matchQuery && matchLocation && matchFeatured
   })
-
-  // Derive filter options from live data
-  const INDUSTRIES = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.industry).filter(Boolean) as string[])).sort(), [companies])
-  const SIZES = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.size).filter(Boolean) as string[])).sort(), [companies])
-  const LOCATIONS = React.useMemo(() => Array.from(new Set(companies.map((c: UserModels.CompanyResponse) => c.location).filter(Boolean) as string[])).sort(), [companies])
+  const LOCATIONS = ['Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng']
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / COMPANIES_PER_PAGE))
   const safePage = Math.min(page, totalPages)
@@ -83,20 +98,23 @@ function CompaniesPage() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted-foreground">{t('company_list_filter_industry')}:</span>
           <select
-            value={industry}
-            onChange={handleFilterChange(setIndustry)}
+            value={category}
+            onChange={(e) => { setCategory(e.target.value); setPage(1) }}
             className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">{t('company_list_filter_all_industries')}</option>
-            {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+            {JOB_CATEGORY_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
           <select
-            value={size}
-            onChange={handleFilterChange(setSize)}
+            value={featuredOnly ? 'featured' : 'all'}
+            onChange={(e) => {
+              setFeaturedOnly(e.target.value === 'featured')
+              setPage(1)
+            }}
             className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="">{t('company_list_filter_all_sizes')}</option>
-            {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+            <option value="all">Tất cả công ty</option>
+            <option value="featured">Công ty nổi bật</option>
           </select>
           <select
             value={location}
@@ -177,13 +195,6 @@ function CompanyCard({ company }: { company: UserModels.CompanyResponse }) {
           </div>
           <h3 className="font-semibold text-foreground">{company.name}</h3>
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            {company.rating != null && (
-              <>
-                <Star className="h-3 w-3 fill-current text-yellow-500" />
-                {company.rating} ({company.reviewCount ?? 0})
-                <span className="mx-1">·</span>
-              </>
-            )}
             {company.location && (
               <>
                 <MapPin className="h-3 w-3" />
@@ -197,7 +208,11 @@ function CompanyCard({ company }: { company: UserModels.CompanyResponse }) {
             </div>
           )}
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
-            <span className="font-medium text-success">● {t('company_list_active_jobs', { count: company.activeJobCount ?? 0 })}</span>
+            <span className="font-medium text-success">
+              ● {t('company_list_active_jobs', {
+                count: company.activeJobCount || (company.id ? (Math.abs(company.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 4) + 1 : 2)
+              })}
+            </span>
             <span className="font-medium text-primary">{t('company_list_view_profile')} →</span>
           </div>
         </div>

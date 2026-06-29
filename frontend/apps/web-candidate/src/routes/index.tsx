@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
-import { Badge, Button, Card, CardContent, Input } from '@smart-cv/ui'
+import { Badge, Button, Card, CardContent, Input, JOB_CATEGORY_LABELS, cn } from '@smart-cv/ui'
 import { useTranslation } from '@smart-cv/i18n'
 import {
   ArrowRight,
@@ -37,39 +37,85 @@ import {
 import { toast } from 'sonner'
 import { hasCandidateRole, useAuthStore } from '../store/useAuthStore'
 
-const JOB_TYPE_LABELS: Record<string, string> = {
-  FULL_TIME: 'Full-time',
-  PART_TIME: 'Part-time',
-  REMOTE: 'Remote',
-  CONTRACT: 'Contract',
-  INTERNSHIP: 'Internship',
-}
 
 export const Route = createFileRoute('/')({
   component: IndexComponent,
 })
 
-function formatDate(dateInput?: string | Date): string {
+function formatDate(dateInput?: string | Date | number): string {
   if (!dateInput) return ''
+  
+  if (typeof dateInput === 'number') {
+    const d = new Date(dateInput)
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  }
+
   if (typeof dateInput === 'string') {
     const cleanStr = dateInput.trim()
-    // Handle date-only strings like YYYY-MM-DD
+    
+    if (/^\d+$/.test(cleanStr)) {
+      const d = new Date(parseInt(cleanStr, 10))
+      if (isNaN(d.getTime())) return ''
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+    }
+
     if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
       const [year, month, day] = cleanStr.split('-')
       return `${day}/${month}/${year}`
     }
-    // Handle ISO date-time strings by extracting the date part
-    if (cleanStr.includes('T')) {
-      const datePart = cleanStr.split('T')[0]
+    
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('/')
+      return `${day}/${month}/${year}`
+    }
+
+    if (cleanStr.includes('T') || cleanStr.includes(' ')) {
+      const separator = cleanStr.includes('T') ? 'T' : ' '
+      const datePart = cleanStr.split(separator)[0]
       if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
         const [year, month, day] = datePart.split('-')
         return `${day}/${month}/${year}`
       }
+      if (/^\d{4}\/\d{2}\/\d{2}$/.test(datePart)) {
+        const [year, month, day] = datePart.split('/')
+        return `${day}/${month}/${year}`
+      }
     }
   }
-  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
-  if (isNaN(d.getTime())) return ''
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+
+  try {
+    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  } catch {
+    return ''
+  }
+}
+
+function getDeadlineDaysLeft(deadline?: string): number | null {
+  if (!deadline) return null
+  try {
+    const parts = deadline.split('-')
+    if (parts.length !== 3) {
+      const deadlineDate = new Date(deadline)
+      if (isNaN(deadlineDate.getTime())) return null
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const dDate = new Date(deadlineDate)
+      dDate.setHours(23, 59, 59, 999)
+      return Math.max(0, Math.floor((dDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+    }
+    const year = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    const day = parseInt(parts[2], 10)
+    const deadlineDate = new Date(year, month, day, 23, 59, 59, 999)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return Math.max(0, Math.floor((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+  } catch {
+    return null
+  }
 }
 
 function IndexComponent() {
@@ -162,6 +208,20 @@ function IndexComponent() {
     navigate({ to: '/jobs', search: { q, location, page: 1 } })
   }
 
+  const handleScrollToJobs = () => {
+    const element = document.getElementById('all-jobs')
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  const handleRecruiterRedirect = () => {
+    const url = window.location.hostname === 'localhost'
+      ? 'http://localhost:3001/signup/recruiter'
+      : 'https://recruiter.smartcv.vn/signup/recruiter'
+    window.location.href = url
+  }
+
   React.useEffect(() => {
     document.title = t('page_title_home')
   }, [t])
@@ -180,8 +240,8 @@ function IndexComponent() {
             </h1>
             <p className="mt-5 text-base text-muted-foreground md:text-lg">{t('hero_subtitle')}</p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button size="lg" className="gap-2">{t('search_jobs')} <ArrowRight className="h-4 w-4" /></Button>
-              <Button size="lg" variant="outline">Đăng tuyển dụng</Button>
+              <Button size="lg" className="gap-2" onClick={handleScrollToJobs}>{t('search_jobs')} <ArrowRight className="h-4 w-4" /></Button>
+              <Button size="lg" variant="outline" onClick={handleRecruiterRedirect}>Đăng tuyển dụng</Button>
             </div>
             <div className="mt-8 flex items-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -248,7 +308,7 @@ function IndexComponent() {
       </section>
 
       <div className="mx-auto max-w-6xl space-y-12 px-4 md:px-6">
-        <section className="relative -mt-4" aria-label="Job Search Engine">
+        <section id="job-search-section" className="relative -mt-4" aria-label="Job Search Engine">
           <form onSubmit={handleSearch} className="grid gap-3 rounded-2xl card-surface p-3 md:grid-cols-[1fr_220px_150px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -322,13 +382,15 @@ function IndexComponent() {
               })
             ) : (
               categories.map((category) => (
-                <Card key={category.name} className="elevate-card card-surface">
-                  <CardContent className="space-y-3 p-5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary"><Layers3 className="h-5 w-5" /></div>
-                    <h3 className="text-base font-semibold">{JOB_TYPE_LABELS[category.name ?? ''] ?? category.name}</h3>
-                    <p className="text-sm text-muted-foreground">{category.jobCount ?? 0} open positions this week</p>
-                  </CardContent>
-                </Card>
+                <Link key={category.name} to="/jobs" search={{ q: undefined, location: undefined, page: 1, category: category.name ?? undefined }}>
+                  <Card className="elevate-card card-surface h-full hover:border-primary/50 transition-colors cursor-pointer">
+                    <CardContent className="space-y-3 p-5">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary"><Layers3 className="h-5 w-5" /></div>
+                      <h3 className="text-base font-semibold">{JOB_CATEGORY_LABELS[category.name ?? ''] ?? category.name}</h3>
+                      <p className="text-sm text-muted-foreground">{category.jobCount ?? 0} open positions this week</p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))
             )}
           </div>
@@ -337,7 +399,7 @@ function IndexComponent() {
         <section id="remote-jobs" className="space-y-4" aria-label="Featured and Hot Jobs">
           <div className="flex items-end justify-between">
             <h2 className="text-2xl font-semibold">Việc làm nổi bật</h2>
-            <Link to="/jobs" search={{ q: undefined, location: undefined, page: 1 }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            <Link to="/jobs" search={{ q: undefined, location: undefined, page: 1, filterType: 'featured' }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
               Xem tất cả <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -351,45 +413,68 @@ function IndexComponent() {
               <p className="col-span-3 py-8 text-center text-sm text-muted-foreground">No featured jobs available right now.</p>
             ) : paginatedJobs.map((job) => (
               <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id ?? '' }} className="block">
-                <article className="elevate-card rounded-2xl card-surface p-5 h-full flex flex-col">
-                  <div className="flex-1">
-                    <div className="mb-3 flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-base font-semibold">{job.title}</h3>
-                        <p className="text-sm text-muted-foreground">{job.company}</p>
+                <article className="elevate-card rounded-2xl card-surface p-5 h-64 flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col justify-between min-w-0">
+                    <div>
+                      <div className="mb-2 flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-semibold line-clamp-2 h-12 overflow-hidden" title={job.title}>{job.title}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-1 h-5 overflow-hidden mt-0.5" title={job.company}>{job.company}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-border shrink-0 mt-0.5" onClick={(e) => e.preventDefault()}>☆</Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-border" onClick={(e) => e.preventDefault()}>☆</Button>
+
+                      <div className="mb-3 flex flex-wrap gap-2 text-xs h-7 overflow-hidden items-center">
+                        {(job.salaryMin != null || job.salaryMax != null) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-0.5 text-primary">
+                            <DollarSign className="h-3 w-3" />
+                            {job.salaryMin != null && job.salaryMax != null
+                              ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
+                              : job.salaryMin != null
+                                ? `From $${job.salaryMin.toLocaleString()}`
+                                : `Up to $${job.salaryMax!.toLocaleString()}`}
+                          </span>
+                        )}
+                        {job.location && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-muted-foreground">
+                            <MapPin className="h-3 w-3" />{job.location}
+                          </span>
+                        )}
+                        {job.openings != null && job.openings > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-muted-foreground">
+                            <Users className="h-3 w-3" />{job.openings} vị trí
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="mb-3 flex flex-wrap gap-2 text-xs">
-                      {(job.salaryMin != null || job.salaryMax != null) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          {job.salaryMin != null && job.salaryMax != null
-                            ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
-                            : job.salaryMin != null
-                              ? `From $${job.salaryMin.toLocaleString()}`
-                              : `Up to $${job.salaryMax!.toLocaleString()}`}
-                        </span>
-                      )}
-                      {job.location && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
-                      )}
-                      {job.openings != null && job.openings > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><Users className="h-3.5 w-3.5" />{job.openings} vị trí</span>
-                      )}
-                    </div>
-
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {(job.skills ?? []).map((skill) => <Badge key={skill} variant="outline" className="border-border text-xs">{skill}</Badge>)}
+                    <div className="mb-3">
+                      <div className="flex flex-wrap gap-1.5 h-6 overflow-hidden items-center">
+                        {(job.skills ?? []).slice(0, 3).map((skill) => (
+                          <Badge key={skill} variant="outline" className="border-border text-[11px] px-2 py-0.5 truncate max-w-[100px]">{skill}</Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground mt-4">
-                    <span className="inline-flex items-center gap-1">
-                      <Clock3 className="h-3.5 w-3.5" />
-                      {job.createdAt ? `Posted ${formatDate(job.createdAt)}` : 'Recently posted'}
-                    </span>
+                  <div className="border-t border-border pt-3 text-xs text-muted-foreground mt-auto shrink-0 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        {job.createdAt ? formatDate(job.createdAt) : 'Vừa mới đăng'}
+                      </span>
+                      {job.deadline && (() => {
+                        const daysLeft = getDeadlineDaysLeft(job.deadline)
+                        return daysLeft !== null ? (
+                          <span className={cn(
+                            "font-medium whitespace-nowrap",
+                            daysLeft < 30 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                          )}>
+                            {t('job_days_left', { days: daysLeft })}
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
                     <Button size="sm" onClick={(e) => handleQuickApply(e, job.id ?? '')} disabled={submitMutation.isPending}>Quick Apply</Button>
                   </div>
                 </article>
@@ -456,7 +541,7 @@ function IndexComponent() {
           </div>
         </section>
 
-        <section className="space-y-4" aria-label="All Jobs Preview">
+        <section id="all-jobs" className="space-y-4" aria-label="All Jobs Preview">
           <div className="flex items-end justify-between">
             <h2 className="text-2xl font-semibold">Tất cả việc làm</h2>
             <Link to="/jobs" search={{ q: undefined, location: undefined, page: 1 }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
@@ -472,38 +557,65 @@ function IndexComponent() {
               <p className="col-span-3 py-8 text-center text-sm text-muted-foreground">No jobs available right now.</p>
             ) : allJobsPreview.map((job) => (
               <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id ?? '' }} className="block">
-                <article className="elevate-card rounded-2xl card-surface p-5 h-full flex flex-col">
-                  <div className="flex-1">
-                    <div className="mb-3 flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-base font-semibold">{job.title}</h3>
-                        <p className="text-sm text-muted-foreground">{job.company}</p>
+                <article className="elevate-card rounded-2xl card-surface p-5 h-64 flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col justify-between min-w-0">
+                    <div>
+                      <div className="mb-2">
+                        <h3 className="text-base font-semibold line-clamp-2 h-12 overflow-hidden" title={job.title}>{job.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-1 h-5 overflow-hidden mt-0.5" title={job.company}>{job.company}</p>
+                      </div>
+
+                      <div className="mb-3 flex flex-wrap gap-2 text-xs h-7 overflow-hidden items-center">
+                        {(job.salaryMin != null || job.salaryMax != null) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-0.5 text-primary">
+                            <DollarSign className="h-3 w-3" />
+                            {job.salaryMin != null && job.salaryMax != null
+                              ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
+                              : job.salaryMin != null
+                                ? `From $${job.salaryMin.toLocaleString()}`
+                                : `Up to $${job.salaryMax!.toLocaleString()}`}
+                          </span>
+                        )}
+                        {job.location && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-muted-foreground">
+                            <MapPin className="h-3 w-3" />{job.location}
+                          </span>
+                        )}
+                        {job.openings != null && job.openings > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-muted-foreground">
+                            <Users className="h-3 w-3" />{job.openings} vị trí
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="mb-3 flex flex-wrap gap-2 text-xs">
-                      {(job.salaryMin != null || job.salaryMax != null) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          {job.salaryMin != null && job.salaryMax != null
-                            ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
-                            : job.salaryMin != null
-                              ? `From $${job.salaryMin.toLocaleString()}`
-                              : `Up to $${job.salaryMax!.toLocaleString()}`}
-                        </span>
-                      )}
-                      {job.location && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
-                      )}
-                    </div>
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {(job.skills ?? []).map((skill) => <Badge key={skill} variant="outline" className="border-border text-xs">{skill}</Badge>)}
+
+                    <div className="mb-3">
+                      <div className="flex flex-wrap gap-1.5 h-6 overflow-hidden items-center">
+                        {(job.skills ?? []).slice(0, 3).map((skill) => (
+                          <Badge key={skill} variant="outline" className="border-border text-[11px] px-2 py-0.5 truncate max-w-[100px]">{skill}</Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground mt-4">
-                    <span className="inline-flex items-center gap-1">
-                      <Clock3 className="h-3.5 w-3.5" />
-                      {job.createdAt ? `Posted ${formatDate(job.createdAt)}` : 'Recently posted'}
-                    </span>
+
+                  <div className="border-t border-border pt-3 text-xs text-muted-foreground mt-auto shrink-0 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        {job.createdAt ? formatDate(job.createdAt) : 'Vừa mới đăng'}
+                      </span>
+                      {job.deadline && (() => {
+                        const daysLeft = getDeadlineDaysLeft(job.deadline)
+                        return daysLeft !== null ? (
+                          <span className={cn(
+                            "font-medium whitespace-nowrap",
+                            daysLeft < 30 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                          )}>
+                            {t('job_days_left', { days: daysLeft })}
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
                     <Button size="sm" onClick={(e) => handleQuickApply(e, job.id ?? '')} disabled={submitMutation.isPending}>Quick Apply</Button>
                   </div>
                 </article>

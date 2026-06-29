@@ -141,15 +141,16 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    public PageResponse<UserResponse> getAllUsers(int page, int size, String keyword, String role) {
+    public PageResponse<UserResponse> getAllUsers(int page, int size, String keyword, String role, Boolean locked) {
         int pageCurrent = page > 0 ? page - 1 : 0;
         int safeSize = size > 0 ? size : defaultPageSize;
         Pageable pageable = PageRequest.of(pageCurrent, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         boolean hasKeyword = keyword != null && !keyword.isBlank();
         boolean hasRole = role != null && !role.isBlank();
+        boolean hasLocked = locked != null;
 
-        if (!hasKeyword && !hasRole) {
+        if (!hasKeyword && !hasRole && !hasLocked) {
             Page<User> users = userRepository.findAll(pageable);
             return PageResponse.<UserResponse>builder()
                     .items(users.getContent().stream().map(userMapper::toUserResponse).toList())
@@ -169,6 +170,9 @@ public class UserService {
         }
         if (hasRole) {
             parts.add(Criteria.where("roles").is(role.toUpperCase()));
+        }
+        if (hasLocked) {
+            parts.add(Criteria.where("locked").is(locked));
         }
         Criteria criteria = parts.size() == 1
                 ? parts.get(0)
