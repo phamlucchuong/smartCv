@@ -111,7 +111,7 @@ function JobsPage() {
     request: {
       keyword: q || undefined,
       location: location || undefined,
-      category: category || undefined,
+      category: (category || undefined) as import('@smart-cv/api').JobModels.JobSearchRequestCategory | undefined,
       page: page - 1,
       size: 100,
     },
@@ -265,21 +265,23 @@ function JobsPage() {
                   </div>
 
                   <div className="border-t border-border pt-3 text-xs text-muted-foreground mt-auto shrink-0 flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1">
-                      <Clock3 className="h-3.5 w-3.5" />
-                      {job.createdAt ? `Đăng ngày ${formatDate(job.createdAt)}` : 'Vừa mới đăng'}
-                    </span>
-                    {job.deadline && (() => {
-                      const daysLeft = getDeadlineDaysLeft(job.deadline)
-                      return daysLeft !== null ? (
-                        <span className={cn(
-                          "font-medium",
-                          daysLeft < 30 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
-                        )}>
-                          {t('job_days_left', { days: daysLeft })}
-                        </span>
-                      ) : null
-                    })()}
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        {job.createdAt ? formatDate(job.createdAt) : 'Vừa mới đăng'}
+                      </span>
+                      {job.deadline && (() => {
+                        const daysLeft = getDeadlineDaysLeft(job.deadline)
+                        return daysLeft !== null ? (
+                          <span className={cn(
+                            "font-medium whitespace-nowrap",
+                            daysLeft < 30 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                          )}>
+                            {t('job_days_left', { days: daysLeft })}
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
                   </div>
                 </article>
               </Link>

@@ -151,7 +151,7 @@ function CompanyProfilePage() {
       companyType,
       foundedYear,
       industry,
-      category: category || undefined,
+      category: (category as any) || undefined,
       logoUrl,
       coverImageUrl,
       contactName,

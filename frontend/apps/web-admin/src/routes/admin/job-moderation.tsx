@@ -214,7 +214,7 @@ function JobDetailModal({
 function JobModerationPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [filter, setFilter] = useState<ModerationFilter>('PENDING')
+  const [filter, setFilter] = useState<ModerationFilter>('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')

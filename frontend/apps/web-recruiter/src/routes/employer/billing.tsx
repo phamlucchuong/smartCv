@@ -222,6 +222,13 @@ function RecruiterBillingPage() {
     return `${hours}:${minutes} ${day}/${month}/${year}`;
   };
 
+  const formatAiCredits = (remaining?: number, total?: number, used?: number) => {
+    if (total === undefined || total === null || total === -1) {
+      return "Không giới hạn";
+    }
+    return `${Math.max(remaining ?? Math.max(total - (used ?? 0), 0), 0)}/${total}`;
+  };
+
   const getOrderStatusLabel = (status: string) => {
     switch (status) {
       case "PAID":
@@ -310,8 +317,11 @@ function RecruiterBillingPage() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Stat l="Quota Tin tuyển dụng" v={recruiter?.quotaJobPost !== undefined ? `${recruiter.quotaJobPost}` : "0"} />
-          <Stat l="Dịch vụ AI" v={recruiter?.activePackageId ? "Nâng cao" : "Cơ bản"} />
+          <Stat l="AI Credit còn lại" v={formatAiCredits(recruiter?.aiCreditsRemaining, recruiter?.aiCreditsTotal, recruiter?.aiCreditsUsed)} />
         </div>
+      </div>
+      <div className="rounded-2xl border border-border/70 bg-card p-4 text-sm text-muted-foreground">
+        Đã dùng {recruiter?.aiCreditsUsed ?? 0} credit AI trong chu kỳ hiện tại.
       </div>
 
       {/* Available Packages Section */}

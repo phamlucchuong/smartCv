@@ -237,6 +237,27 @@ function RootComponent() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleLanguage}
+              disabled={preferencesLoading}
+              className="border-border bg-muted/60 relative flex h-10 w-[92px] cursor-pointer items-center rounded-lg border p-1 text-sm"
+            >
+              <span
+                className={`absolute top-1 h-8 w-[42px] rounded-md bg-primary transition-transform duration-200 ${language === 'EN' ? 'translate-x-0' : 'translate-x-[42px]'}`}
+              />
+              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'EN' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>EN</span>
+              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'VI' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>VI</span>
+            </button>
+            <Button
+              variant="outline"
+              onClick={toggleTheme}
+              disabled={preferencesLoading}
+              size="icon"
+              className="border-border bg-muted/60 text-muted-foreground transition-transform duration-300 active:scale-95"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
+            </Button>
+
             <NotificationPopover
               notifications={notifications}
               unreadCount={unreadCount}
@@ -263,26 +284,6 @@ function RootComponent() {
                 openNotifications: t('notifications_popup_aria'),
               }}
             />
-            <button
-              onClick={handleToggleLanguage}
-              disabled={preferencesLoading}
-              className="border-border bg-muted/60 relative flex h-10 w-[92px] cursor-pointer items-center rounded-lg border p-1 text-sm"
-            >
-              <span
-                className={`absolute top-1 h-8 w-[42px] rounded-md bg-primary transition-transform duration-200 ${language === 'EN' ? 'translate-x-0' : 'translate-x-[42px]'}`}
-              />
-              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'EN' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>EN</span>
-              <span className={`relative z-10 w-[42px] text-center transition-colors duration-200 ${language === 'VI' ? 'text-primary-foreground' : 'text-muted-foreground'}`}>VI</span>
-            </button>
-            <Button
-              variant="outline"
-              onClick={toggleTheme}
-              disabled={preferencesLoading}
-              size="icon"
-              className="border-border bg-muted/60 text-muted-foreground transition-transform duration-300 active:scale-95"
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4 transition-transform duration-300 hover:rotate-12" /> : <Moon className="h-4 w-4 transition-transform duration-300 hover:-rotate-12" />}
-            </Button>
 
             {isAuthenticated ? (
               <div

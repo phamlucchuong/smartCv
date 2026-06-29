@@ -220,11 +220,11 @@ function NewJob() {
     const payload = buildCreateJobPayload(formValues);
 
     if (draftJobId) {
-      await updateJobMutation.mutateAsync({ id: draftJobId, data: payload });
+      await updateJobMutation.mutateAsync({ id: draftJobId, data: payload as any });
       return draftJobId;
     }
 
-    const created = await createJobMutation.mutateAsync({ data: payload });
+    const created = await createJobMutation.mutateAsync({ data: payload as any });
     const nextDraftId = created.data?.id;
     if (!nextDraftId) throw new Error("No job id returned");
     setDraftJobId(nextDraftId);

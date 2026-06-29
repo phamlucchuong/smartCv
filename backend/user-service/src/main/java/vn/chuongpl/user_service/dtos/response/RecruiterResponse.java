@@ -61,6 +61,9 @@ public class RecruiterResponse {
     String activePackageId;
     LocalDateTime packageActivatedAt;
     LocalDateTime packageExpiresAt;
+    Integer aiCreditsTotal;
+    Integer aiCreditsUsed;
+    Integer aiCreditsRemaining;
     LocalDateTime platformFeeDueAt;
     LocalDateTime platformFeeLastPaidAt;
     LocalDateTime platformFeeReminderSentAt;

@@ -95,7 +95,14 @@ public class JobService {
     public PageResponse<JobResponse> getMyJobs(String userId, int page, int size) {
         expireOverduePublishedJobs();
         String recruiterId = userServiceClient.resolveRecruiterId(userId);
-        if (recruiterId == null) {
+
+        // Build search list: Recruiter._id (new jobs) + User._id (jobs created before the
+        // recruiter-id refactoring, where recruiter_id was stored as User._id).
+        List<String> searchIds = new ArrayList<>();
+        if (recruiterId != null) searchIds.add(recruiterId);
+        if (!userId.equals(recruiterId)) searchIds.add(userId);
+
+        if (searchIds.isEmpty()) {
             return PageResponse.<JobResponse>builder()
                     .items(List.of())
                     .total(0)
@@ -105,7 +112,7 @@ public class JobService {
                     .build();
         }
         Pageable pageable = buildPageable(page, size, "createdAt", "desc");
-        Page<Job> jobs = jobRepository.findByRecruiterIdAndDeletedFalse(recruiterId, pageable);
+        Page<Job> jobs = jobRepository.findByRecruiterIdInAndDeletedFalse(searchIds, pageable);
         return toPageResponse(jobs);
     }
 
@@ -538,8 +545,11 @@ public class JobService {
 
     private void assertOwner(Job job, String userId, boolean isAdmin) {
         if (isAdmin) return;
+        String jobRecruiterId = job.getRecruiterId();
+        // New jobs store Recruiter._id; old jobs (pre-refactor) stored User._id directly.
+        if (userId.equals(jobRecruiterId)) return;
         String recruiterId = userServiceClient.resolveRecruiterId(userId);
-        if (recruiterId == null || !job.getRecruiterId().equals(recruiterId)) {
+        if (recruiterId == null || !jobRecruiterId.equals(recruiterId)) {
             throw new AppException(ErrorCode.JOB_NOT_OWNER);
         }
     }

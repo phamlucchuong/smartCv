@@ -185,6 +185,13 @@ function BillingPage() {
     return `${hours}:${minutes} ${day}/${month}/${year}`
   }
 
+  const formatAiCredits = (remaining?: number, total?: number, used?: number) => {
+    if (total === undefined || total === null || total === -1) {
+      return lang === 'VI' ? 'Không giới hạn' : 'Unlimited'
+    }
+    return `${Math.max(remaining ?? Math.max(total - (used ?? 0), 0), 0)}/${total}`
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PAID':
@@ -270,11 +277,16 @@ function BillingPage() {
             </div>
             <div className="bg-card border border-border/60 rounded-2xl p-4 text-center shadow-sm">
               <div className="text-3xl font-extrabold text-foreground">
-                {activePackage.aiCredits === -1 || activePackage.aiCredits === null || activePackage.aiCredits === undefined
-                  ? (lang === 'VI' ? 'Vô hạn' : 'Unlimited')
-                  : activePackage.aiCredits}
+                {formatAiCredits(candidate?.aiCreditsRemaining, candidate?.aiCreditsTotal, candidate?.aiCreditsUsed)}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">Lượt AI Credits</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {lang === 'VI' ? 'AI credit còn lại / tổng gói' : 'AI credits left / total'}
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                {lang === 'VI'
+                  ? `Đã dùng ${candidate?.aiCreditsUsed ?? 0} lượt trong chu kỳ hiện tại`
+                  : `Used ${candidate?.aiCreditsUsed ?? 0} credits in the current cycle`}
+              </div>
             </div>
           </div>
         </CardContent>

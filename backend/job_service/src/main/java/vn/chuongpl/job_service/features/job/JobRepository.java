@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import vn.chuongpl.job_service.enums.JobModerationStatus;
 import vn.chuongpl.job_service.enums.JobVisibilityStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +17,8 @@ public interface JobRepository extends MongoRepository<Job, String> {
     Page<Job> findByDeletedFalse(Pageable pageable);
 
     Page<Job> findByRecruiterIdAndDeletedFalse(String recruiterId, Pageable pageable);
+
+    Page<Job> findByRecruiterIdInAndDeletedFalse(List<String> recruiterIds, Pageable pageable);
 
     Page<Job> findByModerationStatusAndVisibilityStatusAndDeletedFalse(
             JobModerationStatus moderationStatus,

@@ -26,6 +26,7 @@ import type {
 import type {
   ApiResponseInteger,
   ApiResponseJobResponse,
+  ApiResponseListCompanyData,
   ApiResponseListJobResponse,
   ApiResponsePageResponseJobResponse,
   ApiResponseVoid,
@@ -44,22 +45,6 @@ import { customInstance } from '../../../axios-instance';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-export interface RelatedCompanyData {
-  id?: string;
-  name?: string;
-  logoUrl?: string;
-  coverImageUrl?: string;
-  industry?: string;
-  location?: string;
-}
-
-export interface ApiResponseListRelatedCompanyData {
-  ok?: boolean;
-  code?: number;
-  message?: string;
-  data?: RelatedCompanyData[];
-}
 
 
 
@@ -461,6 +446,62 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getDeactivateExcessActiveJobsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const reindexJobs = (
+    
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseInteger>(
+      {url: `/api/jobs/admin/reindex`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getReindexJobsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reindexJobs>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof reindexJobs>>, TError,void, TContext> => {
+
+const mutationKey = ['reindexJobs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reindexJobs>>, void> = () => {
+          
+
+          return  reindexJobs(requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReindexJobsMutationResult = NonNullable<Awaited<ReturnType<typeof reindexJobs>>>
+    
+    export type ReindexJobsMutationError = unknown
+
+    export const useReindexJobs = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reindexJobs>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reindexJobs>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getReindexJobsMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -872,6 +913,92 @@ export function useGetRelatedJobs<TData = Awaited<ReturnType<typeof getRelatedJo
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetRelatedJobsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getRelatedCompanies = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ApiResponseListCompanyData>(
+      {url: `/api/jobs/${id}/related-companies`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetRelatedCompaniesQueryKey = (id?: string,) => {
+    return [
+    `/api/jobs/${id}/related-companies`
+    ] as const;
+    }
+
+    
+export const getGetRelatedCompaniesQueryOptions = <TData = Awaited<ReturnType<typeof getRelatedCompanies>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRelatedCompanies>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRelatedCompaniesQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRelatedCompanies>>> = ({ signal }) => getRelatedCompanies(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRelatedCompanies>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetRelatedCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof getRelatedCompanies>>>
+export type GetRelatedCompaniesQueryError = unknown
+
+
+export function useGetRelatedCompanies<TData = Awaited<ReturnType<typeof getRelatedCompanies>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRelatedCompanies>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRelatedCompanies>>,
+          TError,
+          Awaited<ReturnType<typeof getRelatedCompanies>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRelatedCompanies<TData = Awaited<ReturnType<typeof getRelatedCompanies>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRelatedCompanies>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRelatedCompanies>>,
+          TError,
+          Awaited<ReturnType<typeof getRelatedCompanies>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRelatedCompanies<TData = Awaited<ReturnType<typeof getRelatedCompanies>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRelatedCompanies>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetRelatedCompanies<TData = Awaited<ReturnType<typeof getRelatedCompanies>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRelatedCompanies>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetRelatedCompaniesQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -1315,64 +1442,6 @@ export function useGetJobsByIds<TData = Awaited<ReturnType<typeof getJobsByIds>>
 
 
 
-
-export const getJobRelatedCompanies = (
-  id: string,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal
-) => {
-  return customInstance<ApiResponseListRelatedCompanyData>(
-    { url: `/api/jobs/${id}/related-companies`, method: 'GET', signal },
-    options
-  );
-};
-
-export const getGetJobRelatedCompaniesQueryKey = (id?: string) => {
-  return [`/api/jobs/${id}/related-companies`] as const;
-};
-
-export const getGetJobRelatedCompaniesQueryOptions = <
-  TData = Awaited<ReturnType<typeof getJobRelatedCompanies>>,
-  TError = unknown
->(
-  id: string,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJobRelatedCompanies>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getGetJobRelatedCompaniesQueryKey(id);
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJobRelatedCompanies>>> = ({ signal }) =>
-    getJobRelatedCompanies(id, requestOptions, signal);
-  return { queryKey, queryFn, enabled: !!(id), ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getJobRelatedCompanies>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type GetJobRelatedCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof getJobRelatedCompanies>>>;
-export type GetJobRelatedCompaniesQueryError = unknown;
-
-export function useGetJobRelatedCompanies<
-  TData = Awaited<ReturnType<typeof getJobRelatedCompanies>>,
-  TError = unknown
->(
-  id: string,
-  options?: {
-    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJobRelatedCompanies>>, TError, TData>>;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetJobRelatedCompaniesQueryOptions(id, options);
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-  query.queryKey = queryOptions.queryKey;
-  return query;
-}
 
 export const getAllJobs = (
     params?: GetAllJobsParams,
