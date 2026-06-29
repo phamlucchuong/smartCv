@@ -5,8 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export interface WeaknessItem {
-  area?: string;
-  detail?: string;
-  detailVi?: string;
-}
+export type GetReportParams = {
+timeframe?: string;
+};
