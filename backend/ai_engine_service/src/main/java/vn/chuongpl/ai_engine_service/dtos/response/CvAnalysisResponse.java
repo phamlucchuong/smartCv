@@ -8,6 +8,8 @@ public record CvAnalysisResponse(
         List<String> matchedSkills,
         List<String> missingSkills,
         List<String> extraSkills,
-        String summary
+        String summary,
+        ScoreBreakdownResponse breakdown,
+        ScoreEvidenceResponse evidence
 ) {
 }

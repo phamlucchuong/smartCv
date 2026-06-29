@@ -47,7 +47,9 @@ class AnalysisControllerCvFullTest {
                 List.of(new StrengthItem("Tech", "Java expert")),
                 List.of(new WeaknessItem("Cloud", "No K8s")),
                 List.of(),
-                List.of("Java", "PHP")
+                List.of("Java", "PHP"),
+                null,
+                null
         );
         when(analysisService.analyzeCv(any(CvFullAnalysisRequest.class), any(), anyBoolean()))
                 .thenReturn(response);

@@ -11,7 +11,10 @@ import vn.chuongpl.ai_engine_service.dtos.response.CvFullAnalysisResponse;
 import vn.chuongpl.ai_engine_service.enums.ErrorCode;
 import vn.chuongpl.ai_engine_service.exception.AppException;
 import vn.chuongpl.ai_engine_service.features.analysis.AnalysisService;
+import vn.chuongpl.ai_engine_service.features.analysis.DeterministicCvScoringService;
 import vn.chuongpl.ai_engine_service.features.analysis.PromptBuilder;
+import vn.chuongpl.ai_engine_service.features.analysis.StructuredCvProfile;
+import vn.chuongpl.ai_engine_service.features.analysis.StructuredProfileExtractionService;
 import vn.chuongpl.ai_engine_service.integration.cv.CvTextExtractor;
 import vn.chuongpl.ai_engine_service.integration.job.JobClient;
 import vn.chuongpl.ai_engine_service.integration.user.CvInfoResponse;
@@ -40,6 +43,8 @@ class AnalysisServiceCvFullTest {
     @Mock JobClient jobClient;
     @Mock JobSuggestionsPublisher jobSuggestionsPublisher;
     @Mock UserClient userClient;
+    @Mock StructuredProfileExtractionService structuredProfileExtractionService;
+    @Mock DeterministicCvScoringService deterministicCvScoringService;
 
     @InjectMocks AnalysisService analysisService;
 
@@ -52,6 +57,16 @@ class AnalysisServiceCvFullTest {
     void setUp() {
         when(promptBuilder.systemPrompt()).thenReturn("You are an HR expert.");
         doNothing().when(userClient).consumeCandidateAiCredit(anyString());
+        when(structuredProfileExtractionService.extractCvProfile(anyString())).thenReturn(
+                new StructuredCvProfile(
+                        new StructuredCvProfile.CandidateProfile(List.of(), "", List.of(), 0),
+                        new StructuredCvProfile.SkillProfile(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of()),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                )
+        );
     }
 
     @Test
